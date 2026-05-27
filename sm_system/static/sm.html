@@ -1814,6 +1814,8 @@ function switchPage(page) {
   if (target) {
     target.style.display = 'block';
     target.classList.add('active');
+    // Force reflow in WeChat X5 browser (known issue with display changes)
+    void target.offsetHeight;
   }
   // Show sub-sections for the same page
   if (page === 'schedules') {
