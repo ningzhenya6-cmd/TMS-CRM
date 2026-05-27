@@ -764,6 +764,115 @@ def _levenshtein(s1, s2):
     return prev_row[-1]
 
 
+# ─── Smart Text Parsing ────────────────────────────────────────────────────
+
+_COUNTRIES = ['英国', '美国', '澳洲', '加拿大', '新加坡', '马来西亚', '澳大利亚', '新西兰', '日本', '韩国', '德国', '法国', '意大利', '西班牙', '荷兰', '瑞士', '香港', '澳门']
+_GRADES = ['研一', '研二', '研三', '大一', '大二', '大三', '大四', '高三', '高二', '高一', '初三', '初二', '初一', '预科', '硕士', '博士', '研究生', '本科']
+_SOURCES = ['抖音', '小红书', '视频号', '转介绍', '线下活动', '线上', '百度', '知乎', 'B站', '微博', '朋友介绍', '其他']
+
+def parse_lead_text(text):
+    """Smart parse lead info from unstructured text.
+    Handles formats like:
+      '张三 13800138001 英国金融 大三 抖音'
+      '新线索：李华，13912345678，澳洲会计'
+      '王芳 / 137xxxx / 英国金融数学 / 大一'
+    """
+    result = {'name': '', 'phone': '', 'wechat': '', 'country': '', 'grade': '', 'subject': '', 'source': '', 'notes': '', 'confidence': 0}
+
+    # Clean text
+    t = text.strip()
+    # Remove common prefixes
+    for prefix in ['新线索', '线索', '新增', '客户', '学生', '姓名', '名字']:
+        if t.startswith(prefix):
+            t = t[len(prefix):].strip().lstrip('：:，, ')
+
+    # 1. Extract phone number (11-digit Chinese mobile or with dashes)
+    phone_match = re.search(r'(1[3-9]\d)\s*-?\s*(\d{4})\s*-?\s*(\d{4})', t)
+    if phone_match:
+        result['phone'] = phone_match.group(1) + phone_match.group(2) + phone_match.group(3)
+        t = t.replace(phone_match.group(0), ' ').strip()
+    else:
+        # Try 7+ digit number
+        phone_match = re.search(r'(1[3-9]\d{7,9})', t)
+        if phone_match:
+            result['phone'] = phone_match.group(1)
+            t = t.replace(phone_match.group(0), ' ').strip()
+
+    # 2. Extract wechat (if contains wx/微信/wechat)
+    wx_match = re.search(r'(?:微信|wx|wechat)[：:=\s]*([a-zA-Z0-9_]{4,})', t, re.IGNORECASE)
+    if wx_match:
+        result['wechat'] = wx_match.group(1)
+        t = t.replace(wx_match.group(0), ' ').strip()
+
+    # 3. Extract country
+    for c in _COUNTRIES:
+        if c in t:
+            result['country'] = c
+            t = t.replace(c, ' ').strip()
+            break
+
+    # 4. Extract grade
+    for g in _GRADES:
+        if g in t:
+            result['grade'] = g
+            t = t.replace(g, ' ').strip()
+            break
+
+    # 5. Extract source
+    for s in _SOURCES:
+        if s in t:
+            result['source'] = s
+            t = t.replace(s, ' ').strip()
+            break
+
+    # 6. Extract subject (remaining content after known fields)
+    # Common subjects
+    subjects = ['金融数学', '数据科学', '统计学', '金融', '会计', '经济学', '商务管理',
+                '计算机', 'CS', '机械工程', '电子工程', '生物', '化学', '物理', '数学',
+                '法律', '医学', '教育', '心理学', '社会学', '传媒', '艺术', '建筑',
+                '英语', '语言', '商业分析', '市场营销', '管理']
+
+    # Detect subject patterns first
+    for subj in subjects:
+        if subj in t:
+            result['subject'] = subj
+            t = t.replace(subj, ' ').strip()
+            break
+
+    # 7. Extract name: whatever remains at the beginning (likely the name)
+    # Clean up separator chars
+    t = re.sub(r'[，,、/；;：:（(）)]', ' ', t).strip()
+    t = re.sub(r'\s+', ' ', t).strip()
+
+    parts = [p.strip() for p in t.split() if p.strip()]
+
+    if not result['name'] and parts:
+        # First non-empty segment is likely the name
+        name_candidate = parts[0]
+        # Name should be 2-4 Chinese chars
+        if re.match(r'^[一-龥]{2,4}$', name_candidate):
+            result['name'] = name_candidate
+            parts = parts[1:]
+        elif len(parts) >= 1:
+            result['name'] = name_candidate
+            parts = parts[1:]
+
+    # Remaining parts go to notes
+    if parts:
+        result['notes'] = ' '.join(parts)
+
+    # Calculate confidence
+    confidence = 0
+    if result['name']: confidence += 0.3
+    if result['phone']: confidence += 0.3
+    if result['country']: confidence += 0.15
+    if result['subject']: confidence += 0.15
+    if result['grade']: confidence += 0.1
+    result['confidence'] = min(round(confidence, 2), 1.0)
+
+    return result
+
+
 def get_token(handler):
     cookie = handler.headers.get('Cookie', '')
     for c in cookie.split(';'):
@@ -825,6 +934,7 @@ def parse_path(path):
     if len(parts) == 2:
         if parts[0] == 'leads' and parts[1] == 'batch': return ('leads', None, 'batch')
         if parts[0] == 'leads' and parts[1] == 'import': return ('leads', None, 'import_leads')
+        if parts[0] == 'leads' and parts[1] == 'parse': return ('leads', None, 'parse_text')
         if parts[0] == 'leads': return ('leads', parts[1], 'get')
         if parts[0] == 'packages': return ('packages', parts[1], 'get')
         if parts[0] == 'schedules' and parts[1] == 'calendar': return ('schedules', None, 'calendar')
@@ -1136,6 +1246,7 @@ class TMSHandler(BaseHTTPRequestHandler):
             'contracts@pay': lambda: self._handle_contract_pay(user, res_id, data),
             'referrals@list': lambda: self._handle_create_referral(user, data),
             'leads@merge': lambda: self._handle_merge_leads(user, res_id, data),
+            'leads@parse_text': lambda: self._handle_parse_lead_text(user, data),
             'settlements@calculate': lambda: self._handle_calculate_settlements(user),
             'commissions@calculate': lambda: self._handle_calculate_commissions(user),
             'schedules@reschedule': lambda: self._handle_reschedule_schedule(user, res_id, data),
@@ -2669,6 +2780,39 @@ class TMSHandler(BaseHTTPRequestHandler):
         db.close()
         _audit(user['id'], 'import', 'lead', '', f'导入线索: {success}成功, {len(errors)}失败')
         return json_resp(self, {"status": "done", "success": success, "errors": errors})
+
+    # ═══════════════════════ SMART PARSE ═══════════════════════════════════
+
+    def _handle_parse_lead_text(self, user, data):
+        """Parse unstructured text into lead fields. Returns parsed result + duplicates."""
+        text = data.get('text', '').strip()
+        if not text:
+            return json_resp(self, {"error": "请输入文本内容"}, 400)
+
+        result = parse_lead_text(text)
+
+        # Check duplicates
+        if result.get('phone'):
+            db = get_db()
+            dup = db.execute(
+                "SELECT id, name, status FROM leads WHERE phone=? AND status NOT IN ('lost','closed') AND merge_target_id IS NULL",
+                (result['phone'],)
+            ).fetchone()
+            if dup:
+                result['duplicate'] = {'id': dup['id'], 'name': dup['name'], 'status': dup['status']}
+            db.close()
+
+        if not result.get('duplicate') and result.get('wechat'):
+            db = get_db()
+            dup = db.execute(
+                "SELECT id, name, status FROM leads WHERE wechat=? AND status NOT IN ('lost','closed') AND merge_target_id IS NULL",
+                (result['wechat'],)
+            ).fetchone()
+            if dup:
+                result['duplicate'] = {'id': dup['id'], 'name': dup['name'], 'status': dup['status']}
+            db.close()
+
+        return json_resp(self, {"result": result})
 
     # ─── Activities ───────────────────────────────────────────────────────
 

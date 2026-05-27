@@ -212,6 +212,9 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
         <div class="nav-item" data-roles="admin,supervisor,cs,consultant" data-page="leads" onclick="switchPage('leads')">
           <i class="bi bi-people-fill"></i> <span class="nav-text">资源管理</span>
         </div>
+        <div class="nav-item" data-roles="cs,consultant,admin,supervisor" data-page="quick-add" onclick="switchPage('quick-add')">
+          <i class="bi bi-plus-circle-fill"></i> <span class="nav-text">快速录入</span>
+        </div>
         <div class="nav-item" data-roles="cs,consultant,supervisor,admin" data-page="today" onclick="switchPage('today')">
           <i class="bi bi-calendar-check-fill"></i> <span class="nav-text">今日跟进</span>
         </div>
@@ -855,6 +858,58 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
               <div id="assign-rules-list" style="max-height:300px;overflow-y:auto;"><div class="empty-state"><p>加载中...</p></div></div>
               <div style="padding:8px 14px;border-top:1px solid #e5e7eb;">
                 <button class="btn btn-outline-primary btn-sm w-100" onclick="openRuleModal()"><i class="bi bi-plus-lg"></i> 添加规则</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Quick Add (Mobile-first) ═══ -->
+      <div id="section-quick-add" class="section">
+        <div class="page-header"><h3>快速录入</h3><p>粘贴钉钉/微信消息，智能解析自动创建线索</p></div>
+        <div style="max-width:600px;margin:0 auto;">
+          <div class="detail-card">
+            <h6>粘贴文本</h6>
+            <div style="font-size:.78rem;color:#6b7280;margin-bottom:8px;">
+              从钉钉群复制线索消息粘贴到下方，系统自动解析姓名、手机、国家、科目等信息
+            </div>
+            <textarea id="qa-text" class="form-control" rows="4" placeholder="例如：&#10;张三 13800138001 英国金融数学 大三 抖音&#10;或：新线索：李华 13912345678 澳洲会计 研一 小红书" style="font-size:.95rem;"></textarea>
+            <div class="mt-2 d-flex gap-2 flex-wrap">
+              <button class="btn btn-primary" onclick="parseAndPreview()" id="qa-parse-btn"><i class="bi bi-magic"></i> 智能解析</button>
+              <button class="btn btn-outline-secondary" onclick="document.getElementById('qa-text').value='';document.getElementById('qa-result').classList.add('d-none')"><i class="bi bi-x-lg"></i> 清空</button>
+            </div>
+          </div>
+          <div id="qa-result" class="d-none">
+            <div class="detail-card">
+              <h6>解析结果 <span id="qa-confidence" class="badge" style="font-weight:400;">0%</span></h6>
+              <div id="qa-duplicate-warning" class="d-none alert alert-warning py-2" style="font-size:.82rem;"></div>
+              <div class="row g-3 mt-1">
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">姓名 <span style="color:#ef4444;">*</span></label><input type="text" class="form-control form-control-sm" id="qa-name" placeholder="自动识别"></div>
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">手机</label><input type="text" class="form-control form-control-sm" id="qa-phone" placeholder="自动识别"></div>
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">国家</label>
+                  <select class="form-select form-select-sm" id="qa-country"><option value="">自动识别</option><option>英国</option><option>美国</option><option>澳洲</option><option>加拿大</option><option>新加坡</option><option>马来西亚</option><option>新西兰</option><option>香港</option><option>其他</option></select>
+                </div>
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">年级</label>
+                  <select class="form-select form-select-sm" id="qa-grade"><option value="">自动识别</option><option>大一</option><option>大二</option><option>大三</option><option>大四</option><option>研一</option><option>研二</option><option>高三</option><option>预科</option><option>其他</option></select>
+                </div>
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">科目</label><input type="text" class="form-control form-control-sm" id="qa-subject" placeholder="自动识别"></div>
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">来源</label>
+                  <select class="form-select form-select-sm" id="qa-source"><option value="">自动识别</option><option>抖音</option><option>小红书</option><option>视频号</option><option>转介绍</option><option>钉钉</option><option>微信</option><option>线上</option><option>其他</option></select>
+                </div>
+                <div class="col-12"><label class="form-label" style="font-size:.78rem;">备注</label><input type="text" class="form-control form-control-sm" id="qa-notes" placeholder="其他信息"></div>
+              </div>
+              <button class="btn btn-success btn-lg mt-3 w-100" onclick="confirmQuickAdd()" id="qa-confirm-btn"><i class="bi bi-check2-circle"></i> 确认创建线索</button>
+              <div id="qa-create-error" class="alert alert-danger py-2 mt-2 d-none"></div>
+            </div>
+          </div>
+          <div id="qa-success" class="d-none">
+            <div class="detail-card text-center py-4">
+              <i class="bi bi-check-circle-fill" style="font-size:3rem;color:#10b981;"></i>
+              <h5 class="mt-2" id="qa-success-name">线索已创建</h5>
+              <p class="text-muted" style="font-size:.85rem;" id="qa-success-detail"></p>
+              <div class="d-flex gap-2 justify-content-center mt-3">
+                <button class="btn btn-primary" onclick="resetQuickAdd()"><i class="bi bi-plus-lg"></i> 再录一条</button>
+                <button class="btn btn-outline-primary" onclick="viewNewLead()" id="qa-view-btn"><i class="bi bi-eye"></i> 查看详情</button>
               </div>
             </div>
           </div>
@@ -1520,6 +1575,7 @@ function switchPage(page) {
   else if (page === 'assignment') loadAssignmentDashboard();
   else if (page === 'followup-plan') { switchFupTab('overdue'); }
   else if (page === 'ai-reports') loadAiReportsGlobal();
+  else if (page === 'quick-add') { document.getElementById('qa-text')?.focus(); }
   else if (page === 'finance') { loadSettlements(); loadCommissions(); loadFinanceReport(); }
 }
 function backToLeads() {
@@ -2850,6 +2906,85 @@ async function loadFollowupStats() {
   if (el1) el1.textContent = s.today_followups || 0;
   if (el2) el2.textContent = s.overdue_followups || 0;
   if (el3) el3.textContent = s.followup_rate + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Quick Add (Mobile-first lead parsing)
+// ═══════════════════════════════════════════════════════════════════════════
+let _qaLastLeadId = null;
+
+async function parseAndPreview() {
+  const text = document.getElementById('qa-text').value.trim();
+  if (!text) { toast('请粘贴钉钉消息内容', 'warning'); return; }
+  document.getElementById('qa-confirm-btn').disabled = true;
+  document.getElementById('qa-confirm-btn').innerHTML = '<span class="spinner-border spinner-border-sm"></span> 解析中...';
+  const res = await API.post('/api/sm/leads/parse', { text });
+  document.getElementById('qa-confirm-btn').disabled = false;
+  document.getElementById('qa-confirm-btn').innerHTML = '<i class="bi bi-check2-circle"></i> 确认创建线索';
+  if (res.error) { toast(res.error, 'error'); return; }
+  const r = res.result || {};
+  // Fill preview
+  document.getElementById('qa-name').value = r.name || '';
+  document.getElementById('qa-phone').value = r.phone || '';
+  document.getElementById('qa-country').value = r.country || '';
+  document.getElementById('qa-grade').value = r.grade || '';
+  document.getElementById('qa-subject').value = r.subject || '';
+  document.getElementById('qa-source').value = r.source || '';
+  document.getElementById('qa-notes').value = r.notes || '';
+  // Confidence badge
+  const confEl = document.getElementById('qa-confidence');
+  const conf = (r.confidence || 0) * 100;
+  confEl.textContent = `匹配度 ${conf}%`;
+  confEl.className = 'badge ' + (conf >= 70 ? 'bg-success' : conf >= 40 ? 'bg-warning text-dark' : 'bg-danger');
+  // Duplicate warning
+  const dupEl = document.getElementById('qa-duplicate-warning');
+  if (r.duplicate) {
+    dupEl.classList.remove('d-none');
+    dupEl.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ⚠️ 该手机号已有线索: <strong>${esc(r.duplicate.name)}</strong> (${r.duplicate.status || '跟进中'})。确认创建将产生重复线索。`;
+  } else {
+    dupEl.classList.add('d-none');
+  }
+  document.getElementById('qa-result').classList.remove('d-none');
+  document.getElementById('qa-success').classList.add('d-none');
+  document.getElementById('qa-create-error').classList.add('d-none');
+}
+
+async function confirmQuickAdd() {
+  const name = document.getElementById('qa-name').value.trim();
+  if (!name) { toast('姓名不能为空', 'warning'); return; }
+  document.getElementById('qa-confirm-btn').disabled = true;
+  document.getElementById('qa-confirm-btn').innerHTML = '<span class="spinner-border spinner-border-sm"></span> 创建中...';
+  const res = await API.post('/api/sm/leads', {
+    name: name,
+    phone: document.getElementById('qa-phone').value.trim(),
+    country: document.getElementById('qa-country').value,
+    grade: document.getElementById('qa-grade').value,
+    subject: document.getElementById('qa-subject').value.trim(),
+    source: document.getElementById('qa-source').value || '钉钉',
+    notes: document.getElementById('qa-notes').value.trim() || '来自钉钉消息智能解析',
+  });
+  document.getElementById('qa-confirm-btn').disabled = false;
+  document.getElementById('qa-confirm-btn').innerHTML = '<i class="bi bi-check2-circle"></i> 确认创建线索';
+  if (res.error) {
+    document.getElementById('qa-create-error').textContent = res.error;
+    document.getElementById('qa-create-error').classList.remove('d-none');
+    return;
+  }
+  _qaLastLeadId = res.id;
+  document.getElementById('qa-result').classList.add('d-none');
+  document.getElementById('qa-success').classList.remove('d-none');
+  document.getElementById('qa-success-name').textContent = `✅ ${name} 已创建`;
+  document.getElementById('qa-success-detail').textContent = `手机: ${document.getElementById('qa-phone').value || '-'} · ${document.getElementById('qa-country').value || ''} ${document.getElementById('qa-subject').value || ''}`;
+  document.getElementById('qa-view-btn').onclick = function() { viewLead(_qaLastLeadId); };
+  toast('线索创建成功', 'success');
+}
+
+function resetQuickAdd() {
+  document.getElementById('qa-text').value = '';
+  document.getElementById('qa-result').classList.add('d-none');
+  document.getElementById('qa-success').classList.add('d-none');
+  document.getElementById('qa-create-error').classList.add('d-none');
+  document.getElementById('qa-text').focus();
 }
 
 async function reclaimFromPool(leadId) {
