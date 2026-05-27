@@ -1855,66 +1855,6 @@ function _initPage(p) {
 }
 /* Run on page load if ?p= parameter is present */
 _initPage();
-    allSec[i].classList.remove('active');
-  }
-  var navItems = document.querySelectorAll('.nav-item');
-  for (var j = 0; j < navItems.length; j++) {
-    navItems[j].classList.remove('active');
-  }
-  var tgt = document.getElementById('section-' + page);
-  if (tgt) {
-    tgt.classList.add('active');
-  }
-  // Show sub-sections for the same page
-  if (page === 'schedules') {
-    const seriesSec = document.getElementById('section-series');
-    if (seriesSec) seriesSec.classList.add('active');
-  }
-  const navItem = document.querySelector('.nav-item[data-page="' + page + '"]');
-  if (navItem) navItem.classList.add('active');
-  // Load data
-  if (page === 'dashboard') loadDashboard();
-  else if (page === 'leads') loadLeads();
-  else if (page === 'today') loadToday();
-  else if (page === 'coordinator') loadCoordinatorDashboard();
-  else if (page === 'schedules') { loadSchedules(); loadSeries(); }
-  else if (page === 'packages') loadPackages();
-  else if (page === 'tutors') loadTutors();
-  else if (page === 'pool') loadPool();
-  else if (page === 'assignment') loadAssignmentDashboard();
-  else if (page === 'followup-plan') { switchFupTab('overdue'); }
-  else if (page === 'ai-reports') loadAiReportsGlobal();
-  else if (page === 'quick-add') { document.getElementById('qa-text')?.focus(); }
-  else if (page === 'enrolled') loadEnrolled();
-  else if (page === 'finance') { loadSettlements(); loadCommissions(); loadFinanceReport(); }
-  // Debug: verify section is visible
-  const debugEl = document.getElementById('section-' + page);
-  if (debugEl) {
-    var hasActive = debugEl.classList.contains('active');
-    var hasImportant = debugEl.style.display;
-    console.log('  section-' + page + ' active=' + hasActive + ' display=' + (hasImportant||'CSS'));
-    if (!hasActive) {
-      debugEl.classList.add('active');
-      console.warn('  -> forced active');
-    }
-  }
-  } catch(e) {
-    console.error('switchPage error:', e);
-    // Always try to show the section, even on error
-    document.querySelectorAll('.section').forEach(function(s) { s.hidden = true; });
-    const target = document.getElementById('section-' + page);
-    if (target) {
-      target.hidden = false;
-      target.classList.add('active');
-      target.innerHTML = '<div style="padding:40px;text-align:center;">'
-        + '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:20px;max-width:500px;margin:0 auto;">'
-        + '<h4 style="color:#991b1b;margin:0 0 8px;">⚠️ 页面加载异常</h4>'
-        + '<p style="color:#6b7280;font-size:.85rem;">' + e.message + '</p>'
-        + '<button onclick="location.reload()" style="background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;">刷新页面</button>'
-        + '</div></div>';
-    }
-  }
-}
 function backToLeads() {
   switchPage('leads');
 }
