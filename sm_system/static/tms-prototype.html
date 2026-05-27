@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMS 原型 — 辅导管理系统</title>
+<link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+:root { --sidebar-width: 220px; --primary: #4f46e5; --primary-light: #eef2ff; }
+body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", Roboto, sans-serif; }
+.sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh; background: #1e1b4b; z-index: 1000; overflow-y: auto; }
+.sidebar-brand { padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.sidebar-brand h5 { margin: 0; font-weight: 700; font-size: 1rem; color: #fff; }
+.sidebar-brand small { color: #a5b4fc; font-size: .7rem; }
+.sidebar-nav { padding: 8px 0; }
+.nav-item { padding: 8px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #c7d2fe; font-size: .85rem; transition: all .15s; border-left: 3px solid transparent; }
+.nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: #818cf8; font-weight: 600; }
+.nav-item i { font-size: 1.1rem; width: 20px; text-align: center; }
+.nav-divider { border-top: 1px solid rgba(255,255,255,.1); margin: 8px 16px; }
+.nav-label { padding: 12px 20px 4px; color: #6b7280; font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; }
+.main { margin-left: var(--sidebar-width); min-height: 100vh; padding: 20px 24px; }
+.page-header { margin-bottom: 20px; }
+.page-header h3 { font-weight: 700; color: #111827; margin: 0; font-size: 1.25rem; }
+.page-header p { color: #6b7280; margin: 2px 0 0; font-size: .85rem; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* Stat Card */
+.stat-card { background: #fff; border-radius: 12px; padding: 18px 20px; border: 1px solid #e5e7eb; }
+.stat-card .label { font-size: .78rem; color: #6b7280; margin-bottom: 2px; }
+.stat-card .value { font-size: 1.6rem; font-weight: 700; color: #111827; }
+
+/* Card */
+.card-tms { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
+.card-header-tms { padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; }
+.card-header-tms h6 { margin: 0; font-weight: 600; font-size: .9rem; }
+
+/* Table */
+.table-tms { width: 100%; border-collapse: collapse; }
+.table-tms th { padding: 10px 16px; font-size: .78rem; font-weight: 600; color: #6b7280; text-align: left; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
+.table-tms td { padding: 10px 16px; font-size: .85rem; border-bottom: 1px solid #f3f4f6; }
+.table-tms tr:last-child td { border-bottom: none; }
+.table-tms tr:hover td { background: #f9fafb; }
+
+/* Badges */
+.badge-status { padding: 2px 10px; border-radius: 12px; font-size: .72rem; font-weight: 500; display: inline-block; }
+.bg-scheduled { background: #dbeafe; color: #1e40af; }
+.bg-confirmed { background: #e0e7ff; color: #3730a3; }
+.bg-progress { background: #fef3c7; color: #92400e; }
+.bg-done { background: #d1fae5; color: #065f46; }
+.bg-cancelled { background: #fee2e2; color: #991b1b; }
+.bg-rescheduled { background: #f3e8ff; color: #6b21a8; }
+.bg-pending { background: #fef3c7; color: #92400e; }
+.bg-active { background: #d1fae5; color: #065f46; }
+.bg-exhausted { background: #e5e7eb; color: #374151; }
+.bg-expired { background: #fee2e2; color: #991b1b; }
+
+/* Calendar */
+.cal-week { display: grid; grid-template-columns: 80px repeat(7, 1fr); gap: 1px; background: #e5e7eb; border-radius: 8px; overflow: hidden; }
+.cal-header { background: #f9fafb; padding: 8px; text-align: center; font-size: .78rem; font-weight: 600; color: #374151; }
+.cal-time { background: #fff; padding: 6px 8px; font-size: .75rem; color: #6b7280; text-align: right; }
+.cal-cell { background: #fff; min-height: 60px; padding: 4px; position: relative; }
+.cal-lesson { background: #e0e7ff; border-left: 3px solid #4f46e5; border-radius: 4px; padding: 3px 6px; margin-bottom: 2px; font-size: .7rem; cursor: pointer; }
+.cal-lesson .name { font-weight: 600; color: #1e1b4b; }
+.cal-lesson .time { color: #6b7280; }
+.cal-lesson.tutor-unavail { background: #fef3c7; border-left-color: #f59e0b; }
+
+/* Timeline */
+.timeline-compact { position: relative; padding: 0; }
+.timeline-item-c { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+.timeline-item-c:last-child { border-bottom: none; }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.tl-dot.red { background: #ef4444; }
+.tl-dot.yellow { background: #f59e0b; }
+.tl-dot.blue { background: #3b82f6; }
+.tl-dot.green { background: #10b981; }
+.tl-content { flex: 1; }
+.tl-content .title { font-size: .85rem; font-weight: 500; color: #111827; }
+.tl-content .meta { font-size: .75rem; color: #9ca3af; }
+
+/* Step form */
+.step-indicator { display: flex; gap: 0; margin-bottom: 24px; background: #fff; border-radius: 10px; border: 1px solid #e5e7eb; overflow: hidden; }
+.step-item { flex: 1; padding: 12px; text-align: center; font-size: .82rem; color: #9ca3af; border-right: 1px solid #e5e7eb; position: relative; }
+.step-item:last-child { border-right: none; }
+.step-item .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; border-radius: 50%; background: #e5e7eb; color: #6b7280; font-size: .75rem; font-weight: 700; margin-right: 6px; }
+.step-item.active { color: #4f46e5; font-weight: 600; }
+.step-item.active .num { background: #4f46e5; color: #fff; }
+.step-item.done { color: #10b981; }
+.step-item.done .num { background: #10b981; color: #fff; }
+
+/* Progress bar for packages */
+.pkg-progress { height: 8px; border-radius: 4px; background: #e5e7eb; }
+.pkg-progress .bar { height: 100%; border-radius: 4px; background: #4f46e5; transition: width .3s; }
+.pkg-progress .bar.warning { background: #f59e0b; }
+.pkg-progress .bar.danger { background: #ef4444; }
+
+/* Alert banner */
+.alert-banner { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: .85rem; color: #92400e; }
+
+/* Toast */
+.toast-container { position: fixed; top: 16px; right: 16px; z-index: 99999; }
+.toast-msg { background: #fff; border-radius: 10px; padding: 10px 18px; margin-bottom: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.12); border-left: 4px solid #4f46e5; font-size: .85rem; display: flex; align-items: center; gap: 8px; animation: slideIn .3s ease; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.mock-tag { font-size: .7rem; color: #9ca3af; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-left: 8px; }
+
+@media (max-width: 768px) {
+  .sidebar { width: 56px; }
+  .sidebar .nav-text, .sidebar-brand h5, .sidebar-brand small, .nav-label, .nav-divider { display: none; }
+  .main { margin-left: 56px; padding: 12px; }
+  .cal-week { grid-template-columns: 50px repeat(7, 1fr); font-size: .7rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h5>📘 TMS 原型</h5>
+      <small>Tutoring Management</small>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-label">交付管理</div>
+      <div class="nav-item active" onclick="switchPage('coordinator')">
+        <i class="bi bi-speedometer2"></i><span class="nav-text">教班主任工作台</span>
+      </div>
+      <div class="nav-item" onclick="switchPage('schedules')">
+        <i class="bi bi-calendar-week"></i><span class="nav-text">排课管理</span>
+      </div>
+      <div class="nav-item" onclick="switchPage('consumption')">
+        <i class="bi bi-file-check"></i><span class="nav-text">课时消耗</span>
+      </div>
+      <div class="nav-item" onclick="switchPage('packages')">
+        <i class="bi bi-box-seam"></i><span class="nav-text">课时包</span>
+      </div>
+      <div class="nav-item" onclick="switchPage('tutors')">
+        <i class="bi bi-person-workspace"></i><span class="nav-text">老师管理</span>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-label">CRM 旧模块</div>
+      <div class="nav-item" onclick="switchPage('old-dash')">
+        <i class="bi bi-grid-1x2"></i><span class="nav-text">旧版工作台</span>
+      </div>
+      <div class="nav-item" onclick="switchPage('old-leads')">
+        <i class="bi bi-people"></i><span class="nav-text">资源管理</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main" id="main-content">
+    <!-- ═══════════════ 教班主任工作台 ═══════════════ -->
+    <div id="section-coordinator" class="section active">
+      <div class="page-header d-flex align-items-center gap-2">
+        <h3>教班主任工作台</h3>
+        <span class="mock-tag">模拟数据</span>
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          <span style="font-size:.8rem;color:#6b7280;">👤 李老师（教班主任）</span>
+        </div>
+      </div>
+
+      <!-- Alert -->
+      <div class="alert-banner">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span><strong>3条待办</strong> · 张小明课时包剩余不足5小时，建议联系续费</span>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">待协调排课</div><div class="value" style="color:#f59e0b;">4</div></div><i class="bi bi-calendar-plus" style="font-size:1.4rem;color:#f59e0b;opacity:.6;"></i></div></div></div>
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">今日有课</div><div class="value" style="color:#3b82f6;">8</div></div><i class="bi bi-play-circle" style="font-size:1.4rem;color:#3b82f6;opacity:.6;"></i></div></div></div>
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">待确认消耗</div><div class="value" style="color:#ef4444;">5</div></div><i class="bi bi-clock-history" style="font-size:1.4rem;color:#ef4444;opacity:.6;"></i></div></div></div>
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">已用/总课时</div><div class="value">186<span style="font-size:.9rem;color:#9ca3af;">/312h</span></div></div><i class="bi bi-graph-up-arrow" style="font-size:1.4rem;color:#10b981;opacity:.6;"></i></div></div></div>
+      </div>
+
+      <div class="row g-3">
+        <!-- 待办列表 -->
+        <div class="col-md-5">
+          <div class="card-tms mb-3">
+            <div class="card-header-tms"><h6>⏳ 待处理</h6></div>
+            <div style="padding:8px 16px;">
+              <div class="timeline-item-c">
+                <div class="tl-dot red"></div>
+                <div class="tl-content">
+                  <div class="title">陈雪 — 希望周四加一节统计学课</div>
+                  <div class="meta">学生 · 英国时区 · 剩余课时 11.5h</div>
+                  <div class="mt-1"><button class="btn btn-primary btn-sm" onclick="toast('跳转到排课流程')">去排课</button></div>
+                </div>
+              </div>
+              <div class="timeline-item-c">
+                <div class="tl-dot red"></div>
+                <div class="tl-content">
+                  <div class="title">赵磊 — 下周一请假，需调课</div>
+                  <div class="meta">学生 · 加拿大时区 · 当前排课周三 20:00 EST</div>
+                  <div class="mt-1"><button class="btn btn-outline-primary btn-sm" onclick="toast('跳转到调课')">调课</button></div>
+                </div>
+              </div>
+              <div class="timeline-item-c">
+                <div class="tl-dot yellow"></div>
+                <div class="tl-content">
+                  <div class="title">刘洋 — 课后消耗待确认</div>
+                  <div class="meta">数据科学 · 约定1h · ClassIn实际 62min</div>
+                  <div class="mt-1"><span class="badge-status bg-done">消耗 1.0h</span> <span class="badge-status bg-pending" style="margin-left:4px;">待确认</span></div>
+                </div>
+              </div>
+              <div class="timeline-item-c">
+                <div class="tl-dot yellow"></div>
+                <div class="tl-content">
+                  <div class="title">王芳 — 课时包即将用完</div>
+                  <div class="meta">剩余 2.5h / 20h · 建议续费</div>
+                  <div class="mt-1"><div class="pkg-progress" style="width:120px;"><div class="bar danger" style="width:87.5%;"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 快速排课入口 -->
+          <div class="card-tms">
+            <div class="card-header-tms"><h6>📋 快速排课</h6></div>
+            <div style="padding:14px 16px;">
+              <div class="mb-2"><label class="form-label" style="font-size:.8rem;">选择学生</label>
+                <select class="form-select form-select-sm"><option>张小明 · 金融数学 · 英国</option><option>李华 · 会计 · 澳洲</option><option>王芳 · CS · 美国</option><option>赵磊 · 经济学 · 加拿大</option></select></div>
+              <div class="row g-2 mb-2">
+                <div class="col"><label class="form-label" style="font-size:.8rem;">日期</label><input type="date" class="form-control form-control-sm" value="2026-05-25"></div>
+                <div class="col"><label class="form-label" style="font-size:.8rem;">时间（学生时区）</label><input type="time" class="form-control form-control-sm" value="20:00"></div>
+              </div>
+              <div class="mb-2"><label class="form-label" style="font-size:.8rem;">学生时区</label>
+                <select class="form-select form-select-sm"><option>Europe/London (BST, UTC+1)</option><option>Australia/Sydney (AEST, UTC+10)</option><option>America/New_York (EDT, UTC-4)</option><option>Asia/Shanghai (CST, UTC+8)</option></select></div>
+              <div class="text-end text-muted" style="font-size:.8rem;margin-bottom:6px;">⏰ 对应北京时间: 2026-05-26 03:00</div>
+              <div class="mb-2 p-2" style="background:#f0fdf4;border-radius:6px;font-size:.82rem;border:1px solid #bbf7d0;">
+                <i class="bi bi-person-check text-success"></i> 此时段可上课的老师：
+                <strong>王老师</strong>（金融数学）、<strong>陈老师</strong>（统计学）
+              </div>
+              <button class="btn btn-primary w-100 btn-sm" onclick="toast('排课请求已发送，等待老师确认')">确认排课</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 今日课表 -->
+        <div class="col-md-7">
+          <div class="card-tms mb-3">
+            <div class="card-header-tms">
+              <h6>📅 今日课表 <span style="font-size:.7rem;color:#9ca3af;font-weight:400;">2026-05-23</span></h6>
+              <div><button class="btn btn-outline-primary btn-sm" onclick="switchPage('schedules')">完整课表</button></div>
+            </div>
+            <div style="padding:14px 16px;">
+              <div class="cal-week" style="grid-template-columns: 60px 1fr 1fr;">
+                <div class="cal-header" style="background:transparent;"></div>
+                <div class="cal-header">🇬🇧 英国时区</div>
+                <div class="cal-header">🇨🇳 北京时间</div>
+
+                <div class="cal-time">09:00</div>
+                <div class="cal-cell"></div>
+                <div class="cal-cell"></div>
+
+                <div class="cal-time">10:00</div>
+                <div class="cal-cell"></div>
+                <div class="cal-cell"></div>
+
+                <div class="cal-time">11:00</div>
+                <div class="cal-cell" style="min-height:40px;">
+                  <div class="cal-lesson"><div class="name">张小明 · 金融数学</div><div class="time">19:00-20:00 BST</div></div>
+                </div>
+                <div class="cal-cell"><div style="font-size:.7rem;color:#6b7280;padding:6px;">02:00-03:00 (+1d)</div></div>
+
+                <div class="cal-time">12:00</div>
+                <div class="cal-cell" style="min-height:40px;">
+                  <div class="cal-lesson"><div class="name">陈雪 · 统计学</div><div class="time">20:00-21:00 BST</div></div>
+                </div>
+                <div class="cal-cell"><div style="font-size:.7rem;color:#6b7280;padding:6px;">03:00-04:00 (+1d)</div></div>
+
+                <div class="cal-time">13:00</div>
+                <div class="cal-cell" style="min-height:40px;">
+                  <div class="cal-lesson"><div class="name">李华 · 会计</div><div class="time">12:00-13:30 AEST</div></div>
+                </div>
+                <div class="cal-cell"><div style="font-size:.7rem;color:#6b7280;padding:6px;">10:00-11:30</div></div>
+
+                <div class="cal-time">14:00</div>
+                <div class="cal-cell"></div>
+                <div class="cal-cell"></div>
+
+                <div class="cal-time">15:00</div>
+                <div class="cal-cell"></div>
+                <div class="cal-cell"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 本周排课概览 -->
+          <div class="card-tms">
+            <div class="card-header-tms"><h6>📊 本周排课统计</h6></div>
+            <div style="padding:14px 16px;">
+              <div class="row g-3">
+                <div class="col-md-4 text-center">
+                  <div style="font-size:2rem;font-weight:700;color:#4f46e5;">32</div>
+                  <div style="font-size:.8rem;color:#6b7280;">总课节数</div>
+                </div>
+                <div class="col-md-4 text-center">
+                  <div style="font-size:2rem;font-weight:700;color:#10b981;">28</div>
+                  <div style="font-size:.8rem;color:#6b7280;">已完成</div>
+                </div>
+                <div class="col-md-4 text-center">
+                  <div style="font-size:2rem;font-weight:700;color:#f59e0b;">87.5%</div>
+                  <div style="font-size:.8rem;color:#6b7280;">完成率</div>
+                </div>
+              </div>
+              <hr style="margin:12px 0;">
+              <div style="font-size:.85rem;">
+                <div class="d-flex justify-content-between mb-1"><span>🇬🇧 英国 (12节)</span><span style="color:#6b7280;">11完成 · 1取消</span></div>
+                <div class="d-flex justify-content-between mb-1"><span>🇦🇺 澳洲 (8节)</span><span style="color:#6b7280;">7完成 · 1待上</span></div>
+                <div class="d-flex justify-content-between mb-1"><span>🇺🇸 美国 (7节)</span><span style="color:#6b7280;">6完成 · 1调课</span></div>
+                <div class="d-flex justify-content-between"><span>🇨🇦 加拿大 (5节)</span><span style="color:#6b7280;">4完成 · 1待上</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 排课管理 ═══════════════ -->
+    <div id="section-schedules" class="section">
+      <div class="page-header d-flex align-items-center gap-2">
+        <h3>排课管理</h3>
+        <span class="mock-tag">模拟数据</span>
+        <div class="ms-auto">
+          <button class="btn btn-primary btn-sm" onclick="toast('打开新增排课弹窗')"><i class="bi bi-plus-lg"></i> 新增排课</button>
+        </div>
+      </div>
+
+      <!-- 周课表视图 -->
+      <div class="card-tms mb-3">
+        <div class="card-header-tms">
+          <h6>📅 课表 · 本周</h6>
+          <div>
+            <select class="form-select form-select-sm" style="width:auto;display:inline-block;">
+              <option>2026-05-18 ~ 05-24</option>
+              <option>2026-05-25 ~ 05-31</option>
+            </select>
+            <button class="btn btn-outline-primary btn-sm ms-2" onclick="toast('切换为按老师分组')">按老师</button>
+            <button class="btn btn-outline-primary btn-sm ms-1" onclick="toast('切换为按时区分组')">按时区</button>
+          </div>
+        </div>
+        <div style="padding:14px 16px;overflow-x:auto;">
+          <div class="cal-week">
+            <div class="cal-header"></div>
+            <div class="cal-header">周一<br><span style="font-weight:400;font-size:.7rem;">5/18</span></div>
+            <div class="cal-header">周二<br><span style="font-weight:400;font-size:.7rem;">5/19</span></div>
+            <div class="cal-header">周三<br><span style="font-weight:400;font-size:.7rem;">5/20</span></div>
+            <div class="cal-header">周四<br><span style="font-weight:400;font-size:.7rem;">5/21</span></div>
+            <div class="cal-header">周五<br><span style="font-weight:400;font-size:.7rem;">5/22</span></div>
+            <div class="cal-header" style="background:#eef2ff;">周六<br><span style="font-weight:400;font-size:.7rem;">5/23</span></div>
+            <div class="cal-header">周日</div>
+
+            <div class="cal-time">08</div>
+            <div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div>
+            <div class="cal-cell"></div><div class="cal-cell"></div>
+
+            <div class="cal-time">09</div>
+            <div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div>
+            <div class="cal-cell" style="min-height:50px;">
+              <div class="cal-lesson"><div class="name">张小明</div><div class="time">19:00 BST</div></div>
+            </div>
+            <div class="cal-cell"></div>
+
+            <div class="cal-time">10</div>
+            <div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div>
+            <div class="cal-cell" style="min-height:50px;">
+              <div class="cal-lesson"><div class="name">陈雪</div><div class="time">20:00 BST</div></div>
+            </div>
+            <div class="cal-cell"></div>
+
+            <div class="cal-time">11</div>
+            <div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div>
+            <div class="cal-cell" style="min-height:50px;">
+              <div class="cal-lesson"><div class="name">李华</div><div class="time">12:00 AEST</div></div>
+            </div>
+            <div class="cal-cell"></div>
+
+            <div class="cal-time">12</div>
+            <div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div>
+            <div class="cal-cell"></div><div class="cal-cell"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 排课列表 -->
+      <div class="card-tms">
+        <div class="card-header-tms">
+          <h6>所有排课</h6>
+          <div><select class="form-select form-select-sm" style="width:auto;display:inline-block;">
+            <option>全部状态</option><option>待确认</option><option>已确认</option><option>已完成</option>
+          </select></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table-tms">
+            <thead><tr><th>学生</th><th>科目</th><th>老师</th><th>时间 (学生时区)</th><th>状态</th><th>消耗</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>张小明</td><td>金融数学</td><td>王老师</td><td>周三 19:00-20:00 BST</td><td><span class="badge-status bg-confirmed">已确认</span></td><td>待上课</td><td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看详情')">详情</button></td></tr>
+              <tr><td>陈雪</td><td>统计学</td><td>陈老师</td><td>周三 20:00-21:00 BST</td><td><span class="badge-status bg-confirmed">已确认</span></td><td>待上课</td><td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看详情')">详情</button></td></tr>
+              <tr><td>李华</td><td>会计</td><td>王老师</td><td>周四 12:00-13:30 AEST</td><td><span class="badge-status bg-done">已完成</span></td><td>1.5h</td><td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看详情')">详情</button></td></tr>
+              <tr><td>赵磊</td><td>经济学</td><td>陈老师</td><td>周三 20:00-21:00 EDT</td><td><span class="badge-status bg-scheduled">待确认</span></td><td>-</td><td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看详情')">详情</button></td></tr>
+              <tr><td>刘洋</td><td>数据科学</td><td>王老师</td><td>周二 18:00-19:00 AEST</td><td><span class="badge-status bg-done">已完成</span></td><td>1.0h</td><td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看详情')">详情</button></td></tr>
+              <tr><td>王芳</td><td>CS</td><td>陈老师</td><td>周一 10:00-11:00 EDT</td><td><span class="badge-status bg-cancelled">已取消</span></td><td>-</td><td><span style="font-size:.78rem;color:#9ca3af;">学生请假</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 课时消耗 ═══════════════ -->
+    <div id="section-consumption" class="section">
+      <div class="page-header d-flex align-items-center gap-2">
+        <h3>课时消耗</h3>
+        <span class="mock-tag">模拟数据</span>
+        <div class="ms-auto"><span style="font-size:.82rem;color:#6b7280;">待确认: <strong style="color:#ef4444;">5</strong> 条</span></div>
+      </div>
+
+      <div class="row g-3">
+        <!-- 待确认 -->
+        <div class="col-md-7">
+          <div class="card-tms">
+            <div class="card-header-tms"><h6>⏳ 待确认消耗</h6></div>
+            <div style="overflow-x:auto;">
+              <table class="table-tms">
+                <thead><tr><th>学生</th><th>科目</th><th>约定时长</th><th>ClassIn实际</th><th>建议扣减</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>张小明</td><td>金融数学</td><td>1.0h</td><td>58min</td><td><strong>1.0h</strong></td>
+                    <td><button class="btn btn-success btn-sm me-1" onclick="toast('已确认消耗 1.0h')">✓ 确认</button><button class="btn btn-outline-secondary btn-sm" onclick="toast('打开修正弹窗')">修正</button></td>
+                  </tr>
+                  <tr>
+                    <td>李华</td><td>会计</td><td>1.5h</td><td>92min</td><td><strong>1.5h</strong></td>
+                    <td><button class="btn btn-success btn-sm me-1" onclick="toast('已确认消耗 1.5h')">✓ 确认</button><button class="btn btn-outline-secondary btn-sm" onclick="toast('打开修正弹窗')">修正</button></td>
+                  </tr>
+                  <tr>
+                    <td>刘洋</td><td>数据科学</td><td>1.0h</td><td>62min</td><td><strong style="color:#f59e0b;">1.0h</strong> <span style="font-size:.72rem;color:#9ca3af;">(超2min)</span></td>
+                    <td><button class="btn btn-success btn-sm me-1" onclick="toast('已确认消耗 1.0h')">✓ 确认</button><button class="btn btn-outline-secondary btn-sm" onclick="toast('打开修正弹窗')">修正</button></td>
+                  </tr>
+                  <tr>
+                    <td>王芳</td><td>CS</td><td>1.0h</td><td>0min <span class="badge-status bg-cancelled" style="margin-left:4px;">No-Show</span></td><td><strong style="color:#ef4444;">待判定</strong></td>
+                    <td>
+                      <button class="btn btn-outline-success btn-sm me-1" onclick="toast('判定为学生缺席，扣除课时')">学生缺席</button>
+                      <button class="btn btn-outline-danger btn-sm" onclick="toast('判定为老师缺席，不扣除')">老师缺席</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 消耗统计 -->
+        <div class="col-md-5">
+          <div class="card-tms mb-3">
+            <div class="card-header-tms"><h6>📊 今日消耗概况</h6></div>
+            <div style="padding:16px;">
+              <div class="text-center mb-3">
+                <div style="font-size:2.5rem;font-weight:700;color:#4f46e5;">8.5</div>
+                <div style="font-size:.85rem;color:#6b7280;">今日已消耗课时</div>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span style="font-size:.85rem;">已确认</span><span style="font-weight:600;">6.0h</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span style="font-size:.85rem;">待确认</span><span style="font-weight:600;color:#f59e0b;">2.5h</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span style="font-size:.85rem;">有争议</span><span style="font-weight:600;color:#ef4444;">0h</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-tms">
+            <div class="card-header-tms"><h6>📋 消耗规则</h6></div>
+            <div style="padding:14px 16px;font-size:.82rem;">
+              <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom:1px dashed #e5e7eb;">
+                <span>按实际上课时间扣减</span>
+                <span class="badge-status bg-active">默认</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom:1px dashed #e5e7eb;">
+                <span>约定 vs 实际差异 &lt;5min</span>
+                <span style="color:#6b7280;">按约定扣</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom:1px dashed #e5e7eb;">
+                <span>约定 vs 实际差异 &ge;5min</span>
+                <span style="color:#6b7280;">按实际扣</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span>学生 No-Show</span>
+                <span style="color:#6b7280;">扣课时</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 课时包 ═══════════════ -->
+    <div id="section-packages" class="section">
+      <div class="page-header d-flex align-items-center gap-2">
+        <h3>课时包管理</h3>
+        <span class="mock-tag">模拟数据</span>
+        <div class="ms-auto"><button class="btn btn-primary btn-sm" onclick="toast('打开新增课时包弹窗')"><i class="bi bi-plus-lg"></i> 新建课时包</button></div>
+      </div>
+
+      <!-- 汇总 -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="label">总课时包数</div><div class="value">24</div></div></div>
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="label">有效课时包</div><div class="value" style="color:#10b981;">20</div></div></div>
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="label">即将过期 (&lt;30天)</div><div class="value" style="color:#f59e0b;">3</div></div></div>
+        <div class="col-md-3 col-6"><div class="stat-card"><div class="label">已用罄</div><div class="value" style="color:#6b7280;">4</div></div></div>
+      </div>
+
+      <div class="card-tms">
+        <div class="card-header-tms">
+          <h6>课时包列表</h6>
+          <div><select class="form-select form-select-sm" style="width:auto;display:inline-block;"><option>全部状态</option><option>有效</option><option>即将过期</option><option>已用罄</option></select></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table-tms">
+            <thead><tr><th>学生</th><th>课时包</th><th>总课时</th><th>已用</th><th>剩余</th><th>进度</th><th>状态</th><th>到期</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>张小明</td><td>金融数学 30h</td><td>30h</td><td>18.5h</td><td><strong style="color:#f59e0b;">11.5h</strong></td>
+                <td><div style="width:100px;"><div class="pkg-progress"><div class="bar warning" style="width:62%;"></div></div></div></td>
+                <td><span class="badge-status bg-active">有效</span></td><td>2026-12-31</td>
+                <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看消耗明细')">明细</button></td>
+              </tr>
+              <tr>
+                <td>李华</td><td>会计 20h</td><td>20h</td><td>8h</td><td><strong>12h</strong></td>
+                <td><div style="width:100px;"><div class="pkg-progress"><div class="bar" style="width:40%;"></div></div></div></td>
+                <td><span class="badge-status bg-active">有效</span></td><td>2026-09-30</td>
+                <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看消耗明细')">明细</button></td>
+              </tr>
+              <tr>
+                <td>王芳</td><td>CS 20h</td><td>20h</td><td>17.5h</td><td><strong style="color:#ef4444;">2.5h</strong></td>
+                <td><div style="width:100px;"><div class="pkg-progress"><div class="bar danger" style="width:87.5%;"></div></div></div></td>
+                <td><span class="badge-status bg-active">有效</span></td><td>2026-08-15</td>
+                <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看消耗明细')">明细</button> <button class="btn btn-outline-success btn-sm" onclick="toast('跳转到续费')">续费</button></td>
+              </tr>
+              <tr>
+                <td>赵磊</td><td>经济学 15h</td><td>15h</td><td>15h</td><td><strong>0h</strong></td>
+                <td><div style="width:100px;"><div class="pkg-progress"><div class="bar" style="width:100%;background:#6b7280;"></div></div></div></td>
+                <td><span class="badge-status bg-exhausted">已用罄</span></td><td>2026-06-01</td>
+                <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看消耗明细')">明细</button></td>
+              </tr>
+              <tr>
+                <td>刘洋</td><td>数据科学 20h</td><td>20h</td><td>6h</td><td><strong>14h</strong></td>
+                <td><div style="width:100px;"><div class="pkg-progress"><div class="bar" style="width:30%;"></div></div></div></td>
+                <td><span class="badge-status bg-active">有效</span></td><td>2027-01-15</td>
+                <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看消耗明细')">明细</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 消耗明细 -->
+      <div class="card-tms mt-3">
+        <div class="card-header-tms"><h6>📋 最近消耗记录</h6></div>
+        <div style="overflow-x:auto;">
+          <table class="table-tms">
+            <thead><tr><th>时间</th><th>学生</th><th>科目</th><th>约定</th><th>实际</th><th>扣减</th><th>确认人</th></tr></thead>
+            <tbody>
+              <tr><td>05-23 19:00</td><td>张小明</td><td>金融数学</td><td>1.0h</td><td>58min</td><td><strong>1.0h</strong></td><td>李老师</td></tr>
+              <tr><td>05-23 12:00</td><td>李华</td><td>会计</td><td>1.5h</td><td>90min</td><td><strong>1.5h</strong></td><td>李老师</td></tr>
+              <tr><td>05-22 18:00</td><td>刘洋</td><td>数据科学</td><td>1.0h</td><td>62min</td><td><strong>1.0h</strong></td><td>李老师</td></tr>
+              <tr><td>05-22 10:00</td><td>王芳</td><td>CS</td><td>1.0h</td><td>55min</td><td><strong>1.0h</strong></td><td>李老师</td></tr>
+              <tr><td>05-21 20:00</td><td>陈雪</td><td>统计学</td><td>1.0h</td><td>0min</td><td><strong style="color:#ef4444;">0h</strong> <span style="font-size:.72rem;color:#9ca3af;">(老师缺席)</span></td><td>李老师</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 老师管理 ═══════════════ -->
+    <div id="section-tutors" class="section">
+      <div class="page-header d-flex align-items-center gap-2">
+        <h3>老师管理</h3>
+        <span class="mock-tag">模拟数据</span>
+        <div class="ms-auto"><button class="btn btn-primary btn-sm" onclick="toast('打开新增老师弹窗')"><i class="bi bi-plus-lg"></i> 添加老师</button></div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-8">
+          <div class="card-tms">
+            <div class="card-header-tms"><h6>授课老师列表</h6></div>
+            <div style="overflow-x:auto;">
+              <table class="table-tms">
+                <thead><tr><th>姓名</th><th>可教科目</th><th>时区</th><th>本周排课</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><strong>王老师</strong></td>
+                    <td><span class="badge-status bg-scheduled">金融数学</span> <span class="badge-status bg-scheduled">数据科学</span> <span class="badge-status bg-scheduled">统计学</span></td>
+                    <td>Asia/Shanghai</td>
+                    <td>12节</td>
+                    <td><span class="badge-status bg-active">可排课</span></td>
+                    <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看老师详情')">排课表</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>陈老师</strong></td>
+                    <td><span class="badge-status bg-scheduled">会计</span> <span class="badge-status bg-scheduled">经济学</span> <span class="badge-status bg-scheduled">CS</span></td>
+                    <td>Asia/Shanghai</td>
+                    <td>8节</td>
+                    <td><span class="badge-status bg-active">可排课</span></td>
+                    <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看老师详情')">排课表</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>李老师</strong></td>
+                    <td><span class="badge-status bg-scheduled">商务管理</span> <span class="badge-status bg-scheduled">英语</span></td>
+                    <td>Europe/London</td>
+                    <td>5节</td>
+                    <td><span class="badge-status bg-pending">暂不接新</span></td>
+                    <td><button class="btn btn-outline-primary btn-sm" onclick="toast('查看老师详情')">排课表</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <!-- 老师空闲时间管理 -->
+          <div class="card-tms mb-3">
+            <div class="card-header-tms"><h6>⏰ 王老师 · 空闲时间</h6></div>
+            <div style="padding:12px 16px;">
+              <div class="d-flex justify-content-between mb-2" style="font-size:.82rem;">
+                <span>周一</span><span class="badge-status bg-active">19:00-23:00</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2" style="font-size:.82rem;">
+                <span>周三</span><span class="badge-status bg-active">19:00-23:00</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2" style="font-size:.82rem;">
+                <span>周五</span><span class="badge-status bg-active">20:00-23:00</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2" style="font-size:.82rem;">
+                <span>周六</span><span class="badge-status bg-pending">14:00-18:00</span>
+              </div>
+              <button class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="toast('打开空闲时间编辑')">编辑空闲时间</button>
+            </div>
+          </div>
+
+          <div class="card-tms">
+            <div class="card-header-tms"><h6>📊 老师统计</h6></div>
+            <div style="padding:14px 16px;">
+              <div class="d-flex justify-content-between mb-2"><span>活跃老师数</span><strong>3</strong></div>
+              <div class="d-flex justify-content-between mb-2"><span>本周总排课</span><strong>32节</strong></div>
+              <div class="d-flex justify-content-between mb-2"><span>平均每位老师</span><strong>10.7节/周</strong></div>
+              <div class="d-flex justify-content-between"><span>最忙老师</span><strong>王老师 · 12节</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 旧模块占位 ═══════════════ -->
+    <div id="section-old-dash" class="section"><div class="page-header"><h3>旧版工作台</h3><p>现有 CRM 工作台，功能保持不变</p></div><div class="card-tms p-4 text-center" style="color:#9ca3af;"><i class="bi bi-arrow-left" style="font-size:2rem;"></i><p class="mt-2">返回侧边栏「教班主任工作台」查看新版</p></div></div>
+    <div id="section-old-leads" class="section"><div class="page-header"><h3>资源管理</h3><p>现有 CRM 线索管理，功能保持不变</p></div><div class="card-tms p-4 text-center" style="color:#9ca3af;"><i class="bi bi-arrow-left" style="font-size:2rem;"></i><p class="mt-2">功能同线上版 http://localhost:8766</p></div></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+function switchPage(page) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + page).classList.add('active');
+  document.querySelectorAll(`.nav-item`).forEach(n => {
+    if (n.onclick && n.onclick.toString().includes(page)) n.classList.add('active');
+  });
+  // Also match the sidebar items
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes("'"+page+"'")) n.classList.add('active');
+  });
+}
+
+function toast(msg) {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast-msg';
+  el.innerHTML = `<i class="bi bi-check-circle"></i> ${msg}`;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 2000);
+}
+</script>
+</body>
+</html>

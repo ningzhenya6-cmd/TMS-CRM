@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpaceX 风格 · 留学科辅</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #000;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 48px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%);
+    }
+    .nav-logo { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #fff; }
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; transition: color 0.2s; }
+    .nav-links a:hover { color: #fff; }
+    .nav-cta { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s; }
+    .nav-cta:hover { color: #fff; }
+    @media (max-width: 768px) { nav { padding: 20px 24px; } .nav-links { display: none; } }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative; height: 100vh; min-height: 600px;
+      display: flex; align-items: flex-end; padding: 0 0 120px 48px; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 120% 60% at 30% 100%, rgba(60,80,200,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse 80% 50% at 70% 100%, rgba(100,60,200,0.05) 0%, transparent 50%),
+                  linear-gradient(180deg, #000 0%, #050508 40%, #000 100%);
+    }
+    .hero-line {
+      position: absolute; left: 48px; top: 0; bottom: 0; width: 1px;
+      background: linear-gradient(to bottom, transparent 20%, rgba(255,255,255,0.06) 40%, rgba(255,255,255,0.06) 60%, transparent 80%);
+    }
+    .hero-content { position: relative; z-index: 2; max-width: 800px; }
+    .hero-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.25);
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-size: clamp(42px, 7vw, 88px); font-weight: 900;
+      letter-spacing: -2px; line-height: 1.05;
+    }
+    .hero-title-sub {
+      display: block; color: rgba(255,255,255,0.15); font-weight: 400;
+      margin-top: 8px; letter-spacing: -1px;
+    }
+    .hero-desc {
+      font-size: 16px; color: rgba(255,255,255,0.25); max-width: 520px;
+      margin-top: 24px; line-height: 1.8; font-weight: 300;
+    }
+    .hero-cta {
+      display: inline-block; margin-top: 40px;
+      padding: 16px 44px; border: 1.5px solid rgba(255,255,255,0.25);
+      color: #fff; font-size: 12px; font-weight: 700;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      text-decoration: none; cursor: pointer; background: transparent;
+      transition: all 0.3s;
+    }
+    .hero-cta:hover { background: #fff; color: #000; border-color: #fff; }
+    @media (max-width: 768px) { .hero { padding: 0 24px 80px 24px; } .hero-line { left: 24px; } }
+
+    /* ===== SECTION ===== */
+    section { padding: 120px 48px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.2);
+      margin-bottom: 12px; text-transform: uppercase;
+    }
+    .section-title { font-size: clamp(28px, 4vw, 48px); font-weight: 700; line-height: 1.15; letter-spacing: -0.5px; }
+    .section-title-muted { color: rgba(255,255,255,0.2); font-weight: 400; }
+    @media (max-width: 768px) { section { padding: 80px 24px; } }
+
+    /* ===== PROBLEM STRIP ===== */
+    .strip { display: flex; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 60px; }
+    .strip-item {
+      flex: 1; padding: 48px 40px;
+      border-right: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.3s;
+    }
+    .strip-item:last-child { border-right: none; }
+    .strip-item:hover { background: rgba(255,255,255,0.015); }
+    .strip-num { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: rgba(255,255,255,0.1); margin-bottom: 20px; }
+    .strip-item h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+    .strip-item p { font-size: 13px; color: rgba(255,255,255,0.3); line-height: 1.8; font-weight: 300; }
+    @media (max-width: 900px) { .strip { flex-direction: column; } .strip-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.04); } }
+
+    /* ===== MANTRA ===== */
+    .mantra { text-align: center; padding: 140px 48px; }
+    .mantra h2 {
+      font-size: clamp(24px, 3.5vw, 44px); font-weight: 300; line-height: 1.5;
+      color: rgba(255,255,255,0.4); max-width: 800px; margin: 0 auto;
+    }
+    .mantra strong { color: #fff; font-weight: 500; }
+    @media (max-width: 768px) { .mantra { padding: 100px 24px; } }
+
+    /* ===== AI SHOWCASE ===== */
+    .showcase { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; max-width: 1200px; margin: 0 auto; }
+    .showcase-left p { font-size: 14px; color: rgba(255,255,255,0.3); line-height: 1.8; font-weight: 300; margin-top: 20px; max-width: 440px; }
+    .stats { display: flex; gap: 40px; margin-top: 40px; }
+    .stat-num { font-size: 26px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
+    .chat-box { background: #0a0a0a; border: 1px solid rgba(255,255,255,0.06); }
+    .chat-dots { display: flex; gap: 6px; padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .chat-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+    .chat-dots span:first-child { background: rgba(255,255,255,0.25); }
+    .chat-body { padding: 24px; }
+    .msg { display: flex; gap: 12px; margin-bottom: 20px; }
+    .msg:last-child { margin-bottom: 0; }
+    .msg-av { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .msg-av.u { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.3); }
+    .msg-av.a { background: rgba(255,255,255,0.06); color: #fff; }
+    .msg-b { font-size: 13px; line-height: 1.7; color: rgba(255,255,255,0.4); font-weight: 300; }
+    .msg-b strong { color: #fff; font-weight: 500; }
+    .msg-source { font-size: 10px; color: rgba(255,255,255,0.1); margin-top: 6px; letter-spacing: 0.5px; }
+    @media (max-width: 900px) { .showcase { grid-template-columns: 1fr; gap: 40px; } }
+
+    /* ===== CTA ===== */
+    .cta-section { text-align: center; padding: 160px 48px; border-bottom: none; }
+    .cta-section h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 700; max-width: 600px; margin: 0 auto 12px; line-height: 1.2; letter-spacing: -0.5px; }
+    .cta-section p { font-size: 16px; color: rgba(255,255,255,0.25); font-weight: 300; margin-bottom: 44px; }
+    .cta-btn {
+      display: inline-block; padding: 18px 52px; border: 1.5px solid rgba(255,255,255,0.25);
+      color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; text-decoration: none; cursor: pointer; background: transparent;
+      transition: all 0.3s;
+    }
+    .cta-btn:hover { background: #fff; color: #000; border-color: #fff; }
+
+    /* ===== CARDS GRID ===== */
+    .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 60px; background: rgba(255,255,255,0.04); }
+    .card { background: #000; padding: 56px 40px; transition: background 0.3s; }
+    .card:hover { background: #0a0a0a; }
+    .card-icon { font-size: 24px; margin-bottom: 20px; opacity: 0.4; }
+    .card h3 { font-size: 17px; font-weight: 600; margin-bottom: 12px; }
+    .card p { font-size: 13px; color: rgba(255,255,255,0.3); line-height: 1.8; font-weight: 300; }
+    @media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } }
+
+    footer { padding: 32px 48px 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+    footer .legal { font-size: 11px; color: rgba(255,255,255,0.1); letter-spacing: 1px; }
+    footer .links { display: flex; gap: 20px; list-style: none; }
+    footer .links a { font-size: 11px; color: rgba(255,255,255,0.15); text-decoration: none; letter-spacing: 1px; transition: color 0.2s; }
+    footer .links a:hover { color: #fff; }
+    @media (max-width: 768px) { footer { flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px; } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">AcadAI</div>
+  <ul class="nav-links">
+    <li><a href="#">使命</a></li>
+    <li><a href="#">产品</a></li>
+    <li><a href="#">案例</a></li>
+    <li><a href="#">关于</a></li>
+  </ul>
+  <div class="nav-cta">体验 →</div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-line"></div>
+  <div class="hero-content">
+    <div class="hero-label">专为中国留学生打造</div>
+    <h1 class="hero-title">
+      学业困境
+      <span class="hero-title-sub">不再独自面对</span>
+    </h1>
+    <p class="hero-desc">
+      基于数千真实辅导案例，我们将经验沉淀为 AI 智能引擎。<br>
+      7×24 小时在线，随时提供精准的学业解决方案。
+    </p>
+    <button class="hero-cta">立即体验</button>
+  </div>
+</section>
+
+<!-- ===== PROBLEM ===== -->
+<section>
+  <div class="section-label">挑战</div>
+  <h2 class="section-title">
+    每一步，<span class="section-title-muted">都是一道坎</span>
+  </h2>
+  <div class="strip">
+    <div class="strip-item">
+      <div class="strip-num">01</div>
+      <h3>学业焦虑</h3>
+      <p>全英文授课听不懂、论文格式不了解、小组讨论插不上话。每一步都在消耗信心，而身边没有可以问的人。</p>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num">02</div>
+      <h3>文化孤岛</h3>
+      <p>时差让与国内的联系变得艰难，国外的 Support 资源不知道去哪找。很多问题一拖再拖，从小问题变成大危机。</p>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num">03</div>
+      <h3>时间紧迫</h3>
+      <p>DDL 就在眼前，找 Tutor、约时间、等回复——每一步都在消耗本就不多的时间。等找到人帮忙，已经来不及了。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MANTRA ===== -->
+<section class="mantra">
+  <h2>
+    我们相信，<strong>有经验的过来人</strong>是最好的指南针。<br>
+    我们把这些经验做成了 <strong>AI</strong>。
+  </h2>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section>
+  <div class="section-label">解决方案</div>
+  <h2 class="section-title">
+    你的经验 <span class="section-title-muted">× AI 的能力</span>
+  </h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🧠</div>
+      <h3>案例沉淀</h3>
+      <p>每一个辅导案例、每一个成功的方法论，都被结构化沉淀到知识库中，成为 AI 的训练基础。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>即时响应</h3>
+      <p>无需等待、无需约时间。输入你的问题，AI 在数秒内从知识库中提取最相关的经验给出回答。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>持续进化</h3>
+      <p>每一次新的辅导案例、每一份新的反馈，都被纳入知识库。AI 的能力随着案例的积累越来越强。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI SHOWCASE ===== -->
+<section>
+  <div class="showcase">
+    <div class="showcase-left">
+      <div class="section-label">产品演示</div>
+      <h2 class="section-title">
+        AI 对话 <span class="section-title-muted">实时体验</span>
+      </h2>
+      <p>输入你的学业问题，AI 从知识库中提取最相关的经验，给出精准、可执行的回答。每个回答都标注了来源案例数量。</p>
+      <div class="stats">
+        <div><div class="stat-num">2,000+</div><div class="stat-label">辅导案例</div></div>
+        <div><div class="stat-num">92%</div><div class="stat-label">解决率</div></div>
+        <div><div class="stat-num">7×24</div><div class="stat-label">即时响应</div></div>
+      </div>
+    </div>
+    <div class="chat-box">
+      <div class="chat-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="chat-body">
+        <div class="msg">
+          <div class="msg-av u">U</div>
+          <div>
+            <div class="msg-b">我在澳洲读大一，会计课完全听不懂，马上要 midterm 了，不知道该怎么办...</div>
+          </div>
+        </div>
+        <div class="msg">
+          <div class="msg-av a">AI</div>
+          <div>
+            <div class="msg-b">
+              别担心，往届学生遇到这种情况的很多。根据过往 <strong>47 个类似案例</strong>的经验：<br><br>
+              <strong>1.</strong> 先把课本每章后的 Key Terms 背熟——这是听懂课的基础。<br>
+              <strong>2.</strong> 去 YouTube 搜你的课程代码 + "review"，很多博主有考点串讲。<br>
+              <strong>3.</strong> 参加学校的 PASS（Peer Assisted Study）项目。
+            </div>
+            <div class="msg-source">基于 47 个类似案例 · 解决率 92%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="cta-section">
+  <h2>让每一个留学生<br>都能随时跨过那道坎</h2>
+  <p>告诉我你的项目信息，我帮你把网站搭出来。</p>
+  <button class="cta-btn">开始搭建</button>
+</section>
+
+<footer>
+  <div class="legal">AcadAI · © 2026</div>
+  <ul class="links">
+    <li><a href="#">微信</a></li>
+    <li><a href="#">联系</a></li>
+  </ul>
+</footer>
+
+</body>
+</html>

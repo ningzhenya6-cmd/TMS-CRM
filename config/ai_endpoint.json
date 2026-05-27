@@ -1,0 +1,11 @@
+{
+  "description": "AI 模型集成配置 - 在这里配置你自己的 AI 模型接口",
+  "instructions": "将 enabled 设为 true，并填写你的 AI 模型 API 地址和密钥",
+
+  "enabled": false,
+  "api_url": "http://localhost:5000/v1/chat/completions",
+  "api_key": "",
+  "model": "your-model-name",
+
+  "notes": "当 enabled = true 时，系统会使用你配置的 API 地址替换默认的 DeepSeek 接口。请确保你的 API 与 OpenAI 兼容格式（/v1/chat/completions）。"
+}

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>留学课业辅导 · 免费咨询</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", Roboto, sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; flex-direction: column; }
+.container { max-width: 480px; margin: 0 auto; padding: 20px 16px; flex: 1; display: flex; flex-direction: column; }
+
+/* Header */
+.header { text-align: center; padding: 24px 0 20px; }
+.header h1 { font-size: 1.5rem; font-weight: 700; color: #1e1b4b; }
+.header p { font-size: .88rem; color: #6b7280; margin-top: 4px; }
+
+/* Feature badges */
+.features { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.feature-tag { background: #e0e7ff; color: #3730a3; font-size: .72rem; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+
+/* Form card */
+.form-card { background: #fff; border-radius: 16px; padding: 24px 20px; box-shadow: 0 4px 24px rgba(0,0,0,.06); border: 1px solid #e5e7eb; }
+.form-card h3 { font-size: 1.05rem; font-weight: 600; color: #1e1b4b; margin-bottom: 4px; }
+.form-card .sub { font-size: .8rem; color: #9ca3af; margin-bottom: 20px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: .82rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+.form-group label .req { color: #ef4444; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: .9rem; outline: none; transition: border .15s; font-family: inherit; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+
+/* Captcha */
+.captcha-row { display: flex; gap: 8px; align-items: center; }
+.captcha-row .captcha-challenge { background: #f3f4f6; padding: 8px 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; color: #1e1b4b; white-space: nowrap; }
+.captcha-row input { flex: 1; min-width: 0; }
+.captcha-row .refresh-btn { background: none; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; cursor: pointer; color: #6b7280; font-size: 1rem; line-height: 1; }
+.captcha-row .refresh-btn:hover { background: #f3f4f6; }
+
+/* Submit button */
+.submit-btn { width: 100%; padding: 12px; background: #4f46e5; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s; margin-top: 4px; }
+.submit-btn:hover { background: #4338ca; }
+.submit-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+/* Success state */
+.success-card { display: none; text-align: center; padding: 32px 20px; }
+.success-card .icon { font-size: 3rem; margin-bottom: 12px; }
+.success-card h3 { font-size: 1.2rem; font-weight: 700; color: #065f46; margin-bottom: 6px; }
+.success-card p { color: #6b7280; font-size: .88rem; margin-bottom: 20px; line-height: 1.6; }
+.success-card .wechat-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; }
+.success-card .wechat-card .label { font-size: .78rem; color: #6b7280; margin-bottom: 2px; }
+.success-card .wechat-card .value { font-size: 1.1rem; font-weight: 600; color: #065f46; }
+
+/* Error */
+.alert-error { display: none; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 10px; font-size: .82rem; margin-bottom: 14px; }
+
+/* Footer */
+.footer { text-align: center; padding: 20px 0 24px; font-size: .75rem; color: #9ca3af; }
+
+/* Loading spinner */
+.spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .5s linear infinite; margin: 0 auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>课程辅导</h1>
+    <p>海外留学课业辅导 · 免费咨询评估</p>
+  </div>
+  <div class="features">
+    <span class="feature-tag">本科/硕士</span>
+    <span class="feature-tag">数学/统计</span>
+    <span class="feature-tag">计算机/金融</span>
+    <span class="feature-tag">论文辅导</span>
+    <span class="feature-tag">考前冲刺</span>
+  </div>
+
+  <div class="form-card" id="form-card">
+    <h3>免费咨询</h3>
+    <p class="sub">留下联系方式，专业顾问为您评估</p>
+    <div class="alert-error" id="form-error"></div>
+    <form id="leadForm" onsubmit="return false;">
+      <div class="form-group">
+        <label>姓名 <span class="req">*</span></label>
+        <input type="text" id="field-name" placeholder="您的称呼" required>
+      </div>
+      <div class="form-group">
+        <label>手机号</label>
+        <input type="tel" id="field-phone" placeholder="方便我们联系您">
+      </div>
+      <div class="form-group">
+        <label>微信</label>
+        <input type="text" id="field-wechat" placeholder="微信号，方便添加">
+      </div>
+      <div class="form-group">
+        <label>辅导科目</label>
+        <input type="text" id="field-subject" placeholder="如：微积分、Python、论文润色">
+      </div>
+      <div class="form-group">
+        <label>备注</label>
+        <textarea id="field-notes" rows="2" placeholder="年级、学校、具体需求..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>验证码 <span class="req">*</span></label>
+        <div class="captcha-row">
+          <span class="captcha-challenge" id="captcha-challenge">--</span>
+          <input type="text" id="field-captcha" placeholder="计算结果" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <button type="button" class="refresh-btn" onclick="loadCaptcha()" title="换一题">&#x21bb;</button>
+        </div>
+      </div>
+      <button type="submit" class="submit-btn" id="submit-btn" onclick="submitForm()">
+        <span id="btn-text">提交咨询</span>
+        <span class="spinner" id="btn-spinner"></span>
+      </button>
+    </form>
+  </div>
+
+  <div class="success-card" id="success-card">
+    <div class="icon">&#x2705;</div>
+    <h3>提交成功！</h3>
+    <p>我们已收到您的咨询需求，<br>顾问将在 24 小时内与您联系。</p>
+    <div class="wechat-card">
+      <div class="label">咨询微信</div>
+      <div class="value" id="contact-wechat">edu-consultant</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 2026 留学课业辅导 · 专注海外学术支持
+  </div>
+</div>
+
+<script>
+// UTM auto-capture from URL params
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  ['utm_source','utm_campaign','utm_medium','campaign','ad_source'].forEach(k => {
+    const v = params.get(k);
+    if (v) sessionStorage.setItem(k, v);
+  });
+  // Track landing page
+  sessionStorage.setItem('landing_page', window.location.href);
+})();
+
+function getUtmParams() {
+  const obj = {};
+  ['utm_source','utm_campaign','utm_medium','campaign','ad_source'].forEach(k => {
+    obj[k] = sessionStorage.getItem(k) || '';
+  });
+  obj.landing_page = sessionStorage.getItem('landing_page') || '';
+  return obj;
+}
+
+async function loadCaptcha() {
+  try {
+    const resp = await fetch('/api/public/captcha');
+    const data = await resp.json();
+    document.getElementById('captcha-challenge').textContent = data.challenge;
+  } catch(e) {
+    document.getElementById('captcha-challenge').textContent = '? + ?';
+  }
+}
+
+async function submitForm() {
+  const name = document.getElementById('field-name').value.trim();
+  if (!name) {
+    showError('请输入姓名');
+    return;
+  }
+  const captcha = document.getElementById('field-captcha').value.trim();
+  if (!captcha) {
+    showError('请完成验证码');
+    return;
+  }
+
+  setLoading(true);
+  hideError();
+
+  const utm = getUtmParams();
+  const body = {
+    name: name,
+    phone: document.getElementById('field-phone').value.trim(),
+    wechat: document.getElementById('field-wechat').value.trim(),
+    subject: document.getElementById('field-subject').value.trim(),
+    notes: document.getElementById('field-notes').value.trim(),
+    captcha: captcha,
+    utm_source: utm.utm_source,
+    utm_campaign: utm.utm_campaign,
+    utm_medium: utm.utm_medium,
+    campaign: utm.campaign,
+    ad_source: utm.ad_source,
+    landing_page: utm.landing_page,
+  };
+
+  try {
+    const resp = await fetch('/api/public/lead', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const result = await resp.json();
+    if (resp.ok) {
+      document.getElementById('form-card').style.display = 'none';
+      document.getElementById('success-card').style.display = 'block';
+    } else {
+      showError(result.error || '提交失败，请重试');
+      // Refresh captcha on error
+      loadCaptcha();
+      document.getElementById('field-captcha').value = '';
+    }
+  } catch(e) {
+    showError('网络错误，请稍后重试');
+    loadCaptcha();
+    document.getElementById('field-captcha').value = '';
+  }
+  setLoading(false);
+}
+
+function showError(msg) {
+  const el = document.getElementById('form-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('form-error').style.display = 'none';
+}
+
+function setLoading(loading) {
+  document.getElementById('submit-btn').disabled = loading;
+  document.getElementById('btn-text').style.display = loading ? 'none' : 'inline';
+  document.getElementById('btn-spinner').style.display = loading ? 'block' : 'none';
+}
+
+// Init
+loadCaptcha();
+</script>
+</body>
+</html>

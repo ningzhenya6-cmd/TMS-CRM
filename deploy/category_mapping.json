@@ -1,0 +1,3289 @@
+[
+  {
+    "id": "kb-1779619916-0",
+    "category": "general",
+    "tags": [],
+    "is_active": 0,
+    "title": "测试2",
+    "old_category": "课业辅导"
+  },
+  {
+    "id": "kb-1779619927-1",
+    "category": "general",
+    "tags": [],
+    "is_active": 0,
+    "title": "测试条目1",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619927-2",
+    "category": "general",
+    "tags": [],
+    "is_active": 0,
+    "title": "测试条目2",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-3",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "布里斯托LLB大一新生首篇Essay翻车，IRAC逻辑全乱",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-4",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "学业衔接",
+      "心理健康",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学大二Constitutional Law期末3天极限突击",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-5",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "学业衔接",
+      "国际课程",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "布里斯托LLB大一EU Law同步辅导，课上听不懂课后补",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-6",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "补考",
+      "学业衔接",
+      "签证",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学大三挂科申诉+补考同步辅导",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-7",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "布里斯托计算机大二AI课论文，文献综述写成了产品说明书",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-8",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "布里斯托计算机大三操作系统期末，概念全会做题全废",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-9",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "KCL计算机大一数学+编程同步辅导，跟不上教学节奏",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-10",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "心理健康",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "KCL计算机研前预习，跨专业衔接怕掉队",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-11",
+    "category": "cs-it",
+    "tags": [
+      "传媒",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "职业发展",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "利物浦传媒大二Media Analysis论文：会写新闻稿≠会写学术论文",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-12",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "金融",
+      "会计",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "伯明翰会计大二Financial Reporting期末，三张报表关系不打通",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-13",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "谢菲尔德供应链硕士论文：数据有了，分析框架没了",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-14",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "商科",
+      "市场营销",
+      "教育",
+      "心理学",
+      "学术写作",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "萨塞克斯硕士全程同步，一年制太赶全程护航",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-15",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "会计",
+      "商科",
+      "市场营销",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "格拉斯哥商科大一入学前预习，从0到跟上大课",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-16",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "UAL大三Fine Art毕业论文，创作能讲清楚但写不清楚",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-17",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "会计",
+      "商科",
+      "传媒",
+      "教育",
+      "心理学",
+      "数学/统计"
+    ],
+    "is_active": 1,
+    "title": "利兹传媒大二Digital Media论文：选题太宽写到一半写不下去",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-18",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "心理健康",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "曼大经济学硕士挂科申诉——迟交作业被直接判零",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-19",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "数学/统计",
+      "学术写作",
+      "挂科申诉",
+      "补考",
+      "学业衔接",
+      "家长指南",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "华威经济学硕士挂科申诉——微观经济学两门挂科",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-20",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "学术写作",
+      "挂科申诉",
+      "签证",
+      "心理健康",
+      "职业发展",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "格拉斯哥经济学硕士挂科申诉——毕业论文前被卡",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-21",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "商科",
+      "学术写作",
+      "引用规范",
+      "职业发展",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "KCL法学硕士论文——国际商法论文卡壳三个月",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619940-22",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "学术写作",
+      "方法论",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "爱丁堡法学硕士论文——知识产权法论文方法论困境",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-23",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "学业衔接",
+      "小组作业",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "硕士申请",
+      "本科申请"
+    ],
+    "is_active": 1,
+    "title": "帝国理工管理学硕士——全英文Case Study跟不上",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-24",
+    "category": "economics-finance",
+    "tags": [
+      "市场营销",
+      "学术写作",
+      "学业衔接",
+      "小组作业",
+      "心理健康",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "华威商学院市场营销硕士——全课程同步跟不上节奏",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-25",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "UCL教育学硕士论文——教育政策分析论文被打回",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-26",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "工程",
+      "医学/护理",
+      "学术写作",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "博士申请"
+    ],
+    "is_active": 1,
+    "title": "牛津CS硕士论文——深度学习方向论文实验做不出来",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-27",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "爱丁堡AI硕士考前冲刺——机器学习考试三轮复习",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-28",
+    "category": "appeal",
+    "tags": [
+      "计算机科学",
+      "工程",
+      "挂科申诉",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "学术诚信",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "布里斯托工程硕士考前辅导——有限元分析考试零基础",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-29",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "学术写作",
+      "方法论",
+      "面试",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "博士申请"
+    ],
+    "is_active": 1,
+    "title": "剑桥博士RP辅导——教育学博士Research Proposal",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-30",
+    "category": "academic-writing",
+    "tags": [
+      "心理学",
+      "化学",
+      "学术写作",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "博士申请",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "帝国理工博士SCI辅导——材料学博士第一篇论文被拒",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-31",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "学术写作",
+      "方法论",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "LSE社会学硕士论文——定性研究访谈数据一团乱",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-32",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "经济学",
+      "商科",
+      "教育",
+      "工程",
+      "数学/统计",
+      "学术写作"
+    ],
+    "is_active": 1,
+    "title": "谢菲尔德跨专业硕士适应——英语本科转大数据硕士",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-33",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "数学/统计",
+      "选课",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "OSU经济预习——从\"没学过经济学\"到稳稳跟上",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-34",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "数学/统计",
+      "转学",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "OSU经济预习——转学跨专业的补救方案",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-35",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "数学/统计",
+      "方法论",
+      "学业衔接",
+      "心理健康",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "OSU经济同步——跟不上节奏的大三专业课",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-36",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "UCSD CS——CSE 12数据结构崩溃边缘",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-37",
+    "category": "economics-finance",
+    "tags": [
+      "工程",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "四维诊断",
+      "学管服务",
+      "加拿大留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "加拿大EE硕士——ECE科研方法论+论文双困境",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-38",
+    "category": "economics-finance",
+    "tags": [
+      "工程",
+      "数学/统计",
+      "选课",
+      "学业衔接",
+      "心理健康",
+      "四维诊断",
+      "学管服务",
+      "加拿大留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大EE硕士——选课失误导致的第一学期全面告急",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-39",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "商科",
+      "教育",
+      "引用规范",
+      "面试",
+      "学业衔接",
+      "心理健康",
+      "职业发展"
+    ],
+    "is_active": 1,
+    "title": "加拿大会计——CPA前置课Advanced Financial Accounting",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-40",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "传媒",
+      "引用规范",
+      "挂科申诉",
+      "心理健康",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大会计——中级财务会计II期中挂科后的考前急救",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-41",
+    "category": "mental-health",
+    "tags": [
+      "数学/统计",
+      "化学",
+      "学业衔接",
+      "小组作业",
+      "家长指南",
+      "心理健康",
+      "低龄留学",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "加拿大高中数学+化学——11年级函数和化学同时告急",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-42",
+    "category": "economics-finance",
+    "tags": [
+      "工程",
+      "数学/统计",
+      "化学",
+      "心理健康",
+      "四维诊断",
+      "学管服务",
+      "美国留学",
+      "加拿大留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大高中数学+化学——12年级微积分申工程目标分不够",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-43",
+    "category": "mental-health",
+    "tags": [
+      "心理学",
+      "数学/统计",
+      "物理",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学",
+      "加拿大留学"
+    ],
+    "is_active": 1,
+    "title": "多伦多大学——MAT137微积分证明题全面崩溃",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-44",
+    "category": "mental-health",
+    "tags": [
+      "物理",
+      "化学",
+      "生物",
+      "学业衔接",
+      "家长指南",
+      "心理健康",
+      "国际课程",
+      "低龄留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大低龄OSSD——10年级英语+科学双科薄弱",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-45",
+    "category": "pre-university",
+    "tags": [
+      "工程",
+      "数学/统计",
+      "物理",
+      "国际课程",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "美国高中AP——AP微积分BC+物理C双线备考",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-46",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "美国本科——UCLA经济统计大三论文被指控抄袭",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-47",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "数学/统计",
+      "方法论",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学",
+      "本科申请"
+    ],
+    "is_active": 1,
+    "title": "美国本科——NYU Stern商科新生Business Statistics作业全线告急",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-48",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "商科",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "悉尼大学会计大一跟不上节奏",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-49",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "商科",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "学业衔接",
+      "家长指南",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "墨尔本大学会计预习——高中到大一的桥梁",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619941-50",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "莫纳什会计期中挂科紧急抢救",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-51",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "选课",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "悉尼大学商科选课踩坑",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-52",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "小组作业",
+      "心理健康",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "莫纳什商科小组作业拖后腿",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-53",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "莫纳什商法essay跑题紧急修改",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-54",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "会计",
+      "商科",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "昆士兰大学商科大三预习——提前锁定HD",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-55",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "化学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "UNSW化学实验报告改到崩溃",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-56",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "市场营销",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "转学",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "RMIT挂科申诉——Show Cause逆转",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-57",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "选课",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "墨尔本大学计量经济学同步辅导",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-58",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "物理",
+      "学业衔接",
+      "职业发展",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "NUS计算机数据库项目卡壳",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-59",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "补考",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "科廷新加坡挂科不会写appeal信",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-60",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "金融",
+      "商科",
+      "教育",
+      "心理学",
+      "面试",
+      "学业衔接",
+      "职业发展"
+    ],
+    "is_active": 1,
+    "title": "港中文MBA面试模拟",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-61",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "金融",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "香港留学"
+    ],
+    "is_active": 1,
+    "title": "香港大学金融考前预测不准",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-62",
+    "category": "economics-finance",
+    "tags": [
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "挂科申诉",
+      "面试"
+    ],
+    "is_active": 1,
+    "title": "澳门城市大学文化产业毕业论文卡壳",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-63",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "学业衔接",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "布里斯托教育学硕士｜Research Proposal无从下手",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-64",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "市场营销",
+      "教育",
+      "心理学",
+      "学术写作",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "通用｜商科硕士Proposal卡在Research Gap",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-65",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "谢菲尔德计算机硕士｜Literature Review写得像产品说明书",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-66",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "引用规范",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "通用｜社科硕士LR写成文献流水账",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619942-67",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "方法论",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "通用｜理工科Methodology写得太笼统",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-68",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "KCL法学硕士｜Critical Analysis写不出\"批判\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-69",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "通用｜人文社科essay只会复述不会评价",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-70",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "经济学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学本科｜OSCOLA引用格式频频扣分",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-71",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "通用｜Harvard和APA混用被导师警告",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-72",
+    "category": "uk-law",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "通用｜Paraphrasing不当导致Turnitin高亮一片",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-73",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "教育",
+      "心理学",
+      "工程",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "澳洲金融硕士｜毕业论文全流程拖延到只剩一个月",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-74",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学术写作",
+      "方法论",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "OSU商科本科｜毕业论文从零到一没人管",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-75",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "生物",
+      "学术写作",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大多伦多大学｜英文论文语言不过关",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-76",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "小组作业"
+    ],
+    "is_active": 1,
+    "title": "新加坡国立大学｜多个DDL撞车论文时间崩塌",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-77",
+    "category": "uk-law",
+    "tags": [
+      "传媒",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "选课",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "通用｜被指控Plagiarism面临学术听证会",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-78",
+    "category": "mental-health",
+    "tags": [
+      "教育",
+      "心理学",
+      "数学/统计",
+      "转学",
+      "学业衔接",
+      "家长指南",
+      "心理健康",
+      "国际课程"
+    ],
+    "is_active": 1,
+    "title": "A-Level数学从E到A：英高Year 12函数与微积分同步",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-79",
+    "category": "mental-health",
+    "tags": [
+      "教育",
+      "心理学",
+      "工程",
+      "物理",
+      "选课",
+      "学业衔接",
+      "家长指南",
+      "国际课程"
+    ],
+    "is_active": 1,
+    "title": "A-Level物理衔接：从国内初中物理到AS Physics的跳级之痛",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619943-80",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "物理",
+      "学业衔接",
+      "家长指南"
+    ],
+    "is_active": 1,
+    "title": "A-Level数学考前冲刺：Further Maths的Mechanics让你怀疑人生",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-81",
+    "category": "mental-health",
+    "tags": [
+      "传媒",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "学业衔接",
+      "家长指南",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "安省G12 Advanced Functions：函数不难，难的是\"证明题\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-82",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "化学",
+      "学术写作",
+      "学业衔接",
+      "家长指南",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "安省G11 Chemistry：从\"背化学方程式\"到\"理解化学思维\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-83",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "数学/统计",
+      "方法论",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "安省G12 Calculus考前：Vectors把我搞疯了",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-84",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "传媒",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学业衔接",
+      "职业发展",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "IBDP Math AA HL同步：Internal Assessment选题困局",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-85",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "物理",
+      "学术写作",
+      "学业衔接",
+      "国际课程",
+      "预科",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "IBDP Physics SL实验报告：从\"记数据\"到\"写好一篇Science Essay\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-86",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "物理",
+      "化学",
+      "学术写作",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "OSSD同步：ENG4U英语课是中国理科生的噩梦",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-87",
+    "category": "economics-finance",
+    "tags": [
+      "教育",
+      "心理学",
+      "数学/统计",
+      "选课",
+      "学业衔接",
+      "家长指南",
+      "国际课程",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "AP Calculus BC预习：美高G10跳级选课的风险管理",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-88",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "工程",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "学业衔接",
+      "家长指南"
+    ],
+    "is_active": 1,
+    "title": "澳洲预科升本科：UNSW Foundation理科生的Academic English生死线",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-89",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "传媒",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "选课",
+      "学业衔接",
+      "职业发展"
+    ],
+    "is_active": 1,
+    "title": "英国本科预科同步：KCL Foundation商科生的数学恐慌",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-90",
+    "category": "academic-writing",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "选课",
+      "学业衔接",
+      "家长指南",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "低龄留学适应：13岁英国寄宿女生的\"全人护航\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619944-91",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "学业衔接",
+      "小组作业",
+      "家长指南"
+    ],
+    "is_active": 1,
+    "title": "低龄留学适应：新加坡AEIS考过≠活下来，中二女生的沉默课堂",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-92",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "学业衔接",
+      "国际课程",
+      "预科"
+    ],
+    "is_active": 1,
+    "title": "高中PBL项目：美高G11的Research Paper——一个人的毕业论文预演",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-93",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "心理学",
+      "学术写作",
+      "挂科申诉",
+      "补考",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "挂科后的学位危机——48小时申诉成功",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-94",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "化学",
+      "生物",
+      "医学/护理",
+      "学术写作",
+      "挂科申诉",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "三门连挂面临开除——医学预科生的绝地求生",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-95",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "引用规范",
+      "挂科申诉",
+      "学业衔接",
+      "小组作业",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "Turnitin相似度38%——被指控共谋作弊",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-96",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "会计",
+      "商科",
+      "教育",
+      "心理学",
+      "引用规范",
+      "挂科申诉",
+      "补考"
+    ],
+    "is_active": 1,
+    "title": "奶奶去世+final撞期——EC申请保住考试资格",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-97",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "选课",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "澳洲八大选错课——一学期白读了",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-98",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "方法论",
+      "选课",
+      "转学"
+    ],
+    "is_active": 1,
+    "title": "LSE选修课全是偏科怪——社科生的选课困局",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-99",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "商科",
+      "教育",
+      "心理学",
+      "面试",
+      "学业衔接",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "港大金融面试——群面被刷三次后的突破",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619945-100",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "面试",
+      "学业衔接",
+      "心理健康",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "多伦多大学Rotman MBA面试——中国工作经验如何在国际面试中讲好故事",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-101",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "面试",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "大厂裁员潮下的留学生——还没毕业就开始害怕",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-102",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "学业衔接",
+      "家长指南"
+    ],
+    "is_active": 1,
+    "title": "\"我女儿说一切都好，但成绩单告诉我她在撒谎\"——家长如何面对孩子挂科",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-103",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "家长指南",
+      "心理健康",
+      "职业发展",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "\"QS前100的学校到底怎么选\"——留学择校中的家长决策焦虑",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-104",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "物理",
+      "学业衔接",
+      "家长指南",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "孩子出国后我成了\"最熟悉的陌生人\"——家长如何做到\"支持而非控制\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-105",
+    "category": "mental-health",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "家长指南",
+      "四维诊断",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "家长会听不懂、邮件不敢回——家校沟通中的\"哑巴父母\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-106",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "家长指南",
+      "心理健康",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "孩子的成绩单我看不懂、学校系统我登不进——家校沟通中的\"信息断桥\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619946-107",
+    "category": "cs-it",
+    "tags": [
+      "传媒",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "面试",
+      "选课"
+    ],
+    "is_active": 1,
+    "title": "期中due撞上搬家、打工和感冒——留学生时间管理的多米诺骨牌",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-108",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "商科",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "转学",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "新西兰会计本科——以为\"水\"的专业差点挂科",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-109",
+    "category": "appeal",
+    "tags": [
+      "教育",
+      "心理学",
+      "工程",
+      "挂科申诉",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "德国TU9机械——德语授课的\"地狱难度\"",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-110",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "小组作业",
+      "四维诊断",
+      "学管服务",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "法国高商GE项目——小组作业被法国同学孤立",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-111",
+    "category": "mental-health",
+    "tags": [
+      "教育",
+      "心理学",
+      "学业衔接",
+      "心理健康",
+      "四维诊断",
+      "学管服务",
+      "本科申请"
+    ],
+    "is_active": 1,
+    "title": "日本语言学校——读了半年还没过N2",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-112",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "商科",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "补考",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "马来西亚本科——挂科补考不过面临退学",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-113",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学业衔接",
+      "四维诊断",
+      "学管服务",
+      "英国留学",
+      "GPA管理"
+    ],
+    "is_active": 1,
+    "title": "2+2利物浦——出国后GPA从3.5跌到2.1",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619947-114",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "1+3新南威尔士——预科成绩不够进不了本科",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-115",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "SQA 3+1——国内三年读完来英国发现跟不上",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-116",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "学业衔接",
+      "心理健康",
+      "职业发展"
+    ],
+    "is_active": 1,
+    "title": "GPA 4.0——从焦虑新生到全A学霸",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-117",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "转学",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "Dean's List——文科生转码逆袭进荣誉名单",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-118",
+    "category": "economics-finance",
+    "tags": [
+      "金融",
+      "会计",
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "挂科申诉"
+    ],
+    "is_active": 1,
+    "title": "挂科到Distinction——代写踩坑后被我们救回来",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-119",
+    "category": "appeal",
+    "tags": [
+      "教育",
+      "心理学",
+      "化学",
+      "生物",
+      "挂科申诉",
+      "学业衔接",
+      "心理健康",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "从休学到复学——重度抑郁学生重回校园",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-120",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "教育",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学业衔接",
+      "四维诊断",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "学术诚信红线——一次\"借鉴\"差点毁掉留学",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-121",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "挂科申诉",
+      "补考",
+      "选课"
+    ],
+    "is_active": 1,
+    "title": "挂科率高的课——提前知道这3门课就不会挂",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779619948-122",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "选课",
+      "学业衔接",
+      "四维诊断"
+    ],
+    "is_active": 1,
+    "title": "选课陷阱——为了凑学分选了\"全系最难\"的课",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620051-123",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "低龄留学",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "英国布里斯托大学法学大一，essay总是拿不到60分，说要critical analysis，但我不会写",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620065-124",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "商科",
+      "工程",
+      "数学/统计",
+      "挂科申诉",
+      "选课",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "英国KCL计算机大二期末复习不知道从哪里开始，time management崩溃",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620082-125",
+    "category": "uk-law",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "工程",
+      "数学/统计",
+      "物理",
+      "选课",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "爱丁堡EEE大二听不懂课，lecture上信号与系统全程懵",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620092-126",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "传媒",
+      "学术写作",
+      "学业衔接",
+      "心理健康",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "利物浦传媒大一，内向不敢在seminar发言，participation分数没了",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620105-127",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "工程",
+      "数学/统计",
+      "学业衔接",
+      "国际课程",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "英国Alevel数学，想从C冲到A，有什么方法",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620114-128",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "商科",
+      "心理学",
+      "方法论",
+      "低龄留学",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学proposal被导师否了两次，说research gap不清晰",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620127-129",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "英国曼大经济学硕士挂科了，被发academic warning怎么办",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620137-130",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "商科",
+      "学术写作",
+      "引用规范",
+      "学管服务",
+      "英国留学",
+      "博士申请"
+    ],
+    "is_active": 1,
+    "title": "布里斯托大学法学硕士，proposal被导师否了两次说research gap不清晰，怎么办？",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620152-131",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "经济学",
+      "金融",
+      "会计",
+      "商科",
+      "教育",
+      "数学/统计",
+      "学术写作"
+    ],
+    "is_active": 1,
+    "title": "伯明翰会计金融大一，全英文听不懂，Assignment不会做",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620164-132",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "商科",
+      "教育",
+      "心理学",
+      "工程",
+      "职业发展",
+      "学管服务",
+      "学术诚信"
+    ],
+    "is_active": 1,
+    "title": "谢菲尔德物流供应链考前辅导需要什么准备",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620175-133",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "商科",
+      "数学/统计",
+      "选课",
+      "转学",
+      "学业衔接",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "OSU经济学大一新生，国内普高毕业没学过经济，开学听不懂",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620188-134",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "工程",
+      "数学/统计",
+      "学术写作",
+      "选课",
+      "学业衔接",
+      "学管服务",
+      "加拿大留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大EE硕士工程数学跟不上",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620202-135",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "化学",
+      "选课",
+      "学业衔接",
+      "家长指南"
+    ],
+    "is_active": 1,
+    "title": "加拿大安省11年级，化学和数学同时跟不上，家长很着急",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620212-136",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "商科",
+      "数学/统计",
+      "学业衔接",
+      "国际课程",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "美国高中AP宏观经济考前两周开始复习来得及吗",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620224-137",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "经济学",
+      "商科",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学硕士论文proposal被导师否了，说research gap不清晰",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620236-138",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "数学/统计",
+      "选课",
+      "学业衔接",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "UCSD计算机大二ML课程完全听不懂",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620243-139",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考"
+    ],
+    "is_active": 1,
+    "title": "英国经济硕士两门核心课挂科被发academic warning怎么办",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620255-140",
+    "category": "academic-writing",
+    "tags": [
+      "数学/统计",
+      "物理",
+      "生物",
+      "学术写作",
+      "国际课程",
+      "学管服务",
+      "学术诚信",
+      "加拿大留学"
+    ],
+    "is_active": 1,
+    "title": "多伦多大学生命科学学术写作一直扣语言分",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620264-141",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "会计",
+      "学术写作",
+      "文献综述",
+      "学管服务",
+      "澳洲留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "Literature Review怎么写才不是流水账",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620273-142",
+    "category": "economics-finance",
+    "tags": [
+      "会计",
+      "教育",
+      "心理学",
+      "挂科申诉",
+      "学业衔接",
+      "心理健康",
+      "学管服务",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "澳洲八大会计大一，连debit/credit都搞不清，quiz连挂两次",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620282-143",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "学术写作",
+      "引用规范",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "Critical Analysis到底什么意思，每次都被批too descriptive",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620292-144",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "工程",
+      "数学/统计",
+      "学术写作",
+      "选课",
+      "小组作业",
+      "职业发展",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "悉尼大学选课怎么选给分好的课",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620304-145",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "工程",
+      "数学/统计",
+      "挂科申诉",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "KCL计算机大二考前复习不知道从哪开始",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620317-146",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "会计",
+      "商科",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "选课",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "莫纳什商科大一作业辅导需要帮忙",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620327-147",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "金融",
+      "会计",
+      "数学/统计",
+      "选课",
+      "转学",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "OSU经济学大一新生，国内普高毕业没学过经济开学听不懂",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620339-148",
+    "category": "appeal",
+    "tags": [
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "选课",
+      "转学",
+      "小组作业",
+      "签证",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "澳洲本科挂科了，show cause怎么应付",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620361-149",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "工程",
+      "数学/统计",
+      "挂科申诉",
+      "选课",
+      "学业衔接",
+      "学管服务",
+      "学术诚信"
+    ],
+    "is_active": 1,
+    "title": "墨尔本大学课程辅导怎么找",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620368-150",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "商科",
+      "心理学",
+      "学术写作",
+      "方法论",
+      "低龄留学",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学论文proposal被否了怎么办",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620381-151",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "商科",
+      "工程",
+      "数学/统计",
+      "化学",
+      "学术写作",
+      "引用规范",
+      "选课"
+    ],
+    "is_active": 1,
+    "title": "UNSW新南科学选课避坑",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620389-152",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "数学/统计",
+      "挂科申诉",
+      "补考",
+      "转学",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "英国经济硕士挂科被发warning",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620398-153",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "金融",
+      "商科",
+      "市场营销",
+      "教育",
+      "学业衔接",
+      "职业发展",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "昆士兰国际商务预习怎么准备",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620427-154",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "心理学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "面试",
+      "小组作业",
+      "签证"
+    ],
+    "is_active": 1,
+    "title": "英国一年制商科硕士，学业+求职双线压力崩溃了",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620436-155",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "教育",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "面试",
+      "低龄留学"
+    ],
+    "is_active": 1,
+    "title": "剑桥博士RP怎么写才能过",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620448-156",
+    "category": "economics-finance",
+    "tags": [
+      "化学",
+      "学术写作",
+      "心理健康",
+      "学管服务",
+      "博士申请"
+    ],
+    "is_active": 1,
+    "title": "帝国理工材料学博士SCI被拒了怎么改",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620462-157",
+    "category": "academic-writing",
+    "tags": [
+      "教育",
+      "心理学",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "LSE社会学硕士essay不敢表达自己观点",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620476-158",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "数学/统计",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "引用规范",
+      "学管服务",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "华威统计学硕士methodology写得太笼统被退",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620489-159",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "学术写作",
+      "引用规范",
+      "补考",
+      "学业衔接",
+      "心理健康",
+      "学管服务",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "牛津CS硕士期末和论文撞时间了怎么办",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620508-160",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "商科",
+      "教育",
+      "数学/统计",
+      "选课",
+      "转学",
+      "学业衔接"
+    ],
+    "is_active": 1,
+    "title": "跨专业读数据科学硕士，专业知识完全空白",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620520-161",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学essay总是拿不到60分，说要critical analysis但不会",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620533-162",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "澳洲留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "Literature Review怎么写才不是流水账",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620539-163",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "英国经济硕士两门核心课挂科，被发academic warning怎么办",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620552-164",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "数学/统计",
+      "学术写作",
+      "方法论",
+      "学管服务",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "Methodology章节导师说写得不够详细",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620565-165",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "心理学",
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "引用规范",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "Literature Review怎么写才不会变成流水账",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620571-166",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "商科",
+      "文献综述",
+      "引用规范",
+      "学管服务",
+      "学术诚信",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "Critical Analysis到底是什么意思，怎么才能写出来",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620586-167",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "工程",
+      "数学/统计",
+      "挂科申诉",
+      "补考",
+      "选课",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "KCL计算机大二期末复习不知道从哪开始",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620599-168",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "经济学",
+      "商科",
+      "教育",
+      "心理学",
+      "数学/统计",
+      "学术写作",
+      "引用规范"
+    ],
+    "is_active": 1,
+    "title": "Harvard和APA引用格式有什么区别，总是混用被扣分",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620614-169",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "金融",
+      "数学/统计",
+      "学术写作",
+      "选课",
+      "转学",
+      "学业衔接",
+      "心理健康"
+    ],
+    "is_active": 1,
+    "title": "OSU经济学大一新生，国内普高毕业没学过经济",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620623-170",
+    "category": "economics-finance",
+    "tags": [
+      "商科",
+      "工程",
+      "学术写作",
+      "引用规范",
+      "学管服务",
+      "学术诚信",
+      "英国留学",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "Paraphrasing怎么做到不是抄袭，Turnitin总是高亮",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620851-171",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "金融",
+      "会计",
+      "商科",
+      "教育",
+      "工程",
+      "物理"
+    ],
+    "is_active": 1,
+    "title": "新加坡国立和南洋理工对比？",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620957-172",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "教育",
+      "数学/统计",
+      "学术写作",
+      "方法论",
+      "引用规范",
+      "学管服务",
+      "英国留学"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学essay总是拿不到60分，说要critical analysis但不会",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620963-173",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "选课"
+    ],
+    "is_active": 1,
+    "title": "英国经济硕士两门核心课挂科，被发academic warning怎么办",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620975-174",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "教育",
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "学管服务",
+      "澳洲留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "Literature Review怎么写才不会变成流水账",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779620988-175",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "计算机科学",
+      "工程",
+      "数学/统计",
+      "学术写作",
+      "挂科申诉",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "KCL计算机大二期末复习不知道从哪开始",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621001-176",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "数学/统计",
+      "选课",
+      "转学",
+      "学业衔接",
+      "心理健康",
+      "国际课程",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "OSU经济学大一新生，国内普高毕业没学过经济",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621015-177",
+    "category": "mental-health",
+    "tags": [
+      "数学/统计",
+      "化学",
+      "选课",
+      "学业衔接",
+      "家长指南",
+      "心理健康",
+      "学管服务",
+      "加拿大留学"
+    ],
+    "is_active": 1,
+    "title": "加拿大安省11年级数学化学跟不上，家长急",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621030-178",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "金融",
+      "会计",
+      "商科",
+      "市场营销",
+      "心理学",
+      "工程"
+    ],
+    "is_active": 1,
+    "title": "英国一年制商科硕士学业和求职双线压力",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621042-179",
+    "category": "academic-writing",
+    "tags": [
+      "化学",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "学业衔接",
+      "心理健康",
+      "国际课程"
+    ],
+    "is_active": 1,
+    "title": "你们辅导过英国拉夫堡大学本科预科的化学课程",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621091-180",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "学术写作",
+      "引用规范",
+      "学管服务",
+      "英国留学",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学critical analysis怎么写",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621096-181",
+    "category": "economics-finance",
+    "tags": [
+      "计算机科学",
+      "经济学",
+      "数学/统计",
+      "学术写作",
+      "引用规范",
+      "挂科申诉",
+      "补考",
+      "选课"
+    ],
+    "is_active": 1,
+    "title": "英国经济硕士挂科academic warning",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621106-182",
+    "category": "economics-finance",
+    "tags": [
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "引用规范",
+      "学管服务",
+      "美国留学",
+      "硕士申请",
+      "本科申请"
+    ],
+    "is_active": 1,
+    "title": "Literature Review不是流水账",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621117-183",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "数学/统计",
+      "学术写作",
+      "挂科申诉",
+      "学业衔接",
+      "心理健康",
+      "学管服务",
+      "美国留学"
+    ],
+    "is_active": 1,
+    "title": "KCL计算机考前复习",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621127-184",
+    "category": "economics-finance",
+    "tags": [
+      "经济学",
+      "教育",
+      "数学/统计",
+      "转学",
+      "学业衔接",
+      "学管服务",
+      "美国留学",
+      "GPA管理"
+    ],
+    "is_active": 1,
+    "title": "OSU经济大一新生没学过经济",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621138-185",
+    "category": "appeal",
+    "tags": [
+      "教育",
+      "心理学",
+      "数学/统计",
+      "物理",
+      "化学",
+      "挂科申诉",
+      "补考",
+      "选课"
+    ],
+    "is_active": 1,
+    "title": "加拿大高中数理化跟不上家长急",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621157-186",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "金融",
+      "商科",
+      "市场营销",
+      "学术写作",
+      "挂科申诉",
+      "面试",
+      "签证"
+    ],
+    "is_active": 1,
+    "title": "英国一年制商科硕士学业求职双压力",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621168-187",
+    "category": "academic-writing",
+    "tags": [
+      "数学/统计",
+      "引用规范",
+      "挂科申诉",
+      "转学",
+      "签证",
+      "学管服务",
+      "学术诚信",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "被指控学术不端hearing",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779621178-188",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "学术写作",
+      "引用规范",
+      "学管服务",
+      "英国留学",
+      "澳洲留学",
+      "新加坡留学",
+      "博士申请"
+    ],
+    "is_active": 1,
+    "title": "布里斯托法学proposal被否research gap",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623227-189",
+    "category": "academic-writing",
+    "tags": [
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "挂科申诉",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "之前老师有讲过literature review 这块比较难讲 我就有点不太理解老师说的难讲的点在哪里",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623264-190",
+    "category": "uk-law",
+    "tags": [
+      "法学",
+      "传媒",
+      "学术写作"
+    ],
+    "is_active": 1,
+    "title": "做演讲的话呢",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623400-191",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "硕士申请"
+    ],
+    "is_active": 1,
+    "title": "我写了一份literature review ，需要做演讲，感觉比较难，这个有什么经验吗",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623410-192",
+    "category": "academic-writing",
+    "tags": [
+      "学术写作",
+      "文献综述",
+      "引用规范",
+      "挂科申诉",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "之前老师有讲过literature review 这块比较难讲 我就有点不太理解老师说的难讲的点在哪里",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623894-193",
+    "category": "academic-writing",
+    "tags": [
+      "学术写作",
+      "选课",
+      "签证"
+    ],
+    "is_active": 1,
+    "title": "还记得咱们之前的沟通吗",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623915-194",
+    "category": "academic-writing",
+    "tags": [
+      "学术写作",
+      "文献综述",
+      "方法论",
+      "学管服务",
+      "澳洲留学"
+    ],
+    "is_active": 1,
+    "title": "之前老师有讲过literature review 这块比较难讲 我就有点不太理解老师说的难讲的点在哪里",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779623951-195",
+    "category": "academic-writing",
+    "tags": [
+      "文献综述"
+    ],
+    "is_active": 1,
+    "title": "你的回复可以精炼一下，压缩到两小段话吗",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779624397-196",
+    "category": "academic-writing",
+    "tags": [
+      "学术写作",
+      "引用规范",
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "8:05\t支\t4G\t42\t <\t研究方法(确Promax版)(1).pptx\t  Definition of gratitude Gratitude is wi...",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779624509-197",
+    "category": "general",
+    "tags": [
+      "学管服务"
+    ],
+    "is_active": 1,
+    "title": "可以给我一个模板吗",
+    "old_category": "general"
+  },
+  {
+    "id": "kb-1779625369-198",
+    "category": "cs-it",
+    "tags": [
+      "计算机科学",
+      "心理学",
+      "数学/统计",
+      "挂科申诉",
+      "选课",
+      "学业衔接",
+      "签证",
+      "家长指南"
+    ],
+    "is_active": 1,
+    "title": "我的孩子今年9月份要入学我应该替他做哪些规划",
+    "old_category": "general"
+  }
+]

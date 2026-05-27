@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AcadAI Knowledge Globe · Right Panel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --navy:#1a2236;
+  --gold:#b8864c;
+  --gold-light:#d4a86a;
+  --cream:#f8f6f1;
+  --text:#2c2c2c;
+  --text-secondary:#6b6b6b;
+  --accent-glow:rgba(212,168,106,0.35);
+}
+
+body{
+  font-family:'Noto Sans SC',-apple-system,sans-serif;
+  background:var(--cream);
+  min-height:100vh; overflow-x:hidden;
+}
+
+/* ===== HERO ===== */
+.hero{
+  min-height:100vh;
+  padding:6vh 56px 60px;
+  display:flex; align-items:flex-start;
+  min-height:100vh;
+  background:linear-gradient(135deg,#faf8f5 0%,#f5f0ea 50%,#faf8f5 100%);
+  position:relative; overflow:hidden;
+}
+
+/* Subtle ambient glow behind globe */
+.ambient-glow{
+  position:absolute; right:5%; top:50%; transform:translateY(-50%);
+  width:600px; height:600px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(212,168,106,0.04) 0%,transparent 60%);
+  pointer-events:none; z-index:0;
+}
+
+/* ===== TWO-COLUMN ===== */
+.hero-inner{
+  display:flex; gap:80px; align-items:center;
+  width:100%; max-width:1150px; margin:0 auto;
+  position:relative; z-index:1;
+}
+
+/* ===== LEFT ===== */
+.hero-content{
+  flex-shrink:0; max-width:480px;
+}
+
+.hero-badge{
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(26,34,54,0.04); padding:8px 20px;
+  font-size:12px; color:var(--text-secondary); font-weight:500; margin-bottom:32px;
+  border-radius:20px;
+}
+
+.hero-badge span{
+  width:5px; height:5px; border-radius:50%; background:var(--gold);
+  animation:pulse-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 rgba(184,134,76,0)}50%{box-shadow:0 0 8px rgba(184,134,76,0.4)}}
+
+.hero-content h1{
+  font-family:'Noto Serif SC',serif;
+  font-size:clamp(32px,4.5vw,52px); font-weight:700;
+  line-height:1.22; letter-spacing:1px; color:var(--navy);
+}
+
+.hero-content h1 em{font-style:normal; color:var(--gold)}
+
+.hero-content p{
+  font-size:15px; color:var(--text-secondary); line-height:1.8;
+  margin-top:22px; max-width:420px;
+}
+
+.hero-stats{
+  display:flex; gap:44px; margin-top:40px; padding-top:32px;
+  border-top:1px solid #e8e4de; flex-wrap:wrap;
+}
+
+.hero-stat h3{font-size:28px; font-weight:700; color:var(--navy)}
+.hero-stat span{font-size:11px; color:var(--text-secondary); font-weight:500}
+
+/* ===== RIGHT PANEL —— 无边框, 柔和融入 ===== */
+.hero-side{
+  flex:1; min-width:440px; max-width:560px;
+  aspect-ratio:1/1;
+  position:relative;
+  perspective:1000px;
+  /* 去掉黑色背景和边框，只保留微弱的径向光晕给球体呼吸空间 */
+}
+
+/* 极淡的圆形光晕代替黑框 */
+.hero-side::before{
+  content:''; position:absolute;
+  top:10%; left:10%; width:80%; height:80%;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,0.6) 0%,rgba(248,246,241,0.3) 50%,transparent 75%);
+  z-index:0; pointer-events:none;
+}
+
+/* ===== PARTICLE CANVAS ===== */
+#particles{
+  position:absolute; top:0;left:0;width:100%;height:100%;
+  z-index:1; pointer-events:none;
+}
+
+/* ===== GLOBE SCENE ===== */
+.globe-scene{
+  position:absolute; top:0;left:0;width:100%;height:100%;
+  z-index:2; transform-style:preserve-3d;
+  transition:transform 0.12s ease-out;
+}
+
+/* ===== RINGS (半径 +50%) ===== */
+.ring{
+  position:absolute; top:50%;left:50%; border-radius:50%;
+  transform-style:preserve-3d; pointer-events:none;
+}
+
+.ring--outer{
+  width:100%; height:100%;
+  margin:-50% 0 0 -50%;
+  border:1px solid rgba(212,168,106,0.08);
+  animation:spin-outer 55s linear infinite;
+}
+
+.ring--mid{
+  width:74%; height:74%;
+  margin:-37% 0 0 -37%;
+  border:1px solid rgba(212,168,106,0.13);
+  animation:spin-mid 35s linear infinite reverse;
+}
+
+.ring--inner{
+  width:48%; height:48%;
+  margin:-24% 0 0 -24%;
+  border:1px solid rgba(212,168,106,0.2);
+  animation:spin-inner 24s linear infinite;
+}
+
+/* Ring glow arcs */
+.ring-glow{
+  position:absolute; top:50%;left:50%; border-radius:50%;
+  pointer-events:none; border:1px solid transparent;
+}
+
+.ring-glow--1{
+  width:87%; height:87%; margin:-43.5% 0 0 -43.5%;
+  border-top-color:rgba(212,168,106,0.15);
+  animation:spin-arc 20s linear infinite reverse;
+}
+
+.ring-glow--2{
+  width:61%; height:61%; margin:-30.5% 0 0 -30.5%;
+  border-left-color:rgba(212,168,106,0.1);
+  border-bottom-color:rgba(212,168,106,0.06);
+  animation:spin-arc 15s linear infinite;
+}
+
+@keyframes spin-outer{to{transform:rotate(360deg)}}
+@keyframes spin-mid{to{transform:rotate(360deg)}}
+@keyframes spin-inner{to{transform:rotate(360deg)}}
+@keyframes spin-arc{to{transform:rotate(360deg)}}
+
+/* ===== NODES (再增大100%) ===== */
+.node{
+  position:absolute; z-index:4; cursor:pointer;
+  width:28px; height:28px; margin:-14px 0 0 -14px;
+}
+
+.node-dot{
+  position:absolute; top:50%;left:50%;
+  width:18px; height:18px; margin:-9px 0 0 -9px;
+  border-radius:50%;
+  background:var(--gold-light);
+  box-shadow:0 0 18px var(--accent-glow),0 0 40px rgba(212,168,106,0.1);
+  transition:all 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+
+.node:hover .node-dot{
+  width:30px; height:30px; margin:-15px 0 0 -15px;
+  background:#fff;
+  box-shadow:0 0 32px rgba(212,168,106,0.8),0 0 64px rgba(212,168,106,0.3);
+}
+
+.node-label{
+  position:absolute; top:-26px; left:50%; transform:translateX(-50%);
+  font-size:10px; color:var(--text-secondary); white-space:nowrap;
+  letter-spacing:0.3px; opacity:0;
+  transition:opacity 0.3s,color 0.3s;
+  pointer-events:none;
+}
+
+.node:hover .node-label{opacity:1; color:var(--navy)}
+
+/* ===== CENTER ORB (再增大100%) ===== */
+.orb{
+  position:absolute; top:50%;left:50%;
+  width:168px; height:168px; margin:-84px 0 0 -84px;
+  border-radius:50%; z-index:3; pointer-events:none;
+  background:radial-gradient(circle at 35% 35%,#fff,var(--gold-light));
+  box-shadow:0 0 70px var(--accent-glow),0 0 150px rgba(212,168,106,0.1);
+  animation:orb-pulse 2.5s ease-in-out infinite;
+}
+
+.orb-ring-1{
+  position:absolute; top:50%;left:50%;
+  width:260px; height:260px; margin:-130px 0 0 -130px;
+  border-radius:50%; border:0.8px solid rgba(212,168,106,0.12);
+  pointer-events:none;
+  animation:orb-ring 2.5s ease-in-out infinite;
+}
+
+.orb-ring-2{
+  position:absolute; top:50%;left:50%;
+  width:380px; height:380px; margin:-190px 0 0 -190px;
+  border-radius:50%; border:0.5px solid rgba(212,168,106,0.06);
+  pointer-events:none;
+  animation:orb-ring 2.5s ease-in-out 0.5s infinite;
+}
+
+@keyframes orb-pulse{
+  0%,100%{box-shadow:0 0 70px var(--accent-glow),0 0 150px rgba(212,168,106,0.1)}
+  50%{box-shadow:0 0 120px rgba(212,168,106,0.6),0 0 200px rgba(212,168,106,0.2)}
+}
+
+@keyframes orb-ring{
+  0%,100%{transform:scale(0.9);opacity:0.3}
+  50%{transform:scale(1.3);opacity:0.6}
+}
+
+/* ===== FLOATING LABELS ===== */
+.float-label{
+  position:absolute; z-index:5; pointer-events:none;
+  font-size:9px; letter-spacing:0.8px;
+  color:var(--text-secondary);
+  animation:float-up 5s ease-in-out infinite;
+}
+
+.float-label:nth-child(1){animation-delay:0s}
+.float-label:nth-child(2){animation-delay:-2s}
+.float-label:nth-child(3){animation-delay:-4s}
+
+@keyframes float-up{
+  0%,100%{transform:translateY(0);opacity:0.4}
+  50%{transform:translateY(-6px);opacity:0.9}
+}
+
+/* ===== CONNECTION LINES ===== */
+#connections{
+  position:absolute; top:0;left:0;width:100%;height:100%;
+  z-index:1; pointer-events:none; opacity:0.35;
+}
+
+/* ===== HUD ===== */
+.hud{
+  position:absolute; z-index:6; pointer-events:none;
+  font-size:7px; font-family:monospace;
+  color:rgba(26,34,54,0.12); letter-spacing:1px;
+}
+
+.hud-tl{top:6%;left:8%}
+.hud-tr{top:6%;right:8%}
+.hud-bl{bottom:6%;left:8%}
+
+/* ===== LIVE BAR ===== */
+.live-bar{
+  position:absolute; top:3%; left:8%;
+  z-index:7; display:flex; align-items:center; gap:10px;
+  pointer-events:none;
+}
+
+.live-dot{
+  width:5px; height:5px; border-radius:50%; background:#22c55e;
+  box-shadow:0 0 6px rgba(34,197,94,0.4);
+  animation:live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+.live-label{
+  font-size:7px; font-weight:700; letter-spacing:1.5px;
+  color:#22c55e; text-transform:uppercase;
+}
+
+.live-sys{
+  font-size:7px; font-weight:600; letter-spacing:1px;
+  color:var(--text-secondary); text-transform:uppercase;
+  opacity:0.4;
+}
+
+/* ===== STATS BAR ===== */
+.stats-bar{
+  position:absolute; bottom:6%; left:50%; transform:translateX(-50%);
+  z-index:6; display:flex; gap:28px; pointer-events:none;
+}
+
+.stat-item{text-align:center}
+
+.stat-item .num{
+  font-size:18px; font-weight:700; color:var(--navy);
+}
+
+.stat-item .lbl{
+  font-size:8px; color:var(--text-secondary); letter-spacing:0.5px;
+  margin-top:2px; opacity:0.5;
+}
+
+@media(max-width:900px){
+  .hero{padding:60px 24px}
+  .hero-inner{flex-direction:column;gap:40px}
+  .hero-side{min-width:0;max-width:400px;aspect-ratio:1/1}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+
+  <!-- Ambient glow -->
+  <div class="ambient-glow"></div>
+
+  <div class="hero-inner">
+
+    <!-- ===== LEFT ===== -->
+    <div class="hero-content">
+      <div class="hero-badge"><span></span>基于 10,000+ 真实辅导案例</div>
+      <h1>学业困境<br>不必<em>独自面对</em></h1>
+      <p>我们是经验最丰富的过来人。将数千案例沉淀为 AI 智能引擎，让每一位海外学子，随时都能找到精准的解决方案。</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><h3>10,000+</h3><span>真实辅导案例</span></div>
+        <div class="hero-stat"><h3>96%</h3><span>问题解决率</span></div>
+        <div class="hero-stat"><h3>15+</h3><span>国家覆盖</span></div>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT: KNOWLEDGE GLOBE (无边框) ===== -->
+    <div class="hero-side" id="heroSide">
+
+      <!-- HUD -->
+      <div class="hud hud-tl">◆ ACADAI SYS</div>
+      <div class="hud hud-tr">DIAGNOSTICS</div>
+      <div class="hud hud-bl">NODES · ACTIVE</div>
+
+      <!-- LIVE -->
+      <div class="live-bar">
+        <div class="live-dot"></div>
+        <span class="live-label">LIVE</span>
+        <span class="live-sys">◆ 知识引擎</span>
+      </div>
+
+      <!-- Particles -->
+      <canvas id="particles"></canvas>
+
+      <!-- Connection lines -->
+      <svg id="connections" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+
+      <!-- Globe -->
+      <div class="globe-scene" id="globeScene">
+
+        <!-- Rings -->
+        <div class="ring ring--outer"></div>
+        <div class="ring ring--mid"></div>
+        <div class="ring ring--inner"></div>
+
+        <!-- Ring glow arcs -->
+        <div class="ring-glow ring-glow--1"></div>
+        <div class="ring-glow ring-glow--2"></div>
+
+        <!-- Center orb -->
+        <div class="orb"></div>
+        <div class="orb-ring-1"></div>
+        <div class="orb-ring-2"></div>
+
+        <!-- Float labels -->
+        <div class="float-label" style="top:18%;left:80%">匹配率 96%</div>
+        <div class="float-label" style="top:62%;left:8%">10,000+ 案例</div>
+        <div class="float-label" style="top:75%;left:80%">15+ 国家</div>
+
+        <!-- Nodes injected by JS -->
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat-item"><div class="num">10,000+</div><div class="lbl">知识案例</div></div>
+        <div class="stat-item"><div class="num">8</div><div class="lbl">学科分类</div></div>
+        <div class="stat-item"><div class="num">96%</div><div class="lbl">解决率</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== NODE DATA (半径 +50%) =====
+const nodes = [
+  // Outer ring ~48% (+50% from 32%)
+  {label:'🇬🇧 英国',r:48,a:0,ring:'outer'},
+  {label:'🇺🇸 美国',r:48,a:45,ring:'outer'},
+  {label:'🇦🇺 澳洲',r:48,a:90,ring:'outer'},
+  {label:'🇨🇦 加拿大',r:48,a:135,ring:'outer'},
+  {label:'🇸🇬 新加坡',r:48,a:180,ring:'outer'},
+  {label:'🇭🇰 香港',r:48,a:225,ring:'outer'},
+  {label:'🇯🇵 日本',r:48,a:270,ring:'outer'},
+  {label:'🇩🇪 德国',r:48,a:315,ring:'outer'},
+  // Mid ring ~36% (+50% from 24%)
+  {label:'论文辅导',r:36,a:0,ring:'mid'},
+  {label:'考前突击',r:36,a:72,ring:'mid'},
+  {label:'同步课程',r:36,a:144,ring:'mid'},
+  {label:'挂科申诉',r:36,a:216,ring:'mid'},
+  {label:'选课规划',r:36,a:288,ring:'mid'},
+  // Inner ring ~24% (+50% from 16%)
+  {label:'理工',r:24,a:0,ring:'inner'},
+  {label:'商科',r:24,a:90,ring:'inner'},
+  {label:'人文',r:24,a:180,ring:'inner'},
+  {label:'法学',r:24,a:270,ring:'inner'},
+];
+
+// ===== BUILD NODES =====
+const globeScene = document.getElementById('globeScene');
+const nodeEls = [];
+
+nodes.forEach(n=>{
+  const el = document.createElement('div');
+  el.className = 'node';
+  el.innerHTML = `<div class="node-dot"></div><div class="node-label">${n.label}</div>`;
+  globeScene.appendChild(el);
+  nodeEls.push({el, ...n, angle:n.a});
+});
+
+// ===== POSITION =====
+const maxR = 48;
+function positionNodes(now){
+  const speeds = {outer:5, mid:-7.5, inner:11};
+  nodeEls.forEach(n=>{
+    const sp = speeds[n.ring];
+    const ang = ((n.angle + sp*now/1000)%360+360)%360;
+    const rad = ang * Math.PI/180;
+    const x = 50 + (n.r/maxR)*47.5 * Math.cos(rad);
+    const y = 50 + (n.r/maxR)*47.5 * Math.sin(rad);
+    n.el.style.left = x+'%';
+    n.el.style.top = y+'%';
+    n._x=x; n._y=y;
+  });
+  updateConnections();
+}
+
+// ===== CONNECTIONS =====
+const svg = document.getElementById('connections');
+function updateConnections(){
+  const lines = [];
+  for(let i=0;i<nodeEls.length;i++){
+    for(let j=i+1;j<nodeEls.length;j++){
+      const dx = nodeEls[i]._x - nodeEls[j]._x;
+      const dy = nodeEls[i]._y - nodeEls[j]._y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if(d<30){
+        lines.push({x1:nodeEls[i]._x,y1:nodeEls[i]._y,x2:nodeEls[j]._x,y2:nodeEls[j]._y,d});
+      }
+    }
+  }
+  svg.innerHTML = lines.map(l=>
+    `<line x1="${l.x1}%" y1="${l.y1}%" x2="${l.x2}%" y2="${l.y2}%"
+      stroke="rgba(184,134,76,${(0.08*(1-l.d/30)).toFixed(3)})"
+      stroke-width="0.3" vector-effect="non-scaling-stroke"/>`
+  ).join('');
+}
+
+// ===== ANIMATE =====
+const t0 = performance.now();
+function tick(t){positionNodes(t-t0); requestAnimationFrame(tick)}
+requestAnimationFrame(tick);
+
+// ===== MOUSE 3D TILT =====
+const heroSide = document.getElementById('heroSide');
+heroSide.addEventListener('mousemove',e=>{
+  const r = heroSide.getBoundingClientRect();
+  const dx = (e.clientX - r.left - r.width/2)/r.width;
+  const dy = (e.clientY - r.top - r.height/2)/r.height;
+  globeScene.style.transform = `rotateY(${dx*14}deg) rotateX(${-dy*14}deg)`;
+});
+heroSide.addEventListener('mouseleave',()=>{
+  globeScene.style.transform = 'rotateY(0deg) rotateX(0deg)';
+});
+
+// ===== PARTICLES =====
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let pts = [];
+
+function resizeCanvas(){
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener('resize',resizeCanvas);
+
+for(let i=0;i<80;i++){
+  pts.push({
+    x:Math.random()*100,y:Math.random()*100,
+    r:Math.random()*0.4+0.2,
+    vx:(Math.random()-0.5)*0.15,
+    vy:(Math.random()-0.5)*0.15,
+    a:Math.random()*0.2+0.06,
+  });
+}
+
+function drawParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const w=canvas.width, h=canvas.height;
+  pts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0)p.x=100; if(p.x>100)p.x=0;
+    if(p.y<0)p.y=100; if(p.y>100)p.y=0;
+    ctx.beginPath();
+    ctx.arc(p.x/100*w, p.y/100*h, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(184,134,76,${p.a})`;
+    ctx.fill();
+  });
+  // Connections
+  for(let i=0;i<pts.length;i++){
+    for(let j=i+1;j<pts.length;j++){
+      const dx=(pts[i].x-pts[j].x)/100*w;
+      const dy=(pts[i].y-pts[j].y)/100*h;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<55){
+        ctx.beginPath();
+        ctx.moveTo(pts[i].x/100*w, pts[i].y/100*h);
+        ctx.lineTo(pts[j].x/100*w, pts[j].y/100*h);
+        ctx.strokeStyle = `rgba(184,134,76,${0.03*(1-d/55)})`;
+        ctx.lineWidth=0.3; ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+</script>
+
+</body>
+</html>

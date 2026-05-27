@@ -1,0 +1,2693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global 1v1 · AcadAI — 留学课业AI知识引擎</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--navy:#1a2236;--navy-light:#2a3a5a;--gold:#b8864c;--gold-light:#d4a86a;--cream:#f8f6f1;--white:#fefdfc;--text:#2c2c2c;--text-secondary:#6b6b6b;--text-muted:#999;--border:#e8e4de}
+body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:#faf8f5;color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.hidden{display:none!important}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:16px 56px;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:64px}
+.nav-logo{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:700;color:var(--navy);cursor:pointer}
+.nav-logo em{font-style:normal;color:var(--gold)}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:var(--text-secondary);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s;cursor:pointer}
+.nav-links a:hover{color:var(--navy)}
+.nav-actions{display:flex;align-items:center;gap:12px}
+.nav-actions .link{font-size:12px;color:var(--text-secondary);cursor:pointer;background:none;border:none;font-family:inherit;transition:color .2s}
+.nav-actions .link:hover{color:var(--navy)}
+.nav-cta{background:var(--navy);color:#fff;font-size:12px;font-weight:600;letter-spacing:.5px;padding:9px 24px;cursor:pointer;transition:background .2s;border:none;font-family:inherit}
+.nav-cta:hover{background:var(--navy-light)}
+@media(max-width:768px){nav{padding:14px 20px}.nav-links{display:none}.nav-actions .link{display:none}}
+#landingPage{padding-top:64px}
+.hero{min-height:calc(100vh - 64px);padding:140px 56px 100px;display:flex;align-items:center;background:linear-gradient(135deg,#faf8f5 0%,#f5f0ea 50%,#faf8f5 100%);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(184,134,76,0.03) 0%,transparent 70%)}
+.hero-content{position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(26,34,54,0.04);padding:8px 20px;font-size:12px;color:var(--text-secondary);font-weight:500;margin-bottom:32px}
+.hero-badge span{width:5px;height:5px;border-radius:50%;background:var(--gold)}
+.hero h1{font-family:'Noto Serif SC',serif;font-size:clamp(34px,5vw,56px);font-weight:700;line-height:1.25;letter-spacing:1px;color:var(--navy)}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero p{font-size:16px;color:var(--text-secondary);line-height:1.8;margin-top:24px;max-width:480px}
+.hero-actions{display:flex;gap:16px;margin-top:40px}
+.btn-primary{background:var(--navy);color:#fff;border:none;padding:14px 40px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;letter-spacing:.5px;font-family:inherit}
+.btn-primary:hover{background:var(--navy-light)}
+.btn-secondary{background:transparent;color:var(--navy);border:none;padding:14px 32px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn-secondary:hover{color:var(--gold)}
+.hero-stats{display:flex;gap:48px;margin-top:60px;padding-top:40px;border-top:1px solid var(--border);flex-wrap:wrap}
+.hero-stat h3{font-size:28px;font-weight:700;color:var(--navy)}
+.hero-stat span{font-size:12px;color:var(--text-muted);font-weight:500}
+@media(max-width:768px){.hero{padding:100px 24px 60px}.hero-stats{gap:24px}}
+
+/* ===== HERO TWO-COLUMN LAYOUT (desktop) ===== */
+.hero-inner{display:flex;gap:80px;align-items:flex-start;width:100%;max-width:1280px;margin:0 auto}
+.hero-content{flex-shrink:0;max-width:540px}
+
+/* Right side panel - redesigned: glassmorphism + multi-layer */
+.hero-side{flex:1;min-width:0;max-width:460px;position:relative;overflow:hidden}
+.hero-side-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.65}
+.hero-side-content{position:relative;z-index:1}
+.hero-side-label{font-size:11px;font-weight:600;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.hero-side-label .dot{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:pulse-dot 1.6s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.glass-card{background:rgba(255,255,255,0.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:14px 16px;transition:all .35s cubic-bezier(.16,1,.3,1);cursor:pointer}
+.glass-card:hover{background:rgba(255,255,255,0.8);border-color:var(--gold-light);box-shadow:0 4px 24px rgba(184,134,76,0.08);transform:translateX(3px)}
+.diagnosis-stack{display:flex;flex-direction:column;gap:7px}
+.diag-card{padding:12px 14px}
+.diag-card .header{display:flex;align-items:center;gap:8px}
+.diag-card .icon{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.diag-card .title{font-size:12.5px;font-weight:600;color:var(--navy);flex:1;min-width:0}
+.diag-card .badge{font-size:10px;padding:1px 8px;border-radius:8px;background:rgba(184,134,76,0.08);color:var(--gold);font-weight:500;white-space:nowrap}
+.diag-card .desc{font-size:11.5px;color:var(--text-muted);line-height:1.6;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.diag-card .detail{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.16,1,.3,1)}
+.diag-card .detail.open{max-height:80px;padding-top:8px;margin-top:8px;border-top:1px solid rgba(184,134,76,0.08)}
+.diag-card .stat-row{display:flex;gap:16px}
+.diag-card .stat-item{text-align:center}
+.diag-card .stat-item .num{font-size:17px;font-weight:700;color:var(--navy);line-height:1.2}
+.diag-card .stat-item .lbl{font-size:9.5px;color:var(--text-muted);letter-spacing:.3px}
+.hero-side-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
+.hero-side-stat{background:rgba(255,255,255,0.35);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:10px 6px;text-align:center;transition:all .25s}
+.hero-side-stat:hover{background:rgba(255,255,255,0.55);border-color:rgba(184,134,76,0.15)}
+.hero-side-stat .num{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2;font-variant-numeric:tabular-nums}
+.hero-side-stat .lbl{font-size:9.5px;color:var(--text-muted);margin-top:2px;letter-spacing:.3px}
+.hero-side-quick{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hero-side-quick .item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,0.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;transition:all .25s;font-family:inherit;font-size:11.5px;color:var(--text-secondary)}
+.hero-side-quick .item:hover{background:rgba(255,255,255,0.7);border-color:var(--gold-light);color:var(--navy);transform:translateY(-1px)}
+.hero-side-quick .item .ico{font-size:14px}
+@keyframes cardFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.diag-card:nth-child(1){animation:cardFadeUp .5s ease both}
+.diag-card:nth-child(2){animation:cardFadeUp .5s ease .1s both}
+.diag-card:nth-child(3){animation:cardFadeUp .5s ease .2s both}
+.diag-card:nth-child(4){animation:cardFadeUp .5s ease .3s both}
+.hero-side-stat:nth-child(1){animation:cardFadeUp .5s ease .35s both}
+.hero-side-stat:nth-child(2){animation:cardFadeUp .5s ease .4s both}
+.hero-side-stat:nth-child(3){animation:cardFadeUp .5s ease .45s both}
+.hero-side-quick .item:nth-child(1){animation:cardFadeUp .5s ease .5s both}
+.hero-side-quick .item:nth-child(2){animation:cardFadeUp .5s ease .55s both}
+.hero-side-quick .item:nth-child(3){animation:cardFadeUp .5s ease .6s both}
+.hero-side-quick .item:nth-child(4){animation:cardFadeUp .5s ease .65s both}
+@media(max-width:1023px){.hero-inner{flex-direction:column;gap:40px}.hero-side{display:none}.hero-content{max-width:100%}}
+section{padding:100px 56px}
+.section-label{font-size:11px;font-weight:600;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+.section-title{font-family:'Noto Serif SC',serif;font-size:clamp(26px,3.5vw,40px);font-weight:700;line-height:1.25;color:var(--navy)}
+.section-title em{font-style:normal;color:var(--gold)}
+.section-desc{font-size:15px;color:var(--text-secondary);line-height:1.8;margin-top:16px;max-width:560px}
+@media(max-width:768px){section{padding:60px 24px}}
+.problem-wrap{background:var(--white);border-bottom:1px solid var(--border)}
+.problem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:48px;border:1px solid var(--border)}
+.problem-card{padding:48px 36px;background:var(--white)}
+.problem-card:nth-child(2){border-left:1px solid var(--border);border-right:1px solid var(--border)}
+.problem-icon{font-size:28px;margin-bottom:20px}
+.problem-card h3{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:12px}
+.problem-card p{font-size:13px;color:var(--text-secondary);line-height:1.8}
+@media(max-width:768px){.problem-grid{grid-template-columns:1fr}.problem-card:nth-child(2){border:none}}
+.mantra-wrap{background:var(--navy);color:#fff;text-align:center;padding:100px 56px}
+.mantra-wrap h2{font-family:'Noto Serif SC',serif;font-size:clamp(20px,3vw,34px);font-weight:400;line-height:1.6;color:rgba(255,255,255,0.5);max-width:700px;margin:0 auto}
+.mantra-wrap strong{color:#fff;font-weight:600}
+.mantra-wrap em{font-style:normal;color:var(--gold-light)}
+@media(max-width:768px){.mantra-wrap{padding:80px 24px}}
+.method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:48px}
+.method-num{font-family:'Noto Serif SC',serif;font-size:48px;font-weight:700;color:rgba(184,134,76,0.15);line-height:1;margin-bottom:16px}
+.method-card h3{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.method-card p{font-size:13px;color:var(--text-secondary);line-height:1.7}
+@media(max-width:768px){.method-grid{grid-template-columns:1fr}}
+.showcase-wrap{background:var(--white);border-bottom:1px solid var(--border)}
+.showcase-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;max-width:1100px;margin:0 auto}
+.showcase-text .stat-row{display:flex;gap:32px;margin-top:36px;padding-top:28px;border-top:1px solid var(--border)}
+.showcase-text .stat-row h4{font-size:24px;font-weight:700;color:var(--navy)}
+.showcase-text .stat-row span{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+.chat-box{border:1px solid var(--border)}
+.chat-box-header{display:flex;align-items:center;gap:8px;padding:14px 20px;border-bottom:1px solid var(--border);background:#faf8f5}
+.chat-box-header span{width:8px;height:8px;border-radius:50%;background:#ddd}
+.chat-box-header span:first-child{background:#e8a0a0}
+.chat-box-header span:nth-child(2){background:#e8d5a0}
+.chat-box-header span:nth-child(3){background:#a0c4a0}
+.chat-body{padding:20px}
+.msg{display:flex;gap:12px;margin-bottom:20px}
+.msg:last-child{margin-bottom:0}
+.msg-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.msg-avatar.user{background:#e8e4de;color:var(--text-secondary)}
+.msg-avatar.ai{background:var(--navy);color:#fff}
+.msg-content{background:var(--white);padding:16px 20px;font-size:13px;line-height:1.7;color:var(--text-secondary)}
+.msg-content strong{color:var(--text);font-weight:600}
+.msg-source{font-size:11px;color:var(--text-muted);margin-top:8px}
+@media(max-width:900px){.showcase-grid{grid-template-columns:1fr}}
+
+/* ===== TESTIMONIALS ===== */
+.testimonial-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:48px}
+.t-card{background:var(--white);border:1px solid var(--border);padding:36px;position:relative}
+.t-card::before{content:'"';position:absolute;top:12px;left:20px;font-size:48px;color:var(--gold);opacity:.15;font-family:'Noto Serif SC',serif;line-height:1}
+.t-card p{font-size:13px;color:var(--text-secondary);line-height:1.8;font-style:italic}
+.t-card .t-author{display:flex;align-items:center;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.t-card .t-author .t-avatar{width:36px;height:36px;border-radius:50%;background:rgba(184,134,76,0.1);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.t-card .t-author .t-name{font-size:13px;font-weight:600;color:var(--navy)}
+.t-card .t-author .t-school{font-size:11px;color:var(--text-muted)}
+@media(max-width:768px){.testimonial-grid{grid-template-columns:1fr}}
+
+/* ===== FAQ ===== */
+.faq-list{max-width:700px;margin:48px auto 0;display:flex;flex-direction:column;gap:0;border:1px solid var(--border)}
+.faq-item{border-bottom:1px solid var(--border);background:var(--white)}
+.faq-item:last-child{border-bottom:none}
+.faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;padding:20px 28px;background:none;border:none;font-size:14px;font-weight:500;color:var(--navy);cursor:pointer;text-align:left;font-family:inherit;transition:background .2s}
+.faq-q:hover{background:rgba(26,34,54,0.02)}
+.faq-q .icon{font-size:12px;color:var(--text-muted);transition:transform .2s;flex-shrink:0}
+.faq-q.open .icon{transform:rotate(45deg)}
+.faq-a{padding:0 28px 0;max-height:0;overflow:hidden;transition:all .25s ease;font-size:13px;color:var(--text-secondary);line-height:1.75}
+.faq-a.open{padding:0 28px 20px;max-height:300px}
+
+/* ===== COUNTRY LIST ===== */
+.country-tag-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:32px}
+.country-tag{font-size:11px;padding:5px 14px;background:rgba(26,34,54,0.04);color:var(--text-secondary);letter-spacing:.3px}
+
+/* ===== CASE STORIES ===== */
+.case-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:48px}
+.case-card{background:var(--white);border:1px solid var(--border);padding:36px;cursor:pointer;transition:all .25s;position:relative}
+.case-card:hover{box-shadow:0 4px 20px rgba(26,34,54,0.06);border-color:var(--gold-light);transform:translateY(-2px)}
+.case-card .country{font-size:10px;font-weight:600;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+.case-card h3{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:12px}
+.case-card p{font-size:13px;color:var(--text-secondary);line-height:1.7}
+.case-card .case-detail{max-height:0;overflow:hidden;transition:max-height .35s ease;font-size:13px;color:var(--text-secondary);line-height:1.7;border-top:1px solid var(--border);margin-top:14px;padding-top:14px}
+.case-card .case-detail.open{max-height:600px}
+.case-tag{display:inline-block;margin-top:16px;font-size:11px;color:var(--gold);font-weight:500}
+.case-card .expand-hint{position:absolute;bottom:14px;right:20px;font-size:10px;color:var(--text-muted);opacity:0;transition:opacity .25s}
+.case-card:hover .expand-hint{opacity:1}
+@media(max-width:768px){.case-grid{grid-template-columns:1fr}}
+
+/* ===== CTA ===== */
+.cta-wrap{background:var(--navy);text-align:center;padding:100px 56px}
+.cta-wrap h2{font-family:'Noto Serif SC',serif;font-size:clamp(24px,3.5vw,40px);font-weight:700;color:#fff;max-width:600px;margin:0 auto 16px;line-height:1.25}
+.cta-wrap h2 em{font-style:normal;color:var(--gold-light)}
+.cta-wrap p{font-size:15px;color:rgba(255,255,255,0.4);margin-bottom:40px}
+@media(max-width:768px){.cta-wrap{padding:80px 24px}}
+
+/* ===== FOOTER ===== */
+.landing-footer{background:var(--navy);border-top:1px solid rgba(255,255,255,0.06);padding:28px 56px 32px;display:flex;justify-content:space-between;align-items:center}
+.landing-footer .legal{font-size:11px;color:rgba(255,255,255,0.2)}
+.landing-footer .links{display:flex;gap:20px;list-style:none}
+.landing-footer .links a{font-size:11px;color:rgba(255,255,255,0.2);text-decoration:none;cursor:pointer;transition:color .2s}
+.landing-footer .links a:hover{color:var(--gold-light)}
+@media(max-width:768px){.landing-footer{flex-direction:column;gap:12px;padding:20px 24px}}
+
+/* ============ CHAT APP ============ */
+.chat-app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;background:var(--cream)}
+.chat-top{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--navy);flex-shrink:0}
+.chat-top .brand{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:600;color:#fff}
+.chat-top .brand em{font-style:normal;color:var(--gold-light)}
+.chat-top .tag{font-size:10px;color:rgba(255,255,255,0.4);margin-left:auto}
+.chat-top .back-btn{color:rgba(255,255,255,0.6);cursor:pointer;font-size:13px;background:none;border:none;padding:4px}
+.chat-top .back-btn:hover{color:#fff}
+.chat-top .clear-btn{color:rgba(255,255,255,0.4);font-size:11px;background:none;border:1px solid rgba(255,255,255,0.15);padding:4px 12px;cursor:pointer}
+.chat-top .clear-btn:hover{color:#fff;border-color:rgba(255,255,255,0.3)}
+.chat-msgs-wrap{position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column}
+.chat-msgs{flex:1;overflow-y:auto;padding:20px 24px 8px;display:flex;flex-direction:column;gap:16px;min-height:0;will-change:scroll-position;contain:layout size style}
+.chat-msgs .msg-row{display:flex;align-items:flex-start;gap:10px;max-width:680px;margin:0 auto;width:100%}
+.chat-msgs .msg-row.user{flex-direction:row-reverse;margin-left:auto}
+.chat-msgs .msg-row .av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.chat-msgs .msg-row.user .av{background:#e0dbd4;color:var(--text-secondary)}
+.chat-msgs .msg-row.ai .av{background:var(--navy);color:#fff}
+.chat-msgs .msg-row .bubble{padding:12px 18px;font-size:14px;line-height:1.75;max-width:500px}
+.chat-msgs .msg-row.user .bubble{background:var(--navy);color:#fff;border-radius:12px 4px 12px 12px}
+.chat-msgs .msg-row.ai .bubble{background:var(--white);border:1px solid var(--border);color:var(--text-secondary);border-radius:4px 12px 12px 12px;position:relative}
+.chat-msgs .msg-row.ai .bubble strong{color:var(--text);font-weight:600}
+.typing-dots{display:flex;gap:5px;padding:6px 0}
+.typing-dots span{width:7px;height:7px;border-radius:50%;background:#d0ccc6;animation:b2 1.4s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes b2{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1)}}
+.msg-in{animation:fi .35s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.chat-sources-bar{max-width:680px;margin:0 auto;width:100%;padding:0 24px;flex-shrink:0}
+.chat-sources-bar .inner{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}
+.chat-sources-bar .badge{font-size:10px;padding:2px 10px;border-radius:10px;background:rgba(184,134,76,0.1);color:var(--gold);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;transition:all .2s}
+.chat-sources-bar .badge:hover{background:rgba(184,134,76,0.2)}
+.chat-sources-bar .badge.web{background:rgba(42,58,90,0.08);color:var(--navy-light)}
+.chat-sources-bar .badge.web:hover{background:rgba(42,58,90,0.15)}
+.scroll-bottom-btn{position:absolute;bottom:18px;right:18px;width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(26,34,54,0.2);z-index:10;transition:all .2s;line-height:1}
+.scroll-bottom-btn:hover{transform:scale(1.08)}
+.msg-row.ai .copy-btn{position:absolute;top:6px;right:6px;background:var(--cream);border:1px solid var(--border);border-radius:3px;font-size:10px;color:var(--text-muted);padding:2px 6px;cursor:pointer;opacity:.85;transition:opacity .2s;line-height:1.4;font-family:inherit;z-index:5}
+.msg-row.ai .copy-btn:hover{opacity:1;color:var(--text);border-color:var(--text-muted)}
+.msg-row.ai.streaming .bubble{border-color:var(--gold-light);transition:border-color .3s}
+.stream-cursor{display:inline-block;animation:blink .8s step-end infinite;color:var(--gold);font-weight:300;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+.followup-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.followup-suggestions .fu-btn{font-size:11px;padding:4px 12px;border:1px solid var(--border);background:var(--cream);color:var(--text-secondary);cursor:pointer;transition:all .2s;font-family:inherit;border-radius:10px}
+.followup-suggestions .fu-btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(184,134,76,0.05)}
+.feedback-buttons{display:flex;gap:6px;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);justify-content:flex-end}
+.feedback-buttons .fb-btn{background:none;border:1px solid var(--border);font-size:12px;padding:2px 10px;cursor:pointer;border-radius:4px;color:var(--text-muted);transition:all .2s;font-family:inherit;opacity:.6}
+.feedback-buttons .fb-btn:hover{opacity:1;background:var(--cream)}
+.feedback-buttons .fb-btn.active-up{opacity:1;color:#2a7a2a;border-color:#2a7a2a;background:rgba(42,122,42,0.06)}
+.feedback-buttons .fb-btn.active-down{opacity:1;color:#c00;border-color:#c00;background:rgba(192,0,0,0.06)}
+.ai-disclaimer{font-size:11px;color:var(--text-muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5;opacity:.7}
+
+
+/* Parent trigger */
+.parent-trigger{color:var(--gold)\!important;font-weight:600\!important}
+/* Share modal */
+.share-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center}
+.share-modal{background:#fff;border-radius:10px;padding:28px 24px;max-width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.15);position:relative}
+.share-modal h3{font-size:15px;color:var(--navy);margin-bottom:8px;font-weight:600}
+.share-modal p{font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
+.share-modal input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:4px;font-size:12px;color:var(--text);background:var(--cream);font-family:inherit;text-align:center;outline:none;box-sizing:border-box}
+.share-modal .copy-btn{background:var(--navy);color:#fff;border:none;padding:8px 24px;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px;margin-top:10px;font-family:inherit}
+.share-modal .copy-btn:hover{background:var(--navy-light)}
+.share-modal .close-btn{position:absolute;top:10px;right:14px;background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px}
+/* ===== BOOKING POPUP ===== */
+.booking-popup-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center}
+.booking-popup{background:#fff;border-radius:10px;padding:32px 28px 24px;max-width:380px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.15);position:relative}
+.booking-popup h3{font-size:16px;color:var(--navy);margin-bottom:8px;font-weight:600}
+.booking-popup p{font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7}
+.booking-popup .actions{display:flex;gap:10px;justify-content:center}
+.booking-popup .btn-primary{background:var(--gold);color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer;border-radius:4px;font-family:inherit}
+.booking-popup .btn-primary:hover{background:var(--gold-light)}
+.booking-popup .btn-skip{background:none;color:var(--text-muted);border:none;padding:8px 16px;font-size:11px;cursor:pointer;font-family:inherit}
+.booking-popup .btn-skip:hover{color:var(--text-secondary)}
+.booking-popup .close-btn{position:absolute;top:10px;right:14px;background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px}
+.booking-popup .close-btn:hover{color:var(--text)}
+
+.chat-input-area{max-width:680px;margin:0 auto;width:100%;padding:0 24px 18px;flex-shrink:0}
+.chat-input-box{display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--border);padding:10px 16px;border-radius:8px}
+.chat-input-box:focus-within{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,76,0.08)}
+.chat-input-box input{flex:1;border:none;outline:none;font-size:14px;color:var(--text);background:transparent;font-family:inherit}
+.chat-input-box input::placeholder{color:#bbb}
+.chat-input-box button{background:var(--navy);color:#fff;border:none;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px;transition:background .2s;font-family:inherit}
+.chat-input-box button:hover{background:var(--navy-light)}
+.chat-input-box button:disabled{opacity:.25;cursor:default}
+.welcome-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.welcome-suggestions button{font-size:12px;padding:5px 14px;border:1px solid var(--border);background:var(--white);color:var(--text-secondary);cursor:pointer;transition:all .2s;font-family:inherit;border-radius:4px}
+.welcome-suggestions button:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ===== CHAT → BOOKING BRIDGE ===== */
+.chat-booking-bridge{display:none;max-width:680px;margin:0 auto;width:100%;padding:0 24px 6px;flex-shrink:0}
+.chat-booking-bridge .inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;background:rgba(184,134,76,0.06);border:1px solid rgba(184,134,76,0.15);border-radius:6px}
+.chat-booking-bridge .inner .txt{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.chat-booking-bridge .inner .txt strong{color:var(--gold);font-weight:600}
+.chat-booking-bridge .inner .btn{background:var(--gold);color:#fff;border:none;padding:7px 18px;font-size:11px;font-weight:600;cursor:pointer;border-radius:4px;font-family:inherit;transition:background .2s;white-space:nowrap}
+.chat-booking-bridge .inner .btn:hover{background:var(--gold-light)}
+
+/* ============ ADMIN ============ */
+.admin-page{min-height:100vh;background:var(--cream);padding-top:64px}
+.admin-top{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--navy);flex-shrink:0}
+.admin-top h3{font-size:15px;font-weight:600;color:#fff}
+.admin-top .back-btn{color:rgba(255,255,255,0.6);cursor:pointer;font-size:13px;background:none;border:none;padding:4px}
+.admin-top .back-btn:hover{color:#fff}
+.admin-top .actions{margin-left:auto;display:flex;gap:8px}
+.admin-top .actions button{color:rgba(255,255,255,0.4);font-size:11px;background:none;border:1px solid rgba(255,255,255,0.15);padding:4px 12px;cursor:pointer;font-family:inherit}
+.admin-top .actions button:hover{color:#fff;border-color:rgba(255,255,255,0.3)}
+.admin-body{max-width:800px;margin:0 auto;padding:24px}
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.admin-stat-card{background:var(--white);border:1px solid var(--border);padding:16px 20px}
+.admin-stat-card .lbl{font-size:11px;color:var(--text-muted);margin-bottom:2px}
+.admin-stat-card .val{font-size:22px;font-weight:700;color:var(--navy)}
+.admin-card{background:var(--white);border:1px solid var(--border);padding:24px;margin-bottom:20px}
+.admin-card h3{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.admin-grid input,.admin-card textarea{background:var(--cream);border:1px solid var(--border);padding:10px 12px;font-size:13px;color:var(--text);outline:none;font-family:inherit}
+.admin-grid input:focus,.admin-card textarea:focus{border-color:var(--gold)}
+.admin-card textarea{width:100%;margin-top:10px;min-height:80px;resize:vertical}
+.admin-card .row{display:flex;gap:10px;margin-top:10px;align-items:center}
+.admin-card .row input{flex:1}
+.btn-sm{background:var(--navy);color:#fff;border:none;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;font-family:inherit}
+.btn-sm:hover{background:var(--navy-light)}
+.entry-list{max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.entry-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--cream);gap:10px}
+.entry-row .info{flex:1;min-width:0}
+.entry-row .info .t{font-size:13px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-row .info .m{font-size:11px;color:var(--text-muted);margin-top:1px}
+.entry-row .info .m .cat{background:rgba(184,134,76,0.1);color:var(--gold);padding:1px 6px;font-size:10px}
+.entry-row .del{font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:4px 6px;font-family:inherit}
+.entry-row .del:hover{color:#c00}
+.entry-row .del:hover{color:#c00}
+.kb-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.kb-bar input{padding:8px 12px;border:1px solid var(--border);background:var(--cream);font-size:13px;outline:none;font-family:inherit;border-radius:4px;flex:1;min-width:160px}
+.kb-bar input:focus{border-color:var(--gold)}
+.kb-bar select{padding:8px 12px;border:1px solid var(--border);background:var(--cream);font-size:12px;outline:none;font-family:inherit;border-radius:4px;color:var(--text)}
+.kb-bar .btn{background:var(--navy);color:#fff;border:none;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px;font-family:inherit}
+.kb-bar .btn:hover{background:var(--navy-light)}
+.kb-bar .btn-outline{background:none;color:var(--text-secondary);border:1px solid var(--border);padding:8px 16px;font-size:12px;cursor:pointer;border-radius:4px;font-family:inherit}
+.kb-bar .btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+.kb-table{width:100%;font-size:13px;border-collapse:collapse}
+.kb-table th{background:var(--cream);padding:10px 12px;text-align:left;font-weight:600;color:var(--navy);font-size:12px;border-bottom:2px solid var(--border)}
+.kb-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+.kb-table tr:hover td{background:rgba(184,134,76,0.04)}
+.kb-table .title-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.kb-table .content-cell{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:12px}
+.kb-table .tag{display:inline-block;font-size:10px;padding:1px 6px;background:rgba(184,134,76,0.1);color:var(--gold);border-radius:3px;margin:1px 2px}
+.kb-table .act-btn{font-size:12px;background:none;border:none;cursor:pointer;padding:4px 8px;font-family:inherit;color:var(--text-muted)}
+.kb-table .act-btn:hover{color:var(--navy)}
+.kb-table .act-btn.del:hover{color:#c00}
+.kb-pager{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:14px;font-size:13px;color:var(--text-muted)}
+.kb-pager button{background:var(--cream);border:1px solid var(--border);padding:4px 12px;cursor:pointer;font-family:inherit;font-size:12px;border-radius:4px}
+.kb-pager button:hover{background:var(--gold);color:#fff;border-color:var(--gold)}
+.kb-pager button:disabled{opacity:0.3;cursor:default}
+.kb-pager .cur{font-weight:600;color:var(--navy)}
+/* Edit modal */
+.kb-modal-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center}
+.kb-modal{background:#fff;border-radius:10px;padding:24px;max-width:640px;width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.15);position:relative}
+.kb-modal h3{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:14px}
+.kb-modal label{font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-top:10px;margin-bottom:4px}
+.kb-modal input,.kb-modal textarea,.kb-modal select{width:100%;padding:8px 10px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;border-radius:4px;box-sizing:border-box}
+.kb-modal input:focus,.kb-modal textarea:focus{border-color:var(--gold)}
+.kb-modal textarea{min-height:140px;resize:vertical}
+.kb-modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.kb-modal .btn-primary{background:var(--navy);color:#fff;border:none;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px;font-family:inherit}
+.kb-modal .btn-primary:hover{background:var(--navy-light)}
+.kb-modal .btn-cancel{background:none;color:var(--text-muted);border:1px solid var(--border);padding:8px 20px;font-size:12px;cursor:pointer;border-radius:4px;font-family:inherit}
+.kb-modal .btn-cancel:hover{color:var(--text);border-color:var(--text-muted)}
+.kb-modal .close-btn{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;padding:4px}
+.kb-modal .close-btn:hover{color:var(--text)}
+.kb-modal .tag-input-area{display:flex;gap:6px;align-items:center}
+.kb-modal .tag-input-area input{flex:1}
+.kb-modal .tag-input-area button{background:none;border:1px solid var(--border);padding:8px 12px;cursor:pointer;font-size:12px;font-family:inherit;border-radius:4px}
+.kb-badge{display:inline-block;font-size:10px;padding:1px 8px;border-radius:8px;margin-left:6px;font-weight:400}
+.kb-badge.active{background:#e8f5e9;color:#2e7d32}
+.kb-badge.inactive{background:#fbe9e7;color:#c62828}
+.kb-counter{font-size:13px;color:var(--text-muted);margin-bottom:8px}
+
+.admin-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.admin-tabs .tab-btn{background:none;border:none;padding:12px 24px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-family:inherit}
+.admin-tabs .tab-btn:hover{color:var(--text)}
+.admin-tabs .tab-btn.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600}
+.consult-row{padding:16px 14px;background:var(--cream);margin-bottom:6px;border-left:3px solid var(--gold)}
+.consult-row .hdr{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.consult-row .hdr .nm{font-size:14px;font-weight:600;color:var(--navy)}
+.consult-row .hdr .wc{font-size:12px;color:var(--text-secondary)}
+.consult-row .hdr .tm{font-size:11px;color:var(--text-muted);margin-left:auto}
+.consult-row .meta{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.consult-row .meta .rl{background:rgba(184,134,76,0.1);color:var(--gold);padding:1px 8px;font-size:10px}
+.consult-row .q{font-size:13px;color:var(--text-secondary);line-height:1.6}
+
+/* ===== ADMIN PASSWORD GATE ===== */
+.admin-gate{position:fixed;inset:0;z-index:3000;background:var(--cream);display:none;align-items:center;justify-content:center}
+.admin-gate.open{display:flex}
+.admin-gate .box{text-align:center;max-width:360px;padding:40px}
+.admin-gate .box h3{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.admin-gate .box p{font-size:12px;color:var(--text-muted);margin-bottom:20px}
+.admin-gate .box input{width:100%;padding:12px 14px;border:1px solid var(--border);background:var(--white);font-size:14px;color:var(--text);outline:none;font-family:inherit;text-align:center}
+.admin-gate .box input:focus{border-color:var(--gold)}
+.admin-gate .box .err{font-size:11px;color:#c00;margin-top:8px;display:none}
+.admin-gate .box button{background:var(--navy);color:#fff;border:none;padding:12px 32px;font-size:13px;font-weight:600;cursor:pointer;margin-top:14px;font-family:inherit}
+.admin-gate .box button:hover{background:var(--navy-light)}
+
+/* ============ ABOUT ============ */
+.about-page{min-height:100vh;background:var(--cream);padding-top:64px}
+.about-body{max-width:680px;margin:0 auto;padding:40px 24px 60px}
+.about-body .section-label{font-size:11px;font-weight:600;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-bottom:12px}
+.about-body h1{font-family:'Noto Serif SC',serif;font-size:clamp(26px,4vw,36px);font-weight:700;color:var(--navy);line-height:1.25}
+.about-body .sub{font-size:15px;color:var(--text-secondary);line-height:1.8;margin-top:16px}
+.about-card{background:var(--white);border:1px solid var(--border);padding:36px;margin-top:32px}
+.about-card h2{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.about-card p{font-size:14px;color:var(--text-secondary);line-height:1.9;margin-bottom:14px}
+.about-card .hl{color:var(--gold);font-weight:600}
+.about-quote{background:var(--navy);color:#fff;padding:36px;margin-top:32px;text-align:center}
+.about-quote p{font-family:'Noto Serif SC',serif;font-size:clamp(16px,2.5vw,20px);line-height:1.7;color:rgba(255,255,255,0.5)}
+.about-quote strong{color:#fff;font-weight:600}
+.about-quote em{font-style:normal;color:var(--gold-light)}
+
+/* ============ CONSULT ============ */
+.consult-page{min-height:100vh;background:var(--cream);padding-top:64px}
+.consult-body{max-width:560px;margin:0 auto;padding:40px 24px 60px;text-align:center}
+.consult-body h1{font-family:'Noto Serif SC',serif;font-size:clamp(24px,3.5vw,32px);font-weight:700;color:var(--navy);line-height:1.25}
+.consult-body .sub{font-size:14px;color:var(--text-secondary);line-height:1.8;margin-top:12px}
+.consult-form{background:var(--white);border:1px solid var(--border);padding:36px;margin-top:32px;text-align:left}
+.consult-form .field{margin-bottom:20px}
+.consult-form .field label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
+.consult-form .field input,.consult-form .field textarea{width:100%;padding:12px 14px;border:1px solid var(--border);background:var(--cream);font-size:14px;color:var(--text);outline:none;font-family:inherit}
+.consult-form .field input:focus,.consult-form .field textarea:focus{border-color:var(--gold)}
+.consult-form .field textarea{min-height:100px;resize:vertical}
+.consult-form .submit-btn{width:100%;background:var(--navy);color:#fff;border:none;padding:14px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;font-family:inherit}
+.consult-form .submit-btn:hover{background:var(--navy-light)}
+.consult-form .submit-btn:disabled{opacity:.3;cursor:default}
+.consult-success{display:none;padding:40px;text-align:center}
+.consult-success .icon{font-size:48px;margin-bottom:16px}
+.consult-success h3{font-size:20px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.consult-success p{font-size:14px;color:var(--text-secondary)}
+
+/* ===== SERVICE NOTE ===== */
+.service-note{padding:16px 20px;background:rgba(184,134,76,0.04);border:1px solid rgba(184,134,76,0.1);margin-top:20px;font-size:12px;color:var(--text-muted);line-height:1.7;text-align:center}
+.service-note strong{color:var(--text-secondary);font-weight:500}
+
+/* ============ SOURCE MODAL ============ */
+.source-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:none;align-items:flex-end;justify-content:center}
+.source-overlay.open{display:flex}
+.source-modal{background:var(--cream);width:100%;max-width:600px;max-height:70vh;border-radius:16px 16px 0 0;overflow:hidden;display:flex;flex-direction:column;animation:slideUp .3s cubic-bezier(.16,1,.3,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.source-modal .hdr{display:flex;align-items:flex-start;gap:12px;padding:20px 24px 12px;flex-shrink:0}
+.source-modal .hdr .st{flex:1;min-width:0}
+.source-modal .hdr .st h3{font-size:15px;font-weight:600;color:var(--navy);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.source-modal .hdr .st .sm{font-size:11px;color:var(--text-muted);margin-top:2px}
+.source-modal .hdr .close-btn{background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px;line-height:1}
+.source-modal .hdr .close-btn:hover{color:var(--text)}
+.source-modal .body{overflow-y:auto;padding:12px 24px 24px;font-size:13px;color:var(--text-secondary);line-height:1.75;white-space:pre-wrap}
+.source-modal .body .type-tag{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;margin-bottom:12px}
+.source-modal .body .type-tag.kb{background:rgba(184,134,76,0.1);color:var(--gold)}
+.source-modal .body .type-tag.web{background:rgba(42,58,90,0.08);color:var(--navy-light)}
+/* ===== MOBILE RESPONSIVE ===== */
+@media(max-width:768px){
+  .admin-tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;gap:0}
+  .admin-tabs::-webkit-scrollbar{display:none}
+  .admin-tabs .tab-btn{padding:12px 14px;font-size:12px;white-space:nowrap}
+  .admin-stats{grid-template-columns:repeat(2,1fr)}
+  .admin-body{padding:16px}
+  .admin-card{padding:16px}
+  .admin-grid{grid-template-columns:1fr}
+  .hero{padding:80px 20px 50px}
+  .hero-actions{flex-direction:column;gap:12px}
+  .hero-actions .btn-primary,.hero-actions .btn-secondary{width:100%;text-align:center}
+  .hero-stat h3{font-size:22px}
+  .hero-stats{gap:16px}
+  .country-tag-wrap{gap:6px;margin-top:24px}
+  .country-tag{font-size:12px;padding:6px 14px}
+  .chat-msgs{padding:16px 12px 8px}
+  .chat-msgs .msg-row .bubble{padding:10px 14px;font-size:13px;max-width:calc(100vw - 80px)}
+  .chat-input-area{padding:0 12px 12px}
+  .chat-input-box{padding:8px 12px}
+  .chat-top{padding:12px 14px}
+  .chat-sources-bar{padding:0 12px}
+  .kb-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .kb-table{min-width:600px}
+  .kb-bar input{min-width:120px;flex:1 1 100%}
+  .kb-bar .btn,.kb-bar .btn-outline{font-size:11px;padding:6px 12px}
+  .kb-modal{padding:16px;width:95vw}
+  .booking-popup{padding:24px 20px 20px;margin:0 12px}
+  .about-card{padding:24px}
+  .consult-form{padding:24px}
+  .faq-q{padding:16px 20px;font-size:13px}
+  .faq-a.open{padding:0 20px 16px}
+  .problem-card{padding:32px 24px}
+  .t-card{padding:28px 24px}
+  .case-card{padding:28px 24px}
+  .showcase-text .stat-row{gap:16px;flex-wrap:wrap}
+  .showcase-text .stat-row h4{font-size:20px}
+}
+@media(max-width:480px){
+  .admin-stats{grid-template-columns:1fr}
+  .admin-tabs .tab-btn{padding:10px 10px;font-size:11px}
+  .admin-body{padding:12px}
+  .admin-card{padding:12px}
+  .hero{padding:60px 16px 40px}
+  .hero h1{font-size:32px}
+  .hero p{font-size:15px;line-height:1.7}
+  .hero-stat h3{font-size:22px}
+  .hero-stats{gap:12px}
+  .hero-badge{font-size:13px;padding:6px 16px;margin-bottom:24px}
+  .hero-actions{margin-top:28px}
+  .btn-primary,.btn-secondary{padding:16px 28px;font-size:14px;width:100%;text-align:center}
+  .country-tag-wrap{gap:6px;margin-top:24px}
+  .country-tag{font-size:12px;padding:6px 12px}
+  section{padding:40px 16px}
+  .section-title{font-size:24px;line-height:1.3}
+  .section-desc{font-size:14px}
+  .chat-msgs .msg-row .bubble{font-size:13px;padding:10px 14px;max-width:calc(100vw - 64px)}
+  .nav-logo{font-size:16px}
+  .nav-cta{font-size:12px;padding:8px 18px}
+}
+  .chat-input-box input{font-size:13px}
+  .chat-input-box button{padding:6px 14px;font-size:11px}
+  .kb-modal{padding:12px}
+  .about-card{padding:16px}
+  .consult-form{padding:16px}
+}
+/* ===== AUTH MODAL ===== */
+.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center}
+.auth-modal{background:#fff;border-radius:12px;padding:32px;width:380px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.auth-modal h2{margin:0 0 4px;font-size:20px;color:var(--navy)}
+.auth-modal .sub{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+.auth-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.auth-tab{padding:10px 20px;font-size:13px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;font-family:inherit;background:none;transition:all .2s}
+.auth-tab.active{color:var(--navy);border-bottom-color:var(--gold);font-weight:600}
+.auth-field{margin-bottom:14px}
+.auth-field label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.auth-field input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;outline:none;font-family:inherit;box-sizing:border-box;transition:border-color .2s}
+.auth-field input:focus{border-color:var(--gold)}
+.auth-btn{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s}
+.auth-btn:hover{background:var(--navy-light)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{color:#c00;font-size:12px;margin-top:8px;text-align:center}
+.auth-success{color:green;font-size:12px;margin-top:8px;text-align:center}
+/* ===== SESSION SIDEBAR ===== */
+.session-sidebar{width:260px;min-width:260px;background:var(--cream);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:margin-left .3s}
+.session-sidebar .s-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.session-sidebar .s-header .s-user{font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.session-sidebar .s-header .s-user .s-role{font-weight:400;color:var(--text-muted);font-size:11px;margin-left:4px}
+.session-sidebar .s-new-btn{margin:12px 16px;padding:8px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;transition:background .2s}
+.session-sidebar .s-new-btn:hover{background:var(--navy-light)}
+.session-list{flex:1;overflow-y:auto;padding:4px 8px}
+.session-item{padding:10px 12px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);margin-bottom:2px;transition:background .15s;display:flex;align-items:center;justify-content:space-between}
+.session-item:hover{background:rgba(184,134,76,0.08)}
+.session-item.active{background:rgba(184,134,76,0.15);font-weight:600}
+.session-item .s-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.session-item .s-count{font-size:10px;color:var(--text-muted);margin-left:8px;white-space:nowrap}
+.s-sidebar-toggle{background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:4px;font-family:inherit;line-height:1}
+.s-sidebar-toggle:hover{color:var(--navy)}
+/* Sidebar collapsed state: slide off-screen */
+.session-sidebar.collapsed{margin-left:-260px}
+/* Sidebar backdrop on mobile */
+.sidebar-backdrop{display:none}
+@media(max-width:768px){
+  .session-sidebar{position:fixed;top:64px;left:0;bottom:0;z-index:101;box-shadow:4px 0 24px rgba(0,0,0,0.12)}
+  .session-sidebar.collapsed{margin-left:-260px;box-shadow:none}
+  .sidebar-backdrop.active{display:block;position:fixed;top:64px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:100}
+  .chat-top .tag{display:none}
+  .chat-top .brand{font-size:14px}
+  .chat-top .clear-btn{font-size:12px;padding:4px 8px}
+  .user-badge{font-size:11px;padding:2px 6px}
+}
+/* ===== USER BADGE IN HEADER ===== */
+.user-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;padding:4px 10px;border-radius:4px;transition:background .15s}
+.user-badge:hover{background:rgba(184,134,76,0.08)}
+.user-badge .ub-name{font-weight:600;color:var(--navy);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-badge .ub-limit{font-size:10px;color:var(--text-muted)}
+/* ===== CHAT LAYOUT ===== */
+.chat-layout{display:flex;flex:1;overflow:hidden;height:100%}
+.chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+</style>
+
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" onclick="showPage('landing')">Global 1v1 <em>· AcadAI</em></div>
+  <ul class="nav-links">
+    <li><a href="#" onclick="scrollToSec('mission');return false">使命</a></li>
+    <li><a href="#" onclick="scrollToSec('methodology');return false">方法论</a></li>
+    <li><a href="#" onclick="scrollToSec('product');return false">产品</a></li>
+    <li><a href="#" onclick="scrollToSec('cases');return false">案例</a></li>
+    <li><a href="#" onclick="showPage('about');return false">创始人</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="link" onclick="showPage('consult')">预约</button>
+    <button class="link parent-trigger" onclick="openAsParent()">家长 👪</button>
+    <button class="link" onclick="showPage('admin')">管理</button>
+    <button class="nav-cta" onclick="showPage('chat')">体验 AI →</button>
+  </div>
+</nav>
+
+<!-- ==================== ADMIN PASSWORD GATE ==================== -->
+<div id="adminGate" class="admin-gate">
+  <div class="box">
+    <h3>管理后台</h3>
+    <p>请输入密码后访问</p>
+    <input id="adminPwdInput" type="password" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')checkAdminPwd()">
+    <div class="err" id="adminPwdErr">密码错误</div>
+    <button onclick="checkAdminPwd()">确认</button>
+  </div>
+</div>
+
+<!-- ==================== LANDING ==================== -->
+<div id="landingPage">
+  <section class="hero" id="sec-mission">
+    <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-badge"><span></span>基于 10,000+ 真实辅导案例</div>
+      <h1>学业困境<br>不必<em>独自面对</em></h1>
+      <p>我们是经验最丰富的过来人。将数千案例沉淀为 AI 智能引擎，让每一位海外学子，随时都能找到精准的解决方案。</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="showPage('chat')">开始提问</button>
+        <button class="btn-secondary" onclick="scrollToSec('methodology')">了解更多 →</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><h3>10,000+</h3><span>真实辅导案例</span></div>
+        <div class="hero-stat"><h3>96%</h3><span>问题解决率</span></div>
+        <div class="hero-stat"><h3>英美澳加新港</h3><span>等15+国家覆盖</span></div>
+      </div>
+      <div class="country-tag-wrap">
+        <span class="country-tag">🇬🇧 英国</span>
+        <span class="country-tag">🇺🇸 美国</span>
+        <span class="country-tag">🇦🇺 澳洲</span>
+        <span class="country-tag">🇨🇦 加拿大</span>
+        <span class="country-tag">🇸🇬 新加坡</span>
+        <span class="country-tag">🇭🇰 中国香港</span>
+        <span class="country-tag">🇯🇵 日本</span>
+        <span class="country-tag">🇩🇪 德国</span>
+        <span class="country-tag">🇫🇷 法国</span>
+      </div>
+    </div>
+    <div class="hero-side">
+      <canvas id="heroParticleCanvas" class="hero-side-canvas"></canvas>
+      <div class="hero-side-content">
+        <div class="hero-side-label"><span class="dot"></span>四维诊断 · 精准定位</div>
+
+        <div class="diagnosis-stack" id="diagnosisStack">
+          <div class="glass-card diag-card" onclick="toggleDiagCard(this)">
+            <div class="header">
+              <span class="icon">🌍</span>
+              <span class="title">中外教育差异</span>
+              <span class="badge">2000+</span>
+            </div>
+            <div class="desc">从应试到批判性思维的跨越——中西方教学体系、评分标准、课堂参与方式的根本差异</div>
+            <div class="detail">
+              <div class="stat-row">
+                <div class="stat-item"><div class="num">96%</div><div class="lbl">解决率</div></div>
+                <div class="stat-item"><div class="num">6国</div><div class="lbl">覆盖</div></div>
+                <div class="stat-item"><div class="num">47</div><div class="lbl">关联案例</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="glass-card diag-card" onclick="toggleDiagCard(this)">
+            <div class="header">
+              <span class="icon">📖</span>
+              <span class="title">学术英语断层</span>
+              <span class="badge">2000+</span>
+            </div>
+            <div class="desc">学术写作、文献阅读、课堂讨论中的语言障碍——雅思高分≠学术英语过关</div>
+            <div class="detail">
+              <div class="stat-row">
+                <div class="stat-item"><div class="num">96%</div><div class="lbl">解决率</div></div>
+                <div class="stat-item"><div class="num">4类</div><div class="lbl">学科</div></div>
+                <div class="stat-item"><div class="num">38</div><div class="lbl">关联案例</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="glass-card diag-card" onclick="toggleDiagCard(this)">
+            <div class="header">
+              <span class="icon">🔬</span>
+              <span class="title">专业知识衔接</span>
+              <span class="badge">2000+</span>
+            </div>
+            <div class="desc">跨专业学习的知识鸿沟——国内课程体系与海外专业前置要求之间的差距</div>
+            <div class="detail">
+              <div class="stat-row">
+                <div class="stat-item"><div class="num">96%</div><div class="lbl">解决率</div></div>
+                <div class="stat-item"><div class="num">7类</div><div class="lbl">专业</div></div>
+                <div class="stat-item"><div class="num">53</div><div class="lbl">关联案例</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="glass-card diag-card" onclick="toggleDiagCard(this)">
+            <div class="header">
+              <span class="icon">💚</span>
+              <span class="title">心理 · 学管需求</span>
+              <span class="badge">2000+</span>
+            </div>
+            <div class="desc">留学期间的心理支持、时间管理、学管跟进——从"没人管"到"有人带"</div>
+            <div class="detail">
+              <div class="stat-row">
+                <div class="stat-item"><div class="num">97%</div><div class="lbl">满意度</div></div>
+                <div class="stat-item"><div class="num">24/7</div><div class="lbl">响应</div></div>
+                <div class="stat-item"><div class="num">61</div><div class="lbl">关联案例</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-side-stats">
+          <div class="hero-side-stat"><div class="num" data-target="10000">0</div><div class="lbl">知识案例</div></div>
+          <div class="hero-side-stat"><div class="num" data-target="8">0</div><div class="lbl">分类覆盖</div></div>
+          <div class="hero-side-stat"><div class="num" data-target="96">0</div><div class="lbl">% 解决率</div></div>
+        </div>
+
+        <div class="hero-side-quick">
+          <button class="item" onclick="askSuggested('留学国家怎么选 各有什么优缺点')"><span class="ico">🌍</span> 留学国家怎么选</button>
+          <button class="item" onclick="askSuggested('签证办理需要哪些材料 流程是什么')"><span class="ico">📋</span> 签证办理指南</button>
+          <button class="item" onclick="askSuggested('留学论文写作技巧 如何提高分数')"><span class="ico">✍️</span> 论文写作技巧</button>
+          <button class="item" onclick="askSuggested('留学期间实习和就业怎么规划')"><span class="ico">💼</span> 实习就业规划</button>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <section class="problem-wrap">
+    <div class="section-label">洞察</div>
+    <h2 class="section-title">每一道坎，我们<em>都见过</em></h2>
+    <p class="section-desc">经手数千案例后，我们发现留学生的困境高度相似——不是能力不够，而是缺少一个"问对人"的渠道。</p>
+    <div class="problem-grid">
+      <div class="problem-card"><div class="problem-icon">📚</div><h3>学业脱节</h3><p>全英文授课听不懂教学节奏、论文引用格式不熟悉、小组讨论找不到切入点——不是因为笨，而是因为没人带你过一遍"游戏规则"。</p></div>
+      <div class="problem-card"><div class="problem-icon">🌐</div><h3>信息孤岛</h3><p>学校的 Support 资源没人告诉你怎么用，身边的同学也都在摸索。时差让国内家人干着急，很多问题拖到 DDL 前才爆发。</p></div>
+      <div class="problem-card"><div class="problem-icon">⏰</div><h3>响应滞后</h3><p>约 Tutor 要排期、等回复要过夜、找对的人要反复试错——而 DDL 从不等人。等找到帮助，往往已经来不及了。</p></div>
+    </div>
+  </section>
+
+  <div class="mantra-wrap">
+    <h2>我们相信，<strong>最好的指南针</strong>，是那些<strong>已经走过这条路的人</strong>。<br>我们把他们走过的路，变成了 <em>AI</em>。</h2>
+  </div>
+
+  <section id="sec-methodology">
+    <div class="section-label">方法论</div>
+    <h2 class="section-title">经验 <em>× AI</em> = 即时答案</h2>
+    <p class="section-desc">不是简单的问答机器人。每一段回答背后，是结构化的案例沉淀和严谨的匹配逻辑。</p>
+    <div class="method-grid">
+      <div class="method-card"><div class="method-num">01</div><h3>案例结构化沉淀</h3><p>每一份辅导记录都被拆解为问题类型、学科背景、学生阶段、解决方案、效果追踪五个维度，形成可检索的知识节点。</p></div>
+      <div class="method-card"><div class="method-num">02</div><h3>智能匹配与溯源</h3><p>当用户提问时，AI 从知识库中召回最相关的案例组合，并标注每个建议的来源案例数和解决率——不是凭空生成。</p></div>
+      <div class="method-card"><div class="method-num">03</div><h3>持续迭代进化</h3><p>每一次新的辅导、每一份用户反馈，都会经过清洗和标注后纳入知识库。回答质量随着案例积累持续提升。</p></div>
+    </div>
+  </section>
+
+  <section class="showcase-wrap" id="sec-product">
+    <div class="section-label">产品</div>
+    <div class="showcase-grid">
+      <div class="showcase-text">
+        <h2 class="section-title">输入问题<br><em>即时获得</em>精准方案</h2>
+        <p class="section-desc" style="max-width:100%">描述你的学业困境，AI 从数千案例中提取最相关的经验，给出具体、可执行的建议，并标注来源和可信度。</p>
+        <div class="stat-row">
+          <div><h4>10,000+</h4><span>案例库</span></div>
+          <div><h4>96%</h4><span>解决率</span></div>
+          <div><h4>7×24</h4><span>即时响应</span></div>
+        </div>
+      </div>
+      <div class="chat-box">
+        <div class="chat-box-header"><span></span><span></span><span></span></div>
+        <div class="chat-body">
+          <div class="msg"><div class="msg-avatar user">你</div><div class="msg-content">我在澳洲读大一，会计课完全听不懂，马上要 midterm 了，不知道从哪里开始复习...</div></div>
+          <div class="msg"><div class="msg-avatar ai">AI</div><div><div class="msg-content"><strong>1.</strong> 先把每章 Key Terms 背熟——这是听懂课的基础<br><strong>2.</strong> 去 YouTube 搜课程代码 + "review"，很多博主有考点串讲<br><strong>3.</strong> 参加学校的 PASS 项目——这是往届反馈最有效的方式<div class="msg-source">基于 47 个类似案例 · 解决率 96%</div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TESTIMONIALS ===== -->
+  <section>
+    <div class="section-label">学员反馈</div>
+    <h2 class="section-title">过来人的经验，<em>他们这样说</em></h2>
+    <div class="testimonial-grid">
+      <div class="t-card">
+        <p>一开始真的快撑不下去了，论文连续两周被导师打回。AI 帮我改了一次结构，又匹配了之前学长的经验，最后这篇拿了 68 分。</p>
+        <div class="t-author"><div class="t-avatar">L</div><div><div class="t-name">Lucas</div><div class="t-school">University of Manchester · MSc</div></div></div>
+      </div>
+      <div class="t-card">
+        <p>选课之前问了一下，AI 告诉我哪几门课 workload 大、哪几门给分好。按建议选了，第一学期 GPA 4.0。以前哪有人跟我说这些。</p>
+        <div class="t-author"><div class="t-avatar">Y</div><div><div class="t-name">Yuki</div><div class="t-school">UCSD · Computer Science</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CASES ===== -->
+  <section id="sec-cases">
+    <div class="section-label">真实案例</div>
+    <h2 class="section-title">从困境到突破，<em>他们做到了</em></h2>
+    <div class="case-grid">
+      <div class="case-card" onclick="toggleCase(this)">
+        <div class="country">United Kingdom · 硕士</div>
+        <h3>挂科边缘到 Merit 毕业</h3>
+        <p>经济学硕士第一学期两门核心课挂科，面临被劝退风险。</p>
+        <div class="case-detail">通过针对性论文辅导和研究方法训练，第二学期全部逆袭到 Distinction，最终以 Merit 等级毕业。关键转折点在于调整了论文写作方法和复习策略——从"死记硬背"转向"批判性分析"。</div>
+        <div class="case-tag">论文辅导 · 研究方法</div>
+        <div class="expand-hint">点击展开 →</div>
+      </div>
+      <div class="case-card" onclick="toggleCase(this)">
+        <div class="country">Australia · 本科</div>
+        <h3>从听不懂课到 Dean's List</h3>
+        <p>会计专业大一新生，前六周完全跟不上教学节奏。</p>
+        <div class="case-detail">通过系统化的课程梳理和习题训练，期末拿到全科 High Distinction，入选学院优秀学生名单。核心方法：每周做知识图谱梳理，把每节课的核心概念串联起来，而不是孤立地背知识点。</div>
+        <div class="case-tag">课业补习 · 考试冲刺</div>
+        <div class="expand-hint">点击展开 →</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section>
+    <div class="section-label">常见问题</div>
+    <h2 class="section-title">你可能想<em>了解</em>的</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">AI 是免费使用的吗？<span class="icon">+</span></button>
+        <div class="faq-a">是的，AI 问答功能目前完全免费开放。你可以随时提问。1v1 深度咨询为付费服务，详情可预约了解。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">AI 的回答可靠吗？来自哪里？<span class="icon">+</span></button>
+        <div class="faq-a">每个回答都基于真实辅导案例和实时网络信息，并标注了来源。你可以点击来源标签查看具体内容，判断其相关性。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">覆盖哪些留学国家？<span class="icon">+</span></button>
+        <div class="faq-a">目前覆盖英国、美国、澳洲、加拿大、新加坡、香港、日本、德国、法国等 15+ 留学目的地，案例库仍在持续扩展中。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">如果 AI 解决不了我的问题怎么办？<span class="icon">+</span></button>
+        <div class="faq-a">AI 的知识库覆盖了大多数常见问题，但如果你的情况比较特殊，可以直接预约 1v1 咨询。创始人有 11 年留学行业经验，能针对性地给出建议。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <div class="cta-wrap">
+    <h2>让每一个留学生<br>都能随时<em>跨过那道坎</em></h2>
+    <p>你的学业问题，AI 从数千案例中为你匹配最有效的解决方案。</p>
+    <button class="btn-primary" style="font-size:14px;padding:16px 48px" onclick="showPage('chat')">开始提问</button>
+  </div>
+
+  <div class="landing-footer">
+    <div class="legal">Global 1v1 · AcadAI — 为每一位留学生而建</div>
+    <ul class="links">
+      <li><a href="#" onclick="showPage('about');return false">关于创始人</a></li>
+      <li><a href="#" onclick="showPage('consult');return false">预约咨询</a></li>
+      <li><a href="#" onclick="showPage('admin');return false">管理后台</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== CHAT ==================== -->
+<div id="chatPage" class="hidden chat-app">
+  <div class="chat-layout">
+    <!-- Session Sidebar -->
+    <div id="sessionSidebar" class="session-sidebar">
+      <div class="s-header">
+        <span class="s-user" id="sidebarUser">游客 <span class="s-role">匿名</span></span>
+        <button class="s-sidebar-toggle" onclick="toggleSidebar()" title="收起侧栏">◀</button>
+      </div>
+      <button class="s-new-btn" onclick="newSession()">＋ 新对话</button>
+      <div class="session-list" id="sessionList"></div>
+    </div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+    <!-- Main Chat Area -->
+    <div class="chat-main">
+      <div class="chat-top">
+        <button class="s-sidebar-toggle" onclick="toggleSidebar()" title="展开侧栏" style="font-size:14px">☰</button>
+        <span class="brand">Global 1v1 <em>· AcadAI</em></span>
+        <span id="userBadge" class="user-badge" onclick="showAuth()">登录</span>
+        <button class="clear-btn" onclick="clearChat()">清空</button>
+        <span class="tag">基于真实案例</span>
+      </div>
+      <div class="chat-msgs-wrap">
+        <div id="chatMessages" class="chat-msgs"></div>
+        <button id="scrollBottomBtn" class="scroll-bottom-btn" onclick="scrollForceBottom()">↓</button>
+      </div>
+      <div id="sourcesPanel" class="chat-sources-bar hidden"><div class="inner" id="sourcesList"></div></div>
+      </div> <!-- /chat-main -->
+  </div> <!-- /chat-layout -->
+  <!-- Share modal (inside chatPage for z-index context) -->
+  <div id="shareOverlay" class="share-overlay" onclick="if(event.target===this)closeShareModal()">
+  <div class="share-modal">
+    <button class="close-btn" onclick="closeShareModal()">×</button>
+    <h3>分享这个回答</h3>
+    <p>复制下面的链接，发送给家长或朋友查看</p>
+    <input id="shareLinkInput" readonly onclick="this.select();navigator.clipboard.writeText(this.value)">
+    <button class="copy-btn" onclick="copyShareLink()">复制链接</button>
+  </div>
+</div>
+
+<div id="bookingPopupOverlay" class="booking-popup-overlay" onclick="if(event.target===this)hideBookingPopup()">
+    <div class="booking-popup">
+      <button class="close-btn" onclick="hideBookingPopup()">×</button>
+      <h3 id="bookingPopupTitle">需要更具体的帮助？</h3>
+      <p id="bookingPopupDesc">你的情况可能需要更针对性的分析。我们的真人学管顾问（均有海外留学背景）可以为你提供一对一的定制化规划服务。</p>
+      <div class="actions">
+        <button class="btn-primary" onclick="showPage('consult');hideBookingPopup()">立即预约咨询</button>
+        <button class="btn-skip" onclick="hideBookingPopup()">继续提问</button>
+      </div>
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <div class="chat-input-box">
+      <input id="chatInput" type="text" placeholder="描述你的学业问题..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button id="sendBtn" onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div id="authOverlay" class="auth-overlay hidden" onclick="if(event.target===this)hideAuth()">
+  <div class="auth-modal">
+    <h2 id="authTitle">注册 / 登录</h2>
+    <p class="sub" id="authSub">注册后聊天记录永久保存，多设备同步</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">登录</button>
+      <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">注册</button>
+    </div>
+    <div class="auth-field">
+      <label>用户名</label>
+      <input id="authName" type="text" placeholder="给自己起个名字" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+    <div class="auth-field">
+      <label>密码</label>
+      <input id="authPass" type="password" placeholder="设置密码" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+    <button class="auth-btn" id="authBtn" onclick="submitAuth()">登录</button>
+    <div id="authStatus" class="auth-error"></div>
+  </div>
+</div>
+
+<!-- ==================== ADMIN ==================== -->
+<div id="adminPage" class="hidden admin-page">
+  <div class="admin-top">
+    <button class="back-btn" onclick="showPage('landing')">←</button>
+    <h3>管理后台</h3>
+    <div class="actions">
+      <button onclick="rebuildIndex()">重建索引</button>
+      <button onclick="loadAdminData()">刷新</button>
+	      <button onclick="adminLogout()" style="opacity:0.6">退出</button>
+    </div>
+  </div>
+  <div class="admin-body">
+    <div id="adminStats" class="admin-stats">
+      <div class="admin-stat-card"><div class="lbl">知识条目</div><div class="val">-</div></div>
+      <div class="admin-stat-card"><div class="lbl">分类数</div><div class="val">-</div></div>
+      <div class="admin-stat-card"><div class="lbl">活跃条目</div><div class="val">-</div></div>
+      <div class="admin-stat-card"><div class="lbl">待审核</div><div class="val" id="pendingBadge">-</div></div>
+      <div class="admin-stat-card"><div class="lbl">用户数</div><div class="val" id="userCountVal">-</div></div>
+      <div class="admin-stat-card"><div class="lbl">对话消息</div><div class="val" id="msgCountVal">-</div></div>
+    </div>
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="entries" onclick="switchAdminTab('entries')">知识条目</button>
+      <button class="tab-btn" data-tab="pending" onclick="switchAdminTab('pending')">待审核 <span id="pendingTabBadge" style="background:#c00;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></button>
+      <button class="tab-btn" data-tab="consult" onclick="switchAdminTab('consult')">预约咨询</button>
+      <button class="tab-btn" data-tab="users" onclick="switchAdminTab('users')">用户</button>
+	      <button class="tab-btn" data-tab="approve" onclick="switchAdminTab('approve')">用户审核 <span id="approveTabBadge" style="background:#c00;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></button>
+      <button class="tab-btn" data-tab="dashboard" onclick="switchAdminTab('dashboard')">仪表盘</button>
+      <button class="tab-btn" data-tab="feedback" onclick="switchAdminTab('feedback')">反馈 <span id="feedbackTabBadge" style="background:#c00;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></button>
+	      <button class="tab-btn" data-tab="quality" onclick="switchAdminTab('quality')">质量</button>
+      <button class="tab-btn" data-tab="sessions" onclick="switchAdminTab('sessions')">对话</button>
+      <button class="tab-btn" data-tab="gaps" onclick="switchAdminTab('gaps')">盲区 <span id="gapsTabBadge" style="background:#c00;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></button>
+	      <button class="tab-btn" data-tab="report" onclick="switchAdminTab('report')">日报</button>
+		      <button class="tab-btn" data-tab="smartadd" onclick="switchAdminTab('smartadd')">极简录入</button>
+		      <button class="tab-btn" data-tab="export" onclick="switchAdminTab('export')">数据导出</button>
+    </div>
+    <div id="adminEntriesSection">
+      <!-- Search & Filter Bar -->
+      <div class="admin-card">
+        <div class="kb-bar">
+          <input id="kbSearchInput" placeholder="搜索知识条目..." onkeydown="if(event.key==='Enter'){_kbSearch=this.value;_kbPage=1;loadKnowledgeData(1)}">
+          <select id="kbCategoryFilter" onchange="_kbCategory=this.value;_kbPage=1;loadKnowledgeData(1)"><option value="">全部分类</option></select>
+          <button class="btn" onclick="{_kbSearch=document.getElementById('kbSearchInput').value;_kbPage=1;loadKnowledgeData(1)}">搜索</button>
+          <button class="btn-outline" onclick="openBatchImport()">批量导入</button>
+        </div>
+      </div>
+      <!-- Add Entry Form -->
+      <div class="admin-card"><h3>添加知识条目</h3><div class="admin-grid"><input id="addTitle" placeholder="标题"><input id="addCategory" placeholder="分类 (如: uk-academic)"></div><textarea id="addContent" placeholder="内容（支持 Markdown 格式）"></textarea><div class="row"><input id="addTags" placeholder="标签（逗号分隔）"><button class="btn-sm" onclick="addEntry()">添加</button></div></div>
+      <!-- Entry Table -->
+      <div class="admin-card">
+        <h3>知识条目 <span id="entryCount" style="font-weight:400;color:var(--text-muted)">(0)</span> <span class="kb-counter" id="kbCounter"></span></h3>
+        <div class="kb-table-wrap"><table class="kb-table"><thead><tr><th style="width:28%">标题</th><th style="width:10%">分类</th><th style="width:8%">标签</th><th style="width:34%">内容预览</th><th style="width:8%">状态</th><th style="width:12%">操作</th></tr></thead><tbody id="kbTbody"></tbody></table></div>
+        <div class="kb-pager" id="kbPager"></div>
+      </div>
+    </div>
+    <div id="adminPendingSection" class="hidden">
+      <div class="admin-card"><h3>待审核问答</h3><div id="pendingList" class="entry-list"></div><p id="pendingEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无待审核条目</p></div>
+    </div>
+    <div id="adminConsultSection" class="hidden">
+      <div class="admin-card"><h3>预约咨询记录</h3><div id="consultList" class="entry-list"></div><p id="consultEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无预约记录</p></div>
+    </div>
+    <div id="adminUsersSection" class="hidden">
+      <div class="admin-card"><h3>用户列表 <span id="userCountLabel" style="font-weight:400;color:var(--text-muted)">(0)</span></h3><div id="userList" class="entry-list"></div><p id="userEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无用户</p></div>
+    </div>
+    <div id="adminApproveSection" class="hidden">
+      <div class="admin-card"><h3>待审核用户</h3><div id="approveList" class="entry-list"></div><p id="approveEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无待审核用户</p></div>
+    </div>
+    <div id="adminDashboardSection" class="hidden">
+      <div class="admin-card"><h3>数据概览</h3><div id="dashboardContent" style="font-size:13px;color:var(--text-secondary);line-height:2"></div></div>
+    </div>
+    <div id="adminSessionsSection" class="hidden">
+      <div class="admin-card"><h3>对话管理 <span id="sessionCount" style="font-weight:400;color:var(--text-muted)">(0)</span></h3><div id="sessionList" class="entry-list"></div><p id="sessionEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无对话记录</p></div>
+    </div>
+    <div id="adminFeedbackSection" class="hidden">
+      <div class="admin-card"><h3>低分回答（用户点踩）</h3><div id="feedbackList" class="entry-list"></div><p id="feedbackEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无点踩反馈</p></div>
+    </div>
+    <div id="adminQualitySection" class="hidden">
+      <div class="admin-card"><h3>回答质量看板</h3><div id="qualitySummary"></div></div>
+      <div class="admin-card"><h3>分话题质量</h3><div id="qualityTopicTable"></div></div>
+      <div class="admin-card"><h3>最近低分回答</h3><div id="qualityRecentList" class="entry-list"></div><p id="qualityRecentEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无低分回答</p></div>
+    </div>
+    <div id="adminGapsSection" class="hidden">
+      <div class="admin-card"><h3>知识盲区检测 <span id="gapsCount" style="font-weight:400;color:var(--text-muted)">(0)</span></h3><p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">以下用户问题未能在知识库中找到匹配内容，可转为待审核入库。</p><div id="gapsList" class="entry-list"></div><p id="gapsEmpty" style="text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;display:none">暂无知识盲区</p></div>
+    </div>
+	    <div id="adminSmartAddSection" class="hidden">
+	      <div class="admin-card">
+	        <h3>极简录入 — AI 自动解析辅导记录</h3>
+	        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">把辅导记录原文贴进来，AI 自动提取标题、分类和标签，确认后一键入库。</p>
+	        <textarea id="smartAddInput" placeholder="把辅导记录全文粘贴到这里...
+
+例如：
+学生情况：英国曼彻斯特大学硕士，会计与金融专业，第一学期挂了财务报表分析（38分），现在很焦虑，不知道能不能毕业。学生基础还不错，本科均分82，主要是刚到英国不适应教学方式。辅导过程：先帮他把课程大纲重新梳理了一遍，发现他其实理解能力没问题，问题出在考试答题技巧上——英国判分看重批判性分析，而他还在用国内那套记忆+复述的方式。...
+" style="width:100%;min-height:180px;padding:12px;border:1px solid var(--border);background:var(--cream);font-size:13px;font-family:inherit;color:var(--text);outline:none;resize:vertical;border-radius:4px;box-sizing:border-box"></textarea>
+	        <div class="row" style="margin-top:10px">
+	          <button class="btn-sm" id="smartAddParseBtn" onclick="smartAddParse()">AI 解析</button>
+	          <span id="smartAddStatus" style="font-size:12px;color:var(--text-muted);margin-left:10px"></span>
+	        </div>
+	      </div>
+	      <div id="smartAddPreview" class="admin-card" style="display:none">
+	        <h3>解析预览 <span style="font-weight:400;color:var(--text-muted);font-size:12px">— 可直接编辑后确认入库</span></h3>
+	        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+	          <div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:3px">标题</label><input id="smartAddTitle" style="width:100%;padding:8px 10px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;border-radius:4px;box-sizing:border-box"></div>
+	          <div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:3px">分类</label><input id="smartAddCategory" style="width:100%;padding:8px 10px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;border-radius:4px;box-sizing:border-box"></div>
+	        </div>
+	        <div style="margin-bottom:10px">
+	          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:3px">标签（逗号分隔）</label>
+	          <input id="smartAddTags" style="width:100%;padding:8px 10px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;border-radius:4px;box-sizing:border-box">
+	        </div>
+	        <div>
+	          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:3px">内容</label>
+	          <textarea id="smartAddContent" style="width:100%;min-height:160px;padding:12px;border:1px solid var(--border);font-size:13px;font-family:inherit;color:var(--text);outline:none;resize:vertical;border-radius:4px;box-sizing:border-box;background:var(--cream)"></textarea>
+	        </div>
+	        <div class="row" style="margin-top:12px;display:flex;gap:8px;align-items:center">
+	          <button class="btn-sm" onclick="smartAddSave()">确认入库</button>
+	          <span id="smartAddSaveStatus" style="font-size:12px;color:var(--text-muted)"></span>
+	        </div>
+	      </div>
+	    </div>
+  </div>
+</div>
+
+    <div id="adminReportSection" class="hidden">
+      <div class="admin-card">
+        <h3>今日概况 <span style="font-weight:400;color:var(--text-muted);font-size:12px" id="reportDate"></span></h3>
+        <div id="dailyReportContent" style="font-size:13px;color:var(--text-secondary);line-height:2"></div>
+      </div>
+      <div class="admin-card">
+        <h3>本周趋势 (7天)</h3>
+        <div id="weeklyReportContent" style="font-size:13px;color:var(--text-secondary);line-height:2"></div>
+      </div>
+    </div>
+    <div id="adminExportSection" class="hidden">
+      <div class="admin-card">
+        <h3>数据导出</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">导出知识库全部条目为 JSON，供离线分析或内容审阅。</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <a href="/api/export/entries" target="_blank" class="btn" download="knowledge-export.json" style="text-decoration:none">下载全部知识条目 (JSON)</a>
+          <button class="btn-outline" onclick="loadExportData()">预览导出数据</button>
+        </div>
+        <div id="exportPreview" style="margin-top:16px;display:none">
+          <h4 style="font-size:13px;margin-bottom:8px">数据预览</h4>
+          <div id="exportStats" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+          <div id="exportEntries" class="entry-list"></div>
+        </div>
+      </div>
+    </div>
+<!-- ==================== EDIT MODAL ==================== -->
+<div id="kbEditOverlay" class="kb-modal-overlay" onclick="if(event.target===this)closeEditModal()">
+  <div class="kb-modal"><button class="close-btn" onclick="closeEditModal()">×</button><h3>编辑知识条目</h3>
+    <input id="kbEditId" type="hidden">
+    <label>标题</label><input id="kbEditTitle">
+    <label>分类</label><input id="kbEditCategory">
+    <label>标签（逗号分隔）</label><input id="kbEditTags">
+    <label>内容</label><textarea id="kbEditContent"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input id="kbEditActive" type="checkbox" checked style="width:auto"> 活跃</label>
+    <div class="actions"><button class="btn-cancel" onclick="closeEditModal()">取消</button><button class="btn-primary" onclick="saveEdit()">保存</button></div>
+  </div>
+</div>
+<!-- ==================== BATCH IMPORT MODAL ==================== -->
+<div id="kbBatchOverlay" class="kb-modal-overlay" onclick="if(event.target===this)closeBatchImport()">
+  <div class="kb-modal"><button class="close-btn" onclick="closeBatchImport()">×</button><h3>批量导入知识条目</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">JSON 数组格式，每个对象包含 title、content、category、tags：</p>
+    <textarea id="kbBatchInput" placeholder='[\n  {"title":"美国F1签证材料清单","content":"F1签证所需材料...","category":"us-visa","tags":["签证","美国"]}\n]' style="min-height:200px"></textarea>
+    <div class="actions"><button class="btn-cancel" onclick="closeBatchImport()">取消</button><button class="btn-primary" onclick="submitBatchImport()">导入</button></div>
+  </div>
+</div>
+
+<!-- ==================== ABOUT ==================== -->
+<div id="aboutPage" class="hidden about-page">
+  <div class="admin-top"><button class="back-btn" onclick="showPage('landing')">←</button><h3>关于创始人</h3></div>
+  <div class="about-body">
+    <div class="section-label">ABOUT</div>
+    <h1>11 年，一条路<br>从留学到教育</h1>
+    <p class="sub">从留学前期的规划咨询，到留学后期的学业支持，再到专注于帮助海外学子衔接学业——这条路走了 11 年。</p>
+    <div class="about-card">
+      <h2>从业历程</h2>
+      <p><span class="hl">2014 — 2018 · 留学前期</span><br>从留学规划咨询起步，帮助数百个家庭完成留学申请。在这过程中，我看到了一个共同的焦虑：孩子出去了，然后呢？</p>
+      <p><span class="hl">2018 — 2022 · 留学后期</span><br>开始深入留学生课业辅导，发现出去的很多孩子不只是学不会，而是孤立无援。语言不通、体系不熟、身边没有可以问的人——这些比课业本身更难跨越。</p>
+      <p><span class="hl">2022 至今 · 衔接海外学业</span><br>专注帮助海外中国学生解决学业困境，为家庭提供从"出去"到"毕业"的全链路支持。积累了数千真实案例，深知每条路上都有什么坎。</p>
+    </div>
+    <div class="about-card">
+      <h2>我的信念</h2>
+      <p>留学生遇到的学业问题，90% 不是能力问题——而是信息差和方法论的问题。有经验的过来人稍微带一步，结果完全不同。</p>
+      <p>所以我一直在做一件事：<span class="hl">把那些成功走过来的经验，最大化地传递给正在走这条路的人。</span></p>
+    </div>
+    <div class="about-quote"><p><strong>赋能海外学业</strong><br>让留学之路 <em>更具价值</em></p></div>
+    <div class="landing-actions" style="margin-top:32px;justify-content:center;display:flex;gap:14px"><button class="btn-primary" onclick="showPage('chat')">体验 AI 助手</button><button class="btn-secondary" onclick="showPage('consult')">预约咨询 →</button></div>
+  </div>
+</div>
+
+<!-- ==================== CONSULT ==================== -->
+<div id="consultPage" class="hidden consult-page">
+  <div class="admin-top"><button class="back-btn" onclick="showPage('landing')">←</button><h3>预约咨询</h3></div>
+  <div class="consult-body">
+    <h1>预约 <em style="font-style:normal;color:var(--gold)">一对一</em> 咨询</h1>
+    <p class="sub">留下你的联系方式，我会尽快与你沟通。<br>也可以直接扫码添加微信：</p>
+    <div style="margin:12px auto 0;width:140px"><img src="/wechat-qr.jpg" alt="微信二维码" style="width:140px;height:140px;border:2px solid var(--border);border-radius:4px"></div>
+    <div class="service-note">💡 AI 问答完全免费。1v1 深度咨询为付费服务，<strong>首次咨询享优惠</strong>。提交后 24h 内微信联系。</div>
+    <div class="consult-form" id="consultForm">
+      <div class="field"><label>你的姓名</label><input id="cName" placeholder="如何称呼你？"></div>
+      <div class="field"><label>微信号</label><input id="cWechat" placeholder="你的微信号"></div>
+      <div class="field"><label>你是</label><input id="cRole" placeholder="学生本人 / 家长 / 其他" style="width:100%;padding:12px 14px;border:1px solid var(--border);background:var(--cream);font-size:14px;color:var(--text);outline:none;font-family:inherit"></div>
+      <div class="field"><label>需要解决的问题</label><textarea id="cQuestion" placeholder="简单描述一下你的学业问题或需求..."></textarea></div>
+      <button class="submit-btn" id="consultBtn" onclick="submitConsult()">提交预约</button>
+    </div>
+    <div class="consult-success" id="consultSuccess"><div class="icon">✅</div><h3>提交成功！</h3><p>我会尽快通过微信与你联系。<br>请留意你的微信好友请求。</p><button class="btn-primary" style="margin-top:24px" onclick="showPage('landing')">返回首页</button></div>
+  </div>
+</div>
+
+<div id="sourceOverlay" class="source-overlay" onclick="closeSourceModal(event)">
+  <div class="source-modal" id="sourceModal">
+    <div class="hdr"><div class="st"><h3 id="sourceTitle"></h3><div class="sm" id="sourceMeta"></div></div><button class="close-btn" onclick="closeSourceModal()">✕</button></div>
+    <div class="body" id="sourceBody"></div>
+  </div>
+</div>
+
+<script>
+/* ===== ADMIN AUTH (server-side) ===== */
+function getAdminToken(){
+  var c=document.cookie.split('; ');
+  for(var i=0;i<c.length;i++){var p=c[i].split('=');if(p[0]==='admin_token')return p[1]}
+  return localStorage.getItem('admin_token')||'';
+}
+function setAdminToken(t){
+  if(t){
+    document.cookie='admin_token='+t+'; path=/; max-age=86400; SameSite=Lax';
+    localStorage.setItem('admin_token',t);
+  } else {
+    document.cookie='admin_token=; path=/; max-age=0';
+    localStorage.removeItem('admin_token');
+  }
+}
+async function checkAdminPwd(){
+  var inp=document.getElementById('adminPwdInput').value.trim();
+  if(!inp){document.getElementById('adminPwdErr').style.display='block';return}
+  try{
+    var r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:inp})});
+    var d=await r.json();
+    if(d.authenticated){
+      setAdminToken(d.token||'');
+      document.getElementById('adminGate').classList.remove('open');
+      loadAdminData();
+    } else {
+      document.getElementById('adminPwdErr').style.display='block';
+    }
+  }catch(e){
+    document.getElementById('adminPwdErr').textContent='登录失败：'+e.message;
+    document.getElementById('adminPwdErr').style.display='block';
+  }
+}
+async function checkAdminAuth(){
+  if(getAdminToken()){
+    try{
+      var r=await fetch('/api/admin/login'),d=await r.json();
+      if(d.authenticated){loadAdminData();return}
+    }catch(e){}
+  }
+  document.getElementById('adminGate').classList.add('open');
+}
+function adminLogout(){
+  setAdminToken('');
+  document.getElementById('adminGate').classList.add('open');
+  document.getElementById('adminPwdInput').value='';
+  document.getElementById('adminPwdErr').style.display='none';
+  // Clear admin data
+  document.getElementById('entriesList').innerHTML='';
+  document.getElementById('pendingList').innerHTML='';
+}
+
+/* ===== PAGE SWITCHING ===== */
+function showPage(p){
+  ['landingPage','chatPage','adminPage','aboutPage','consultPage'].forEach(function(id){
+    document.getElementById(id).classList.add('hidden')
+  });
+  window.scrollTo(0,0);
+  if(p==='landing') document.getElementById('landingPage').classList.remove('hidden');
+  else if(p==='chat'){document.getElementById('chatPage').classList.remove('hidden');initChat()}
+  else if(p==='admin'){
+    document.getElementById('adminPwdInput').value='';
+    document.getElementById('adminPwdErr').style.display='none';
+    document.getElementById('adminPage').classList.remove('hidden');
+    checkAdminAuth();
+  }
+  else if(p==='about') document.getElementById('aboutPage').classList.remove('hidden');
+  else if(p==='consult'){document.getElementById('consultPage').classList.remove('hidden');resetConsult()}
+}
+window.addEventListener('DOMContentLoaded',function(){
+  showPage('landing');
+  initUserSession();
+});
+
+function scrollToSec(id){
+  showPage('landing');
+  var el=document.getElementById('sec-'+id);
+  if(el){
+    var top=el.getBoundingClientRect().top+window.pageYOffset-80;
+    window.scrollTo({top:top,behavior:'smooth'});
+  }
+}
+
+/* ===== FAQ ===== */
+function toggleFaq(btn){
+  btn.classList.toggle('open');
+  var a=btn.nextElementSibling;
+  if(a) a.classList.toggle('open');
+}
+
+/* ===== CASE EXPAND ===== */
+var lastCaseCard=null;
+function toggleCase(card){
+  if(lastCaseCard&&lastCaseCard!==card){
+    var prevDetail=lastCaseCard.querySelector('.case-detail');
+    var prevHint=lastCaseCard.querySelector('.expand-hint');
+    if(prevDetail) prevDetail.classList.remove('open');
+    if(prevHint) prevHint.textContent='点击展开 →';
+  }
+  var detail=card.querySelector('.case-detail');
+  var hint=card.querySelector('.expand-hint');
+  if(detail&&hint){
+    detail.classList.toggle('open');
+    hint.textContent=detail.classList.contains('open')?'收起 ↑':'点击展开 →';
+  }
+  lastCaseCard=card;
+}
+
+/* ===== CHAT ===== */
+var isStreaming=false, chatInited=false, userScrolledUp=false, conversationHistory=[];
+var chatMsgCount=0, userToken=localStorage.getItem('acadai_token')||'';
+var _feedbackVotes = {};  // messageId -> 'up' or 'down'
+var _isParent = false; var _bookingPopupShown = false;  // only show booking popup once per session
+
+var chatMsgsEl=document.getElementById('chatMessages');
+var _lastScrollTime=0, _scrollCheckRaf=null;
+if(chatMsgsEl){
+  chatMsgsEl.addEventListener('scroll',function(){
+    // 立即阻止自动滚动（不等 rAF），避免和渲染帧打架
+    userScrolledUp=true;
+    _lastScrollTime=Date.now();
+    // rAF 节流：更新按钮显隐 + 判断用户是否真的停下来了
+    if(!_scrollCheckRaf){
+      _scrollCheckRaf=requestAnimationFrame(function(){
+        _scrollCheckRaf=null;
+        var threshold=80;
+        var stillUp=this.scrollTop+this.clientHeight<this.scrollHeight-threshold;
+        var btn=document.getElementById('scrollBottomBtn');
+        if(btn) btn.style.display=stillUp?'flex':'none';
+        // 用户停止滚动 400ms 后重新评估位置
+        clearTimeout(window._scrollSettleTimer);
+        window._scrollSettleTimer=setTimeout(function(){
+          var st=chatMsgsEl.scrollTop+chatMsgsEl.clientHeight<chatMsgsEl.scrollHeight-threshold;
+          userScrolledUp=st;
+        },400);
+      }.bind(this));
+    }
+  });
+}
+function scrollToBottom(){
+  if(userScrolledUp) return;
+  var el=document.getElementById('chatMessages');
+  if(el) el.scrollTop=el.scrollHeight;
+}
+
+function initChat(){
+  if(chatInited) return;
+  chatInited=true;
+  // On mobile (<768px), start sidebar collapsed so it doesn't block chat
+  if(window.innerWidth<=768){var sb=document.getElementById('sessionSidebar');if(sb)sb.classList.add('collapsed')}
+  chatMsgCount=0;
+  conversationHistory=[];
+  var cb=document.getElementById('chatBookingBridge');if(cb)cb.style.display='none';
+  var m=document.getElementById('chatMessages');
+  // Load conversation history from server
+  if(userToken){
+    loadChatHistory(m);
+    loadSessions();  // 加载会话列表
+  } else {
+    showChatWelcome(m);
+    scrollToBottom();  // 让用户一进入就看到输入框
+  }
+}
+function askSuggested(q){document.getElementById('chatInput').value=q;sendMessage()}
+/* Detect booking intent — show booking bridge immediately */
+function _checkBookingIntent(q){
+  var ql=q.toLowerCase();
+  var bookingKw=[
+    '联系','电话','微信','wechat','whatsapp','联系方式','怎么找你们',
+    '1对1','1v1','一对一','私人','定制','个性化',
+    '预约','咨询','见面','当面',
+    '能不能帮我','帮我规划','帮我分析','我是家长','我孩子','我女儿','我儿子','我家孩子','孩子留学','孩子成绩','孩子不适应','孩子想',
+    '你们在哪儿','你们的地址',
+    '真人','学管','顾问',
+    '太复杂','听不懂','还是不懂','还是不清楚',
+    '再加点','详细说说','深入',
+    '可以聊聊吗','想聊聊',
+    '辅导','学业求助','跟不上','听不懂课','求助','学业困难',
+    '挂科','fail','救','help','救命','太难了','焦虑',
+  ];
+  for(var i=0;i<bookingKw.length;i++){if(ql.indexOf(bookingKw[i])>=0) return true}
+  return false;
+}
+function getFollowUps(q){
+  var ql=q.toLowerCase();
+  if(ql.match(/签证|visa|f-?1|tier|study permit|student pass/i)) return ['签证被check怎么办？','签证材料清单','签证面试注意事项'];
+  if(ql.match(/选课|课|课程|cs|computer|计算机|专业|major/i)) return ['第一学期选几门课合适？','GPA怎么维持？','这个专业就业前景怎么样？'];
+  if(ql.match(/费|学费|tuition|钱|花|budget/i)) return ['怎么省钱？','奖学金怎么申请？','校外住宿多少钱？'];
+  if(ql.match(/实习|工作|job|intern|OPT|CPT|H1B|psw|工签/i)) return ['简历怎么写？','什么时候开始找实习？','面试怎么准备？'];
+  if(ql.match(/研究|grad|申|申请|admission/i)) return ['选校策略是什么？','文书怎么写？','推荐信找谁写？'];
+  if(ql.match(/生活|住|租|house|宿舍|医保|保险/i)) return ['租房注意事项','银行卡怎么办？','怎么看病？'];
+  if(ql.match(/英国|uk|伦敦|牛津|剑桥|帝国理工|ucl|g5/i)) return ['英国一年制硕士值不值？','Graduate Route签证','英国G5申请条件'];
+  if(ql.match(/澳洲|澳|悉尼|墨尔本|uni|八大|go8/i)) return ['澳洲485工签','澳洲移民路径','澳洲八大哪个好？'];
+  if(ql.match(/加拿大|ca|多伦多|ubc|麦吉尔|滑铁卢/i)) return ['加拿大PGWP工签','加拿大移民EE','加拿大SDS学签'];
+  if(ql.match(/新加坡|nus|ntu|smu|国立|南洋/i)) return ['新加坡PR怎么申请？','新加坡生活费','NUS vs NTU对比'];
+  if(ql.match(/香港|港|hk|港大|港中文|港科大/i)) return ['香港IANG签证','香港永居7年怎么算？','香港留学费用'];
+  if(ql.match(/美国|美|us|usa|加州|纽约|常春藤/i)) return ['美国OPT申请流程','STEM专业列表','美国研究生申请时间线'];
+  return ['有什么推荐的后续问题？','可以再详细说说吗？','和别的方面有关联吗？'];
+}
+
+function addMsg(text, isUser){
+  var m=document.getElementById('chatMessages'), d=document.createElement('div');
+  d.className='msg-row '+(isUser?'user':'ai')+' msg-in';
+  if(isUser){
+    d.innerHTML='<div class="bubble">'+esc(text)+'</div><div class="av">我</div>';
+  } else {
+    d.innerHTML='<div class="av">A</div><div class="bubble"><button class="copy-btn" onclick="copyMsg(this)">复制</button></div>';
+  }
+  m.appendChild(d); scrollToBottom();
+  if(isUser) chatMsgCount++;
+  return isUser ? null : d.querySelector('.bubble');
+}
+function addTyping(){
+  var m=document.getElementById('chatMessages'), d=document.createElement('div');
+  d.id='typingInd'; d.className='msg-row ai msg-in';
+  d.innerHTML='<div class="av">A</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  m.appendChild(d); scrollToBottom();
+}
+function removeTyping(){var e=document.getElementById('typingInd');if(e)e.remove()}
+function showSources(s){
+  var p=document.getElementById('sourcesPanel'), l=document.getElementById('sourcesList');
+  l.innerHTML='';
+  if(!s||s.length===0){p.classList.add('hidden');return}
+  p.classList.remove('hidden');
+  s.forEach(function(x){
+    var b=document.createElement('span'); b.className='badge';
+    if(x.type==='web') b.classList.add('web');
+    var icon=x.type==='web'?'🌐':'📚';
+    b.innerHTML=icon+' '+esc(x.title).substring(0,26);
+    b.onclick=function(){openSource(x)};
+    l.appendChild(b)
+  })
+}
+function openSource(x){
+  document.getElementById('sourceTitle').textContent=x.title;
+  var meta='';
+  if(x.type==='kb') meta='📚 案例库 · '+(x.category||'通用');
+  else if(x.type==='web') meta='🌐 网络搜索'+(x.url?' · <a href="'+esc(x.url)+'" target="_blank" style="color:var(--gold)">查看原文</a>':'');
+  document.getElementById('sourceMeta').innerHTML=meta;
+  var body=document.getElementById('sourceBody');
+  body.innerHTML='<span class="type-tag '+(x.type||'kb')+'">'+(x.type==='web'?'🌐 网络信息':'📚 案例库')+'</span>'+esc(x.snippet||'(无内容)').replace(/\n/g,'<br>');
+  document.getElementById('sourceOverlay').classList.add('open');
+}
+function closeSourceModal(e){
+  if(e&&e.target!==document.getElementById('sourceOverlay')) return;
+  document.getElementById('sourceOverlay').classList.remove('open');
+}
+function scrollForceBottom(){document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight}
+function copyMsg(btn){
+  var txt=btn.parentNode.textContent.replace('复制','').trim();
+  navigator.clipboard.writeText(txt).then(function(){
+    btn.textContent='已复制';
+    setTimeout(function(){btn.textContent='复制'},1500)
+  }).catch(function(){})
+}
+function clearChat(){
+  document.getElementById('chatMessages').innerHTML='';
+  chatInited=false; chatMsgCount=0;
+  document.getElementById('sourcesPanel').classList.add('hidden');
+  var cb=document.getElementById('chatBookingBridge');if(cb)cb.style.display='none';
+  _currentSessionId = null;
+  conversationHistory=[];
+  initChat();
+}
+
+async function sendMessage(){
+  if(isStreaming) return;
+  var inp=document.getElementById('chatInput'), q=inp.value.trim();
+  if(!q) return;
+  inp.value='';
+  conversationHistory.push({role:'user',content:q});
+  addMsg(q, true);
+  addTyping();
+  // Proactive booking — show immediately if user expresses need for contact or 1v1 help
+  if(_checkBookingIntent(q)){
+    var cb=document.getElementById('chatBookingBridge');if(cb)cb.style.display='block';
+  }
+  showSources([]);
+  isStreaming=true; document.getElementById('sendBtn').disabled=true;
+  var fullResponse='',renderIdx=0;
+  try{
+    var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,messages:conversationHistory.slice(-20),user_token:userToken||null,session_id:_currentSessionId||null})});
+    var reader=r.body.getReader(), dec=new TextDecoder();
+    var buf='', msgEl=null;
+    while(true){
+      var rr=await reader.read();
+      if(rr.done) break;
+      buf+=dec.decode(rr.value,{stream:true});
+      var lines=buf.split('\n'); buf=lines.pop()||'';
+      for(var i=0;i<lines.length;i++){
+        var ln=lines[i];
+        if(ln.indexOf('data: ')!==0) continue;
+        try{
+          var p=JSON.parse(ln.slice(6));
+          if(p.type==='user'){if(p.data&&p.data.token){userToken=p.data.token;localStorage.setItem('acadai_token',userToken)}}else if(p.type==='sources'){showSources(p.data);window._lastFollowUps=p.follow_ups||[]}
+          else if(p.type==='chunk'){
+            if(!msgEl){removeTyping(); msgEl=addMsg('',false)}
+            if(msgEl){
+              msgEl.classList.add('streaming');
+              fullResponse+=p.data;
+              if(!msgEl._renderPending){
+                msgEl._renderPending=true;
+                requestAnimationFrame(function(){
+                  msgEl._renderPending=false;
+                  // 用户停止滚动 200ms 以上才更新 DOM，避免抖动
+                  if(!userScrolledUp && Date.now()-_lastScrollTime>200){
+                    msgEl.innerHTML=renderMarkdown(fullResponse,true);
+                    scrollToBottom();
+                  }
+                });
+              }
+            }
+          } else if(p.type==='done'){
+            if(msgEl && renderIdx<fullResponse.length){
+              msgEl.innerHTML=renderMarkdown(fullResponse,false);
+              msgEl.classList.remove('streaming');
+              renderIdx=fullResponse.length;
+              // 重新添加复制按钮（innerHTML 覆盖会清掉初始的）
+              var cpBtn=document.createElement('button');
+              cpBtn.className='copy-btn'; cpBtn.textContent='复制';
+              cpBtn.onclick=function(){copyMsg(this)};
+              msgEl.insertBefore(cpBtn, msgEl.firstChild);
+            }
+            if(fullResponse) conversationHistory.push({role:'assistant',content:fullResponse});
+            if(msgEl){
+              var suggestions=window._lastFollowUps&&window._lastFollowUps.length?window._lastFollowUps:getFollowUps(q);
+              if(suggestions.length){
+                var fuDiv=document.createElement('div'); fuDiv.className='followup-suggestions';
+                suggestions.forEach(function(sug){
+                  var btn=document.createElement('button'); btn.className='fu-btn';
+                  btn.textContent=sug; btn.onclick=function(){askSuggested(sug)};
+                  fuDiv.appendChild(btn)
+                });
+                msgEl.appendChild(fuDiv);
+                scrollToBottom();
+              }
+              // Feedback buttons
+              var _msgId = chatMsgCount + '-' + Date.now();
+              var fbDiv = document.createElement('div'); fbDiv.className='feedback-buttons';
+              var upBtn = document.createElement('button'); upBtn.className='fb-btn'; upBtn.textContent='👍 有帮助';
+              var dnBtn = document.createElement('button'); dnBtn.className='fb-btn'; dnBtn.textContent='👎 没帮助';
+              fbDiv.dataset.msgId = _msgId;
+              fbDiv.dataset.question = q;
+              fbDiv.dataset.answer = fullResponse;
+              upBtn.onclick = function(){ submitFeedback(this, 'up'); };
+              dnBtn.onclick = function(){ submitFeedback(this, 'down'); };
+              var shareBtn = document.createElement('button'); shareBtn.className='fb-btn'; shareBtn.textContent='🔗 分享'; shareBtn.onclick=function(){ shareAnswer(fullResponse, q); }; fbDiv.appendChild(shareBtn);
+              fbDiv.appendChild(upBtn); fbDiv.appendChild(dnBtn);
+              msgEl.appendChild(fbDiv);
+              // Disclaimer: all responses are AI-generated
+              var discDiv=document.createElement('div'); discDiv.className='ai-disclaimer';
+              discDiv.textContent='⚠️ 以上回复由AI基于案例库生成，仅供参考，不构成专业建议。具体决策请结合个人实际情况或咨询专业顾问。';
+              msgEl.appendChild(discDiv);
+            }
+            // Show booking bridge after 2+ user messages, or immediately on booking intent
+            if(chatMsgCount>=2||_checkBookingIntent(q)){
+              var cb=document.getElementById('chatBookingBridge');if(cb)cb.style.display='block';
+            }
+            // If booking intent detected, show a popup (once per session)
+            if(_checkBookingIntent(q)&&!_bookingPopupShown){
+              _bookingPopupShown=true;
+              setTimeout(function(){document.getElementById('bookingPopupOverlay').style.display='flex'}, 600);
+            }
+            // Refresh session list after answer completes
+            loadSessions();
+          }
+        }catch(e){}
+      }
+    }
+  }catch(e){
+    removeTyping();
+    var em=addMsg('',false);
+    if(em) em.innerHTML='<span style="color:#c00">连接失败，请检查服务是否运行。</span>';
+  }
+  isStreaming=false; document.getElementById('sendBtn').disabled=false;
+}
+
+/* ===== ADMIN ===== */
+async function loadAdminData(){
+  try{
+    var r=await fetch('/api/stats'), d=await r.json();
+    var c=document.querySelectorAll('.admin-stat-card .val');
+    if(c[0]) c[0].textContent=d.total||0;
+    if(c[1]){if(d.categories)c[1].textContent=d.categories.length;else if(d.by_category)c[1].textContent=Object.keys(d.by_category).length}
+    if(c[2]) c[2].textContent=d.active||0;
+  }catch(e){}
+  try{
+    loadKnowledgeData(1);
+    // Load categories for filter dropdown
+    var cr=await fetch('/api/categories'), cd=await cr.json();
+    var sel=document.getElementById('kbCategoryFilter');
+    if(cd.categories){
+      sel.innerHTML='<option value="">全部分类</option>';
+      cd.categories.forEach(function(c){sel.innerHTML+='<option value="'+esc(c)+'">'+esc(c)+'</option>'});
+    }
+  }catch(e){}
+  try{
+    var r=await fetch('/api/analytics'), d=await r.json();
+    if(d.pending_qa&&d.pending_qa.count>=0){
+      document.getElementById('pendingBadge').textContent=d.pending_qa.count;
+      document.getElementById('pendingTabBadge').textContent=d.pending_qa.count;
+    }
+    if(d.users&&d.users.total_users>=0) document.getElementById('userCountVal').textContent=d.users.total_users;
+    if(d.chat_messages&&d.chat_messages.total>=0) document.getElementById('msgCountVal').textContent=d.chat_messages.total;
+    if(d.feedback){
+      document.getElementById('feedbackTabBadge').textContent=d.feedback.down_count||0;
+    }
+    if(d.knowledge_gaps){
+      document.getElementById('gapsTabBadge').textContent=d.knowledge_gaps.count||0;
+    }
+  }catch(e){}
+  var ct=document.querySelector('.tab-btn.active');
+  if(ct){
+    var tab=ct.getAttribute('data-tab');
+    if(tab==='consult') loadConsultData();
+    else if(tab==='pending') loadPendingData();
+    else if(tab==='users') loadUserData();
+    else if(tab==='dashboard') loadDashboardData();
+    else if(tab==='feedback') loadFeedbackData();
+    else if(tab==='sessions') loadSessionData();
+    else if(tab==='quality') loadQualityData();
+	    else if(tab==='gaps') loadGapsData();
+	    else if(tab==='report') loadReportData();
+  }
+}async function addEntry(){
+  var t=document.getElementById('addTitle').value.trim(),c=document.getElementById('addContent').value.trim(),cat=document.getElementById('addCategory').value.trim()||'general',ts=document.getElementById('addTags').value.trim();
+  if(!t||!c){alert('请输入标题和内容');return}
+  try{
+    var r=await fetch('/api/knowledge/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t,content:c,category:cat,tags:ts?ts.split(/[,，]/).map(function(x){return x.trim()}).filter(Boolean):[]})});
+    var d=await r.json();
+    if(d.status==='ok'){['addTitle','addContent','addCategory','addTags'].forEach(function(id){document.getElementById(id).value=''});loadAdminData()}
+  }catch(e){alert('添加失败')}
+}
+async function deleteEntry(id){
+  if(!confirm('确定删除？'))return;
+  try{await fetch('/api/knowledge/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});loadAdminData()}catch(e){alert('删除失败')}
+}
+async function rebuildIndex(){
+  try{var r=await fetch('/api/rebuild',{method:'POST'}),d=await r.json();alert('索引重建完成！共 '+d.stats.total+' 条知识条目');loadAdminData()}catch(e){alert('重建失败')}
+}
+function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML}
+function renderMarkdown(text,streaming){
+  var html=esc(text).replace(/\n/g,'<br>');
+  html=html.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  html=html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" style="color:var(--gold);text-decoration:underline">$1</a>');
+  if(streaming) html+='<span class="stream-cursor">|</span>';
+  return html;
+}
+function showBookingPopup(){document.getElementById('bookingPopupOverlay').style.display='flex'}
+function hideBookingPopup(){document.getElementById('bookingPopupOverlay').style.display='none'}
+
+async function initUserSession(){
+  if(userToken){
+    // Check if token is still valid
+    try{
+      var r=await fetch('/api/auth/check?token='+encodeURIComponent(userToken));
+      var d=await r.json();
+      if(d.valid && d.user && d.user.name){
+        _currentUser = d.user;
+        updateUserBadge();
+      }
+    }catch(e){}
+    return;
+  }
+  try{
+    var r=await fetch('/api/user/session',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json();
+    if(d.token){userToken=d.token;localStorage.setItem('acadai_token',d.token)}
+  }catch(e){}
+}
+
+/* ===== AUTH ===== */
+var _currentUser = null;  // {id, name, role, status} when logged in
+var _authMode = 'login';  // 'login' or 'register'
+var _currentSessionId = null;  // active chat session ID
+
+function showAuth(){
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('authName').value='';
+  document.getElementById('authPass').value='';
+  document.getElementById('authStatus').textContent='';
+  switchAuthTab('login');
+}
+function hideAuth(){document.getElementById('authOverlay').classList.add('hidden')}
+
+function switchAuthTab(tab){
+  _authMode=tab;
+  document.querySelectorAll('.auth-tab').forEach(function(b){b.classList.remove('active')});
+  document.querySelector('.auth-tab[data-tab="'+tab+'"]').classList.add('active');
+  if(tab==='login'){
+    document.getElementById('authTitle').textContent='登录';
+    document.getElementById('authSub').textContent='登录后查看你的聊天记录';
+    document.getElementById('authBtn').textContent='登录';
+  }else{
+    document.getElementById('authTitle').textContent='注册';
+    document.getElementById('authSub').textContent='注册后聊天记录永久保存，多设备同步';
+    document.getElementById('authBtn').textContent='注册';
+  }
+  document.getElementById('authStatus').textContent='';
+}
+
+async function submitAuth(){
+  var name=document.getElementById('authName').value.trim();
+  var pass=document.getElementById('authPass').value.trim();
+  if(!name||!pass){document.getElementById('authStatus').textContent='请填写用户名和密码';return}
+  var btn=document.getElementById('authBtn');btn.disabled=true;btn.textContent='处理中...';
+  try{
+    var endpoint=_authMode==='login'?'/api/auth/login':'/api/auth/register';
+    var r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,password:pass})});
+    var d=await r.json();
+    if(d.error){
+      document.getElementById('authStatus').textContent=d.error;
+      btn.disabled=false;btn.textContent=_authMode==='login'?'登录':'注册';
+      return;
+    }
+    // Success
+    _currentUser = d.user;
+    userToken = d.token;
+    localStorage.setItem('acadai_token', d.token);
+    localStorage.setItem('acadai_user', JSON.stringify(d.user));
+    hideAuth();
+    updateUserBadge();
+    // Reload sessions and chat
+    loadSessions();
+    loadChatHistory(document.getElementById('chatMessages'));
+  }catch(e){
+    document.getElementById('authStatus').textContent='网络错误，请重试';
+  }
+  btn.disabled=false;btn.textContent=_authMode==='login'?'登录':'注册';
+}
+
+function logout(){
+  _currentUser = null;
+  localStorage.removeItem('acadai_user');
+  // Keep token for anonymous use
+  updateUserBadge();
+  clearChat();
+}
+
+function updateUserBadge(){
+  var badge=document.getElementById('userBadge');
+  if(_currentUser && _currentUser.name){
+    var statusText = _currentUser.status==='pending'?'(待审核)':_currentUser.status==='disabled'?'(已禁用)':'';
+    badge.innerHTML='<span class="ub-name">'+esc(_currentUser.name)+'</span><span class="ub-limit">'+statusText+'</span>';
+    badge.onclick=function(){ /* maybe show profile later */ };
+    // Update sidebar
+    document.getElementById('sidebarUser').innerHTML = esc(_currentUser.name)+' <span class="s-role">'+
+      (_currentUser.role==='student'?'学员':_currentUser.role)+'</span>';
+  }else{
+    badge.textContent='登录';
+    badge.onclick=function(){showAuth()};
+    document.getElementById('sidebarUser').innerHTML = '游客 <span class="s-role">匿名</span>';
+  }
+}
+
+/* ===== SESSION MANAGEMENT ===== */
+var _sessions = [];  // cached session list
+var _sessionListLoaded = false;
+
+function toggleSidebar(){
+  var sb=document.getElementById('sessionSidebar');
+  sb.classList.toggle('collapsed');
+  var bd=document.getElementById('sidebarBackdrop');
+  if(bd) bd.classList.toggle('active');
+}
+
+async function loadSessions(){
+  if(!userToken) return;
+  try{
+    var r=await fetch('/api/user/sessions?token='+encodeURIComponent(userToken));
+    var d=await r.json();
+    _sessions = d.sessions || [];
+    renderSessionList();
+    _sessionListLoaded = true;
+  }catch(e){}
+}
+
+function renderSessionList(){
+  var list=document.getElementById('sessionList');
+  if(!_sessions || _sessions.length===0){
+    list.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--text-muted)">暂无对话记录<br>开始你的第一段对话吧</div>';
+    return;
+  }
+  list.innerHTML='';
+  _sessions.forEach(function(s){
+    var item=document.createElement('div');
+    item.className='session-item'+(s.id===_currentSessionId?' active':'');
+    var title=s.title||'新对话';
+    item.innerHTML='<span class="s-title">'+esc(title.substring(0,20))+'</span><span class="s-count">'+s.message_count+'</span>';
+    item.onclick=function(){switchSession(s.id)};
+    list.appendChild(item);
+  });
+}
+
+async function newSession(){
+  if(!userToken){showAuth();return}
+  try{
+    var r=await fetch('/api/user/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:userToken,title:'新对话'})});
+    var d=await r.json();
+    if(d.session_id){
+      _currentSessionId = d.session_id;
+      clearChatMessages();
+      loadSessions();
+    }
+  }catch(e){}
+}
+
+async function switchSession(sessionId){
+  if(sessionId===_currentSessionId) return;
+  _currentSessionId = sessionId;
+  // Update UI
+  document.querySelectorAll('.session-item').forEach(function(el){el.classList.remove('active')});
+  var items=document.getElementById('sessionList').children;
+  for(var i=0;i<items.length;i++){
+    if(items[i].textContent && _sessions[i] && _sessions[i].id===sessionId){
+      items[i].classList.add('active');
+      break;
+    }
+  }
+  // Load messages for this session
+  clearChatMessages();
+  try{
+    var r=await fetch('/api/user/session/messages?token='+encodeURIComponent(userToken)+'&session_id='+encodeURIComponent(sessionId));
+    var d=await r.json();
+    if(d.messages && d.messages.length>0){
+      d.messages.forEach(function(msg){
+        var isUser=msg.role==='user';
+        var bubble=addMsg(msg.content, isUser);
+        if(!isUser&&bubble){
+          bubble.innerHTML='<button class="copy-btn" onclick="copyMsg(this)">复制</button>'+renderMarkdown(msg.content,false);
+        }
+        if(isUser) conversationHistory.push({role:'user',content:msg.content});
+        else conversationHistory.push({role:'assistant',content:msg.content});
+      });
+    }
+    showChatWelcome(document.getElementById('chatMessages'));
+    scrollToBottom();
+  }catch(e){}
+}
+
+function clearChatMessages(){
+  document.getElementById('chatMessages').innerHTML='';
+  conversationHistory=[];
+  chatMsgCount=0;
+}
+
+/* ===== FEEDBACK ===== */
+async function submitFeedback(btn, vote){
+  // Read context from DOM data attributes (avoids closure/hoisting bugs)
+  var fbDiv = btn.closest('.feedback-buttons');
+  if(!fbDiv) return;
+  var msgId = fbDiv.dataset.msgId;
+  var question = fbDiv.dataset.question;
+  var answer = fbDiv.dataset.answer;
+  var upBtn = fbDiv.querySelector('.fb-btn:first-child');
+  var dnBtn = fbDiv.querySelector('.fb-btn:last-child');
+  if(!upBtn || !dnBtn) return;
+  var prev = _feedbackVotes[msgId];
+  if(prev === vote){
+    // Same vote → toggle off
+    delete _feedbackVotes[msgId];
+    upBtn.className='fb-btn'; dnBtn.className='fb-btn';
+  } else {
+    // New vote or switch
+    _feedbackVotes[msgId] = vote;
+    upBtn.className='fb-btn' + (vote==='up' ? ' active-up' : '');
+    dnBtn.className='fb-btn' + (vote==='down' ? ' active-down' : '');
+  }
+  try{
+    var effectiveVote = _feedbackVotes[msgId] || '';
+    await fetch('/api/feedback', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message_id:msgId, question:question, answer:answer, vote:effectiveVote, user_token:userToken||''})});
+  }catch(e){}
+}
+
+async function loadQualityData(){
+  try{
+    var r=await fetch('/api/feedback/quality'), d=await r.json();
+    var s=d.summary||{}, t=d.by_topic||[], rd=d.recent_downvoted||[];
+    document.getElementById('qualitySummary').innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
+      '<div><strong>总反馈数</strong><br><span style="font-size:22px;font-weight:700;color:var(--navy)">'+s.total_feedback+'</span></div>'+
+      '<div><strong>点踩数</strong><br><span style="font-size:22px;font-weight:700;color:#c00">'+s.total_downvoted+'</span></div>'+
+      '<div><strong>点踩率</strong><br><span style="font-size:22px;font-weight:700;color:'+(s.downvote_rate>0.3?'#c00':'var(--navy)')+'">'+(s.downvote_rate*100).toFixed(1)+'%</span></div>'+
+      '</div>';
+    // Topic table
+    var tt=document.getElementById('qualityTopicTable');
+    if(t.length){
+      var html='<table style="width:100%;font-size:13px;border-collapse:collapse"><tr style="background:var(--cream);font-weight:600"><td style="padding:8px 12px">话题</td><td style="padding:8px 12px">总反馈</td><td style="padding:8px 12px">点踩数</td><td style="padding:8px 12px">点踩率</td></tr>';
+      t.forEach(function(x){
+        var rateColor=x.down_rate>0.3?'color:#c00':x.down_rate>0.1?'color:#d68a36':'color:var(--text-secondary)';
+        html+='<tr style="border-top:1px solid var(--border)"><td style="padding:8px 12px">'+esc(x.topic)+'</td><td style="padding:8px 12px">'+x.total+'</td><td style="padding:8px 12px">'+x.downvotes+'</td><td style="padding:8px 12px;'+rateColor+'">'+(x.down_rate*100).toFixed(0)+'%</td></tr>';
+      });
+      html+='</table>';
+      tt.innerHTML=html;
+    } else {tt.innerHTML='<p style="font-size:13px;color:var(--text-muted)">暂无反馈数据</p>'}
+    // Recent downvoted list
+    var rl=document.getElementById('qualityRecentList'), re=document.getElementById('qualityRecentEmpty');
+    rl.innerHTML=''; re.style.display='none';
+    if(rd.length){
+      rd.forEach(function(x){
+        var dv=document.createElement('div'); dv.className='entry-row';
+        dv.innerHTML='<div class="info"><div class="t">'+esc(x.question)+'</div><div class="m">'+esc(x.answer_preview.substring(0,150))+' · '+esc(x.created_at)+'</div></div>';
+        rl.appendChild(dv);
+      });
+    } else {re.style.display='block'}
+  }catch(e){console.error('quality load error',e)}
+}
+async function loadFeedbackData(){
+  var list=document.getElementById('feedbackList'), empty=document.getElementById('feedbackEmpty');
+  list.innerHTML=''; empty.style.display='none';
+  try{
+    var r=await fetch('/api/feedback?downvoted=true'), d=await r.json();
+    if(!d.entries||d.entries.length===0){empty.style.display='block';return}
+    d.entries.forEach(function(e){
+      var dv=document.createElement('div'); dv.className='entry-row';
+      dv.style.flexDirection='column'; dv.style.alignItems='stretch'; dv.style.marginBottom='8px';
+      var qPreview=e.question?e.question.substring(0,60):'(空)';
+      var aPreview=e.answer_preview?e.answer_preview.substring(0,150):'(空)';
+      var timeStr=e.created_at?e.created_at.substring(0,19).replace('T',' '):'';
+      dv.innerHTML='<div style="font-size:13px;font-weight:500;color:var(--navy)">'+esc(qPreview)+'</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin:2px 0">'+esc(aPreview)+'</div>'+
+        '<div style="font-size:10px;color:var(--text-secondary)">👎 点踩 · '+esc(timeStr)+'</div>'+
+        '<div style="display:flex;gap:6px;margin-top:4px">'+
+        '<button class="btn-sm" style="font-size:10px;padding:4px 12px" data-fb-id="'+esc(e.id)+'" data-fb-q="'+esc(e.question||'')+'" data-fb-a="'+esc(e.answer_preview||'')+'" onclick="feedbackToPending(this)">转待审核</button></div>';
+      list.appendChild(dv)
+    })
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+
+async function feedbackToPending(btn){
+  var id=btn.getAttribute('data-fb-id'), question=btn.getAttribute('data-fb-q'), answer=btn.getAttribute('data-fb-a');
+  try{
+    var r=await fetch('/api/pending-qa/add', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:question, answer:answer, sources:[]})});
+    var d=await r.json();
+    if(d.status==='ok'){
+      alert('已转为待审核条目');
+      loadFeedbackData();
+      // Refresh pending badge
+      var ar=await fetch('/api/analytics'), ad=await ar.json();
+      if(ad.pending_qa) document.getElementById('pendingTabBadge').textContent=ad.pending_qa.count;
+    } else {
+      alert('转换失败');
+    }
+  }catch(e){alert('转换失败')}
+}
+/* ===== KNOWLEDGE GAPS ===== */
+async function loadGapsData(){
+  var list=document.getElementById('gapsList'), empty=document.getElementById('gapsEmpty'), cnt=document.getElementById('gapsCount');
+  list.innerHTML=''; empty.style.display='none';
+  try{
+    var r=await fetch('/api/queries/gaps'), d=await r.json();
+    if(cnt) cnt.textContent='('+d.count+')';
+    if(!d.gaps||d.gaps.length===0){empty.style.display='block';return}
+    d.gaps.forEach(function(g){
+      var dv=document.createElement('div'); dv.className='entry-row';
+      dv.style.flexDirection='column'; dv.style.alignItems='stretch'; dv.style.marginBottom='8px';
+      var firstTime=(g.first_asked||'').substring(0,10);
+      var lastTime=(g.last_asked||'').substring(0,10);
+      dv.innerHTML='<div style="font-size:13px;font-weight:500;color:var(--navy)">'+esc(g.question)+'</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin:2px 0">提问 '+g.count+' 次 · 首次 '+esc(firstTime)+' · 最近 '+esc(lastTime)+'</div>'+
+        '<div style="display:flex;gap:6px;margin-top:4px">'+
+        '<button class="btn-sm" style="font-size:10px;padding:4px 12px" data-gap-q="'+esc(g.question)+'" onclick="gapToPending(this)">转待审核</button></div>';
+      list.appendChild(dv)
+    });
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+
+async function gapToPending(btn){
+  var question=btn.getAttribute('data-gap-q');
+  try{
+    var r=await fetch('/api/pending-qa/add', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:question, answer:'', sources:[]})});
+    var d=await r.json();
+    if(d.status==='ok'){
+      alert('已转为待审核条目');
+      loadGapsData();
+      var ar=await fetch('/api/analytics'), ad=await ar.json();
+      if(ad.pending_qa) document.getElementById('pendingTabBadge').textContent=ad.pending_qa.count;
+    } else {
+      alert('转换失败');
+    }
+  }catch(e){alert('转换失败')}
+}
+
+async function loadChatHistory(m){
+  m.innerHTML='<div class="msg-row ai msg-in"><div class="av">A</div><div class="bubble">加载历史记录...</div></div>';
+  try{
+    var r=await fetch('/api/chat/history?token='+encodeURIComponent(userToken)+(_currentSessionId?'&session_id='+encodeURIComponent(_currentSessionId):''));
+    var d=await r.json();
+    m.innerHTML='';
+    // Update sessions list
+    if(d.sessions){
+      _sessions = d.sessions;
+      renderSessionList();
+      // If no current session selected, use the first one (most recent)
+      if(!_currentSessionId && _sessions.length>0){
+        _currentSessionId = _sessions[0].id;
+      }
+    }
+    if(d.messages&&d.messages.length>0){
+      var lastQuestion='';
+      d.messages.forEach(function(msg){
+        var isUser=msg.role==='user';
+        var bubble=addMsg(msg.content, isUser);
+        if(isUser) lastQuestion=msg.content;
+        if(!isUser&&bubble) {
+          // Fill in the AI response content that addMsg() left empty
+          bubble.innerHTML='<button class="copy-btn" onclick="copyMsg(this)">复制</button>'+renderMarkdown(msg.content,false);
+          // Add feedback buttons for restored AI messages
+          if(lastQuestion){
+            var _msgId='hist-'+chatMsgCount+'-'+Date.now();
+            var fbDiv=document.createElement('div'); fbDiv.className='feedback-buttons';
+            fbDiv.dataset.msgId=_msgId; fbDiv.dataset.question=lastQuestion; fbDiv.dataset.answer=msg.content;
+            var upBtn=document.createElement('button'); upBtn.className='fb-btn'; upBtn.textContent='👍 有帮助';
+            var dnBtn=document.createElement('button'); dnBtn.className='fb-btn'; dnBtn.textContent='👎 没帮助';
+            upBtn.onclick=function(){submitFeedback(this,'up')}; dnBtn.onclick=function(){submitFeedback(this,'down')};
+            fbDiv.appendChild(upBtn); fbDiv.appendChild(dnBtn);
+            bubble.appendChild(fbDiv);
+          }
+        }
+        if(!isUser) chatMsgCount--;
+        if(isUser) conversationHistory.push({role:'user',content:msg.content});
+        else conversationHistory.push({role:'assistant',content:msg.content});
+      });
+    }
+    showChatWelcome(m);
+    scrollToBottom();
+  }catch(e){
+    m.innerHTML='';
+    showChatWelcome(m);
+    scrollToBottom();
+  }
+}
+
+function showChatWelcome(m){
+  var hasHistory=m.children.length>0;
+  if(!hasHistory){
+    m.innerHTML='<div class="msg-row ai msg-in"><div class="av">A</div><div class="bubble">你好，我是 <strong>AcadAI</strong>。<br><br>我可以帮你回答留学规划、选课策略、课程难点、论文写作、签证政策等方面的问题。每个回答都基于真实案例和实时信息。<br><br>试试这些问题：<div class="welcome-suggestions"><button onclick="askSuggested(\'美国F1签证2025年有什么新政策？\')">美国F1签证</button><button onclick="askSuggested(\'UCSD计算机科学专业课程难度怎么样？\')">UCSD CS课程</button><button onclick="askSuggested(\'澳洲八大留学一年费用多少？\')">澳洲留学费用</button><button onclick="askSuggested(\'英国G5计算机专业选课建议？\')">英国G5选课</button><button onclick="askSuggested(\'加拿大学生签证2025年要求？\')">加拿大签证</button><button onclick="askSuggested(\'新加坡国立和南洋理工对比？\')">NUS vs NTU</button></div></div></div>'
+  }
+}
+
+function switchAdminTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+  document.querySelector('.tab-btn[data-tab="'+tab+'"]').classList.add('active');
+  ['adminEntriesSection','adminPendingSection','adminConsultSection','adminUsersSection','adminApproveSection','adminDashboardSection','adminSessionsSection','adminFeedbackSection','adminQualitySection','adminGapsSection','adminSmartAddSection','adminReportSection','adminExportSection'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
+  if(tab==='entries') document.getElementById('adminEntriesSection').classList.remove('hidden');
+  else if(tab==='pending'){document.getElementById('adminPendingSection').classList.remove('hidden');loadPendingData()}
+  else if(tab==='consult'){document.getElementById('adminConsultSection').classList.remove('hidden');loadConsultData()}
+  else if(tab==='users'){document.getElementById('adminUsersSection').classList.remove('hidden');loadUserData()}
+  else if(tab==='approve'){document.getElementById('adminApproveSection').classList.remove('hidden');loadApproveData()}
+  else if(tab==='dashboard'){document.getElementById('adminDashboardSection').classList.remove('hidden');loadDashboardData()}
+  else if(tab==='sessions'){document.getElementById('adminSessionsSection').classList.remove('hidden');loadSessionData()}
+  else if(tab==='feedback'){document.getElementById('adminFeedbackSection').classList.remove('hidden');loadFeedbackData()}
+  else if(tab==='quality'){document.getElementById('adminQualitySection').classList.remove('hidden');loadQualityData()}
+  else if(tab==='gaps'){document.getElementById('adminGapsSection').classList.remove('hidden');loadGapsData()}
+	  else if(tab==='report'){document.getElementById('adminReportSection').classList.remove('hidden');loadReportData()}
+	  else if(tab==='smartadd'){document.getElementById('adminSmartAddSection').classList.remove('hidden')}
+	  else if(tab==='export'){document.getElementById('adminExportSection').classList.remove('hidden')}
+}
+async function loadConsultData(){
+  var list=document.getElementById('consultList'), empty=document.getElementById('consultEmpty');
+  list.innerHTML='';empty.style.display='none';
+  try{
+    var r=await fetch('/api/consult/list'),d=await r.json();
+    if(!d.submissions||d.submissions.length===0){empty.style.display='block';return}
+    d.submissions.slice().reverse().forEach(function(s){
+      var dv=document.createElement('div');dv.className='consult-row';
+      dv.innerHTML='<div class="hdr"><span class="nm">'+esc(s.name)+'</span><span class="wc">'+esc(s.wechat)+'</span><span class="tm">'+esc(s.time)+'</span></div>'+
+        '<div class="meta"><span class="rl">'+esc(s.role||'未填写')+'</span>'+(s.status==='new'?' <span style="color:#c00;font-size:10px">[新]</span>':'')+'</div>'+
+        (s.question?'<div class="q">'+esc(s.question)+'</div>':'');
+      list.appendChild(dv)
+    })
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+
+function resetConsult(){
+  document.getElementById('consultForm').style.display='block';
+  document.getElementById('consultSuccess').style.display='none';
+  ['cName','cWechat','cRole','cQuestion'].forEach(function(id){document.getElementById(id).value=''});
+}
+async function submitConsult(){
+  var n=document.getElementById('cName').value.trim(),w=document.getElementById('cWechat').value.trim(),r=document.getElementById('cRole').value.trim(),q=document.getElementById('cQuestion').value.trim();
+  if(!n||!w){alert('请填写姓名和微信号');return}
+  document.getElementById('consultBtn').disabled=true;
+  document.getElementById('consultBtn').textContent='提交中...';
+  try{
+    var resp=await fetch('/api/consult',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,wechat:w,role:r,question:q})});
+    var d=await resp.json();
+    if(d.status==='ok'){document.getElementById('consultForm').style.display='none';document.getElementById('consultSuccess').style.display='block'}
+    else alert('提交失败，请重试');
+  }catch(e){alert('网络错误，请重试')}
+  document.getElementById('consultBtn').disabled=false;
+  document.getElementById('consultBtn').textContent='提交预约';
+}
+
+async function loadPendingData(){
+  var list=document.getElementById('pendingList'), empty=document.getElementById('pendingEmpty');
+  list.innerHTML=''; empty.style.display='none';
+  try{
+    var r=await fetch('/api/pending-qa'), d=await r.json();
+    if(!d.entries||d.entries.length===0){empty.style.display='block';return}
+    d.entries.forEach(function(e){
+      var dv=document.createElement('div'); dv.className='entry-row';
+      dv.style.flexDirection='column'; dv.style.alignItems='stretch'; dv.style.marginBottom='8px';
+      var qPreview=e.question?e.question.substring(0,60):'(空)';
+      var aPreview=e.answer?e.answer.substring(0,80):'(空)';
+      dv.innerHTML='<div style="font-size:13px;font-weight:500;color:var(--navy)">'+esc(qPreview)+'</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin:2px 0">'+esc(aPreview)+'</div>'+
+        '<div style="font-size:10px;color:var(--gold)">'+esc(e.auto_category||'')+'</div>'+
+        '<div style="display:flex;gap:6px;margin-top:4px">'+
+        '<button class="btn-sm" style="font-size:10px;padding:4px 12px" onclick="approvePendingUI(\''+e.id+'\')">批准入库</button>'+
+        '<button style="background:#c00;color:#fff;border:none;font-size:10px;padding:4px 12px;cursor:pointer;font-family:inherit" onclick="rejectPendingUI(\''+e.id+'\')">拒绝</button></div>';
+      list.appendChild(dv)
+    })
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+
+async function approvePendingUI(id){
+  var title=prompt('标题：'), cat=prompt('分类：'), tags=prompt('标签（逗号分隔）'), content=prompt('内容：');
+  if(!title) return;
+  try{
+    var r=await fetch('/api/pending-qa/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,title:title,category:cat||'user-qa',tags:tags?tags.split(/[,，]/).map(function(x){return x.trim()}).filter(Boolean):[],content:content||''})});
+    var d=await r.json();
+    if(d.status==='ok') loadAdminData();
+    else alert('批准失败');
+  }catch(e){alert('网络错误')}
+}
+
+async function rejectPendingUI(id){
+  if(!confirm('确定拒绝？')) return;
+  try{
+    var r=await fetch('/api/pending-qa/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});
+    var d=await r.json();
+    if(d.status==='ok') loadAdminData();
+  }catch(e){}
+}
+
+async function loadUserData(){
+  var list=document.getElementById('userList'), empty=document.getElementById('userEmpty'), label=document.getElementById('userCountLabel');
+  list.innerHTML=''; empty.style.display='none';
+  try{
+    var r=await fetch('/api/user/list'), d=await r.json();
+    if(!d.users||d.users.length===0){empty.style.display='block';return}
+    if(label) label.textContent='('+d.users.length+')';
+    d.users.forEach(function(u){
+      var dv=document.createElement('div'); dv.className='entry-row';
+      var role=u.role||'student';
+      var qs=u.total_questions||0;
+      dv.innerHTML='<div class="info"><div class="t">'+esc(u.name||u.id.substring(0,16))+'</div><div class="m"><span class="cat">'+esc(role)+'</span> 提问 '+qs+' 次 &middot; '+esc(u.last_active||'')+'</div></div>';
+      list.appendChild(dv)
+    })
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+
+async function loadApproveData(){
+  var list=document.getElementById('approveList'), empty=document.getElementById('approveEmpty');
+  list.innerHTML=''; empty.style.display='none';
+  try{
+    var r=await fetch('/api/admin/pending-users'), d=await r.json();
+    if(!d.users||d.users.length===0){empty.style.display='block';document.getElementById('approveTabBadge').textContent='0';return}
+    document.getElementById('approveTabBadge').textContent=d.users.length;
+    d.users.forEach(function(u){
+      var dv=document.createElement('div'); dv.className='entry-row';
+      dv.style.display='flex'; dv.style.alignItems='center'; dv.style.justifyContent='space-between';
+      var infoDiv=document.createElement('div'); infoDiv.className='info';
+      infoDiv.innerHTML='<div class="t">'+esc(u.name)+'</div><div class="m"><span class="cat">待审核</span> &middot; 注册于 '+esc(u.created_at)+'</div>';
+      dv.appendChild(infoDiv);
+      var actionsDiv=document.createElement('div'); actionsDiv.style.display='flex'; actionsDiv.style.gap='6px';
+      var approveBtn=document.createElement('button'); approveBtn.className='btn-sm';
+      approveBtn.textContent='通过';
+      approveBtn.onclick=function(){ approveUser(u.id, 20); };
+      var rejectBtn=document.createElement('button'); rejectBtn.className='btn-sm';
+      rejectBtn.textContent='拒绝'; rejectBtn.style.background='#c00';
+      rejectBtn.onclick=function(){ approveUser(u.id, 0); };  // 0 limit = effectively disabled
+      actionsDiv.appendChild(approveBtn); actionsDiv.appendChild(rejectBtn);
+      dv.appendChild(actionsDiv);
+      list.appendChild(dv);
+    });
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+
+async function approveUser(userId, limit){
+  try{
+    var r=await fetch('/api/admin/user/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId, daily_limit:limit})});
+    var d=await r.json();
+    if(d.status==='ok') loadApproveData();
+  }catch(e){}
+}
+
+async function loadExportData(){
+  var preview=document.getElementById('exportPreview');
+  var statsEl=document.getElementById('exportStats');
+  var listEl=document.getElementById('exportEntries');
+  preview.style.display='block';
+  statsEl.textContent='加载中...';
+  listEl.innerHTML='';
+  try{
+    var r=await fetch('/api/export/entries');
+    if(!r.ok) throw new Error('请求失败');
+    var d=await r.json();
+    statsEl.innerHTML='共 <strong>'+d.total+'</strong> 条条目，活跃 <strong>'+d.active+'</strong> 条，导出时间：'+d.exported_at;
+    // 按分类统计
+    var cats={};
+    d.entries.forEach(function(e){var c=e.category||'未分类';cats[c]=(cats[c]||0)+1});
+    var catInfo=Object.keys(cats).sort().map(function(c){return c+'('+cats[c]+'条)'}).join('，');
+    var infoEl=document.createElement('div');
+    infoEl.style.fontSize='12px';
+    infoEl.style.color='var(--text-muted)';
+    infoEl.style.marginBottom='12px';
+    infoEl.textContent='分类：'+catInfo;
+    statsEl.appendChild(infoEl);
+    // 按分类分组显示
+    var grouped={};
+    d.entries.forEach(function(e){var c=e.category||'未分类';if(!grouped[c])grouped[c]=[];grouped[c].push(e)});
+    Object.keys(grouped).sort().forEach(function(cat){
+      var hdr=document.createElement('div');
+      hdr.style.fontWeight='600';
+      hdr.style.fontSize='13px';
+      hdr.style.marginTop='12px';
+      hdr.style.marginBottom='6px';
+      hdr.style.color='var(--navy)';
+      hdr.textContent=cat+' ('+grouped[cat].length+'条)';
+      listEl.appendChild(hdr);
+      grouped[cat].slice(0,5).forEach(function(e){
+        var item=document.createElement('div');
+        item.className='entry-item';
+        item.innerHTML='<div class="entry-title">'+esc(e.title||'(无标题)')+'</div>'+
+          '<div class="entry-content">'+(e.content?esc(e.content.slice(0,150)):'')+'...</div>'+
+          '<div class="entry-meta">'+(e.tags&&e.tags.length?'标签: '+e.tags.join(', '):'')+'</div>';
+        listEl.appendChild(item);
+      });
+      if(grouped[cat].length>5){
+        var more=document.createElement('div');
+        more.style.fontSize='11px';
+        more.style.color='var(--text-muted)';
+        more.style.padding='4px 12px';
+        more.textContent='...还有'+(grouped[cat].length-5)+'条';
+        listEl.appendChild(more);
+      }
+    });
+  }catch(e){
+    statsEl.textContent='加载失败: '+e.message;
+  }
+}
+
+async function loadDashboardData(){
+  var el=document.getElementById('dashboardContent');
+  try{
+    var r=await fetch('/api/analytics'), d=await r.json();
+    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+    html+='<div><strong>知识库</strong><br>总条目: '+(d.knowledge?d.knowledge.total:0)+'<br>活跃: '+(d.knowledge?d.knowledge.active:0)+'<br>分类数: '+(d.knowledge&&d.knowledge.categories?d.knowledge.categories.length:0)+'</div>';
+    html+='<div><strong>用户</strong><br>总用户: '+(d.users?d.users.total_users:0)+'<br>待审核: '+(d.pending_qa?d.pending_qa.count:0)+'<br>对话消息: '+(d.chat_messages?d.chat_messages.total:0)+'</div>';
+    html+='<div><strong>咨询</strong><br>预约记录: '+(d.consultations?d.consultations.count:0)+'</div>';
+    if(d.queries){
+      html+='<div><strong>查询统计 (近7天)</strong><br>总查询: '+d.queries.total_queries+'<br>独立用户: '+d.queries.unique_users+'<br>无结果率: '+(d.queries.zero_kb_rate*100).toFixed(1)+'%<br>网络搜索: '+d.queries.web_search_count+'</div>';
+    }
+    if(d.users&&d.users.by_role){
+      var roles='<div><strong>用户角色</strong><br>';
+      for(var rl in d.users.by_role) roles+=esc(rl)+': '+d.users.by_role[rl]+'<br>';
+      roles+='</div>';
+      html+=roles;
+    }
+    if(d.knowledge&&d.knowledge.by_category){
+      var cats=Object.keys(d.knowledge.by_category).slice(0,10);
+      var catHtml='<div><strong>热门分类 (Top 10)</strong><br>';
+      cats.forEach(function(c){catHtml+=esc(c)+': '+d.knowledge.by_category[c]+'<br>'});
+      catHtml+='</div>';
+      html+=catHtml;
+    }
+    html+='</div>';
+    // Hot questions
+    if(d.hot_questions&&d.hot_questions.length){
+      html+='<div style="margin-top:16px"><strong>热门问题 (近7天)</strong><div style="margin-top:6px">';
+      d.hot_questions.slice(0,10).forEach(function(q){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">'+
+          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(q.question)+'</span>'+
+          '<span style="margin-left:8px;color:var(--gold);font-weight:600;white-space:nowrap">'+q.count+'次</span></div>';
+      });
+      html+='</div></div>';
+    }
+    el.innerHTML=html;
+  }catch(e){el.innerHTML='加载失败'}
+}
+
+/* ===== SESSION MANAGEMENT ===== */
+var _sessionMessagesModal=null;
+async function loadSessionData(){
+  var list=document.getElementById('sessionList'), empty=document.getElementById('sessionEmpty'), cnt=document.getElementById('sessionCount');
+  list.innerHTML=''; empty.style.display='none';
+  try{
+    var r=await fetch('/api/admin/sessions'), d=await r.json();
+    if(cnt) cnt.textContent='('+d.total+')';
+    if(!d.sessions||d.sessions.length===0){empty.style.display='block';return}
+    d.sessions.forEach(function(s){
+      var dv=document.createElement('div'); dv.className='entry-row';
+      dv.style.flexDirection='column'; dv.style.alignItems='stretch'; dv.style.marginBottom='6px';
+      var title=s.title||'(无标题)';
+      var userStr=(s.user_name||s.user_id||'?').substring(0,20);
+      var timeStr=(s.updated_at||'').substring(0,16);
+      dv.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;font-weight:500;color:var(--navy)">'+esc(title.substring(0,50))+'</span>'+
+        '<span style="font-size:10px;color:var(--text-muted)">'+esc(timeStr)+'</span></div>'+
+        '<div style="font-size:11px;color:var(--text-secondary);margin:2px 0">👤 '+esc(userStr)+' &middot; '+s.message_count+' 条消息</div>'+
+        '<div style="display:flex;gap:6px;margin-top:4px">'+
+        '<button class="btn-sm" style="font-size:10px;padding:4px 12px" onclick="viewSessionMessages(\''+s.id+'\')">查看消息</button>'+
+        '<button style="background:#c00;color:#fff;border:none;font-size:10px;padding:4px 12px;cursor:pointer;font-family:inherit" onclick="deleteSession(\''+s.id+'\')">删除</button></div>';
+      list.appendChild(dv);
+    });
+  }catch(e){empty.textContent='加载失败';empty.style.display='block'}
+}
+async function viewSessionMessages(sessionId){
+  try{
+    var r=await fetch('/api/admin/session/messages?id='+encodeURIComponent(sessionId)), d=await r.json();
+    if(!d.messages||d.messages.length===0){alert('该对话无消息');return}
+    var html='<div style="max-height:60vh;overflow-y:auto">';
+    d.messages.forEach(function(m){
+      var roleLabel=m.role==='user'?'🧑 用户':'🤖 AI';
+      var colorStyle=m.role==='user'?'background:var(--cream);border-left:2px solid var(--navy)':'background:var(--white);border-left:2px solid var(--gold)';
+      html+='<div style="'+colorStyle+';padding:10px 14px;margin-bottom:6px;font-size:13px;line-height:1.6">'+
+        '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">'+roleLabel+'</div>'+
+        '<div>'+esc(m.content||'').substring(0,1000).replace(/\n/g,'<br>')+'</div></div>';
+    });
+    html+='</div>';
+    var overlay=document.createElement('div'); overlay.style.cssText='position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center';
+    overlay.onclick=function(e){if(e.target===overlay){overlay.remove()}};
+    var modal=document.createElement('div'); modal.style.cssText='background:#fff;border-radius:10px;padding:24px;max-width:600px;width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.15);position:relative';
+    modal.innerHTML='<button onclick="this.closest(\'[style*=\\\\\'position:fixed;inset:0\\\\\']\').remove()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;padding:4px">×</button>'+
+      '<h3 style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:14px">对话消息 ('+d.count+' 条)</h3>'+html;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }catch(e){alert('加载失败')}
+}
+async function deleteSession(sessionId){
+  if(!confirm('确定删除该对话？此操作不可恢复。')) return;
+  try{
+    var r=await fetch('/api/admin/session/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:sessionId})});
+    var d=await r.json();
+    if(d.status==='ok') loadSessionData();
+    else alert('删除失败');
+  }catch(e){alert('删除失败')}
+}
+
+/* ===== KNOWLEDGE MANAGEMENT (Table-based CRUD) ===== */
+var _kbPage=1, _kbSearch='', _kbCategory='', _kbTotalPages=1;
+async function loadKnowledgeData(page){
+  _kbPage=page||1;
+  var params='?page='+_kbPage+'&page_size=20';
+  if(_kbSearch) params+='&q='+encodeURIComponent(_kbSearch);
+  if(_kbCategory) params+='&category='+encodeURIComponent(_kbCategory);
+  try{
+    var r=await fetch('/api/knowledge'+params), d=await r.json();
+    document.getElementById('entryCount').textContent='('+d.total+')';
+    document.getElementById('kbCounter').textContent='第 '+d.page+'/'+Math.ceil(d.total/d.page_size)+' 页 (共 '+d.total+' 条)';
+    _kbTotalPages=Math.ceil(d.total/d.page_size)||1;
+    var tbody=document.getElementById('kbTbody'); tbody.innerHTML='';
+    if(!d.entries||d.entries.length===0){
+      tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">暂无条目</td></tr>';
+    } else {
+      d.entries.forEach(function(e){
+        var tr=document.createElement('tr');
+        var tags=(e.tags||[]).slice(0,3).map(function(t){return'<span class="tag">'+esc(t)+'</span>'}).join('');
+        var statusHtml=e.is_active!==false?'<span class="kb-badge active">活跃</span>':'<span class="kb-badge inactive">停用</span>';
+        var contentPreview=(e.content||'').substring(0,120);
+        tr.innerHTML=
+          '<td class="title-cell" title="'+esc(e.title||'')+'">'+esc(e.title||'无标题')+'</td>'+
+          '<td>'+esc(e.category||'general')+'</td>'+
+          '<td>'+tags+'</td>'+
+          '<td class="content-cell" title="'+esc(contentPreview)+'">'+esc(contentPreview)+'</td>'+
+          '<td>'+statusHtml+'</td>'+
+          '<td><button class="act-btn" onclick="editEntry(\''+e.id+'\')">编辑</button><button class="act-btn del" onclick="deleteEntry(\''+e.id+'\')">删除</button></td>';
+        tbody.appendChild(tr);
+      });
+    }
+    // Pagination
+    var pager=document.getElementById('kbPager');
+    if(_kbTotalPages<=1){pager.innerHTML='';return}
+    var html='';
+    if(_kbPage>1) html+='<button onclick="loadKnowledgeData('+(_kbPage-1)+')">← 上一页</button>';
+    html+='<span class="cur">'+_kbPage+'/'+_kbTotalPages+'</span>';
+    if(_kbPage<_kbTotalPages) html+='<button onclick="loadKnowledgeData('+(_kbPage+1)+')">下一页 →</button>';
+    pager.innerHTML=html;
+  }catch(e){console.error('loadKnowledgeData error',e)}
+}
+async function editEntry(id){
+  try{
+    var r2=await fetch('/api/knowledge?page_size=9999'), d2=await r2.json();
+    var entry=null;
+    if(d2.entries) d2.entries.forEach(function(e){if(e.id===id)entry=e});
+    if(!entry){alert('未找到该条目');return}
+    document.getElementById('kbEditId').value=entry.id;
+    document.getElementById('kbEditTitle').value=entry.title||'';
+    document.getElementById('kbEditCategory').value=entry.category||'';
+    document.getElementById('kbEditTags').value=(entry.tags||[]).join(', ');
+    document.getElementById('kbEditContent').value=entry.content||'';
+    document.getElementById('kbEditActive').checked=entry.is_active!==false;
+    document.getElementById('kbEditOverlay').style.display='flex';
+  }catch(e){alert('加载条目失败');console.error(e)}
+}
+async function saveEdit(){
+  var id=document.getElementById('kbEditId').value;
+  var title=document.getElementById('kbEditTitle').value.trim();
+  if(!title){alert('标题不能为空');return}
+  try{
+    var r=await fetch('/api/knowledge/update',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:id,title:title,category:document.getElementById('kbEditCategory').value.trim()||'general',
+        tags:document.getElementById('kbEditTags').value.split(/[,，]/).map(function(x){return x.trim()}).filter(Boolean),
+        content:document.getElementById('kbEditContent').value,
+        is_active:document.getElementById('kbEditActive').checked})});
+    var d=await r.json();
+    if(d.status==='ok'){closeEditModal();loadKnowledgeData(_kbPage)}
+    else alert('保存失败');
+  }catch(e){alert('保存失败')}
+}
+function closeEditModal(){document.getElementById('kbEditOverlay').style.display='none'}
+function openBatchImport(){document.getElementById('kbBatchOverlay').style.display='flex'}
+function closeBatchImport(){document.getElementById('kbBatchOverlay').style.display='none'}
+async function submitBatchImport(){
+  var val=document.getElementById('kbBatchInput').value.trim();
+  if(!val){alert('请输入JSON内容');return}
+  try{
+    var entries=JSON.parse(val);
+    if(!Array.isArray(entries)){alert('请输入JSON数组');return}
+    var r=await fetch('/api/knowledge/batch-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:entries})});
+    var d=await r.json();
+    if(d.status==='ok'){
+      alert('导入成功！新增 '+d.added+' 条，共 '+d.total+' 条');
+      closeBatchImport();
+      document.getElementById('kbBatchInput').value='';
+      loadKnowledgeData(1);
+    } else {alert('导入失败')}
+  }catch(e){alert('JSON格式错误: '+e.message)}
+}
+
+/* ===== DAILY / WEEKLY REPORT ===== */
+async function loadReportData(){
+  var dc=document.getElementById('dailyReportContent'), wc=document.getElementById('weeklyReportContent'), rd=document.getElementById('reportDate');
+  if(rd) rd.textContent='('+new Date().toLocaleDateString('zh-CN')+')';
+  try{
+    var dr=await fetch('/api/reports/daily'), dd=await dr.json();
+    var wr=await fetch('/api/reports/weekly'), wd=await wr.json();
+    // Daily report
+    var dailyHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">'+
+      '<div style="background:var(--cream);padding:12px;text-align:center;border-radius:4px"><div style="font-size:22px;font-weight:700;color:var(--navy)">'+dd.queries+'</div><div style="font-size:11px;color:var(--text-muted)">今日查询</div></div>'+
+      '<div style="background:var(--cream);padding:12px;text-align:center;border-radius:4px"><div style="font-size:22px;font-weight:700;color:'+(dd.zero_kb_rate>0.5?'#c00':'var(--navy)')+'">'+(dd.zero_kb_rate*100).toFixed(0)+'%</div><div style="font-size:11px;color:var(--text-muted)">无结果率</div></div>'+
+      '<div style="background:var(--cream);padding:12px;text-align:center;border-radius:4px"><div style="font-size:22px;font-weight:700;color:'+(dd.feedback_down>0?'#c00':'var(--navy)')+'">'+dd.feedback_down+'/'+dd.feedback_total+'</div><div style="font-size:11px;color:var(--text-muted)">点踩/反馈</div></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px">'+
+      '<div><span style="color:var(--text-muted)">网络搜索</span><br><strong>'+dd.web_searches+'</strong></div>'+
+      '<div><span style="color:var(--text-muted)">新增用户</span><br><strong>'+dd.new_users+'</strong></div>'+
+      '<div><span style="color:var(--text-muted)">新消息</span><br><strong>'+dd.new_messages+'</strong></div>'+
+      '<div><span style="color:var(--text-muted)">预约咨询</span><br><strong>'+dd.consultations+'</strong></div>'+
+      '</div>';
+    dc.innerHTML=dailyHtml;
+    // Weekly report
+    var trendHtml='';
+    if(wd.daily_trend&&wd.daily_trend.length){
+      trendHtml='<div style="display:flex;gap:4px;align-items:flex-end;margin-bottom:16px;padding:10px 0;border-bottom:1px solid var(--border)">';
+      var maxQ=1;
+      wd.daily_trend.forEach(function(d){if(d.queries>maxQ)maxQ=d.queries});
+      wd.daily_trend.forEach(function(d){
+        var pct=d.queries/maxQ*100;
+        var barColor=pct>70?'var(--gold)':pct>30?'var(--navy-light)':'var(--text-muted)';
+        trendHtml+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+          '<span style="font-size:10px;color:var(--text-muted)">'+d.queries+'</span>'+
+          '<div style="width:100%;height:'+Math.max(20,pct)+'px;background:'+barColor+';border-radius:3px 3px 0 0"></div>'+
+          '<span style="font-size:9px;color:var(--text-muted);transform:rotate(-30deg);white-space:nowrap">'+d.date.slice(5)+'</span></div>';
+      });
+      trendHtml+='</div>';
+    }
+    var weeklyHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
+      '<div style="background:var(--cream);padding:12px;text-align:center;border-radius:4px"><div style="font-size:22px;font-weight:700;color:var(--navy)">'+wd.total_queries+'</div><div style="font-size:11px;color:var(--text-muted)">周查询总量</div></div>'+
+      '<div style="background:var(--cream);padding:12px;text-align:center;border-radius:4px"><div style="font-size:22px;font-weight:700;color:'+(wd.downvote_rate>0.3?'#c00':'var(--navy)')+'">'+(wd.downvote_rate*100).toFixed(0)+'%</div><div style="font-size:11px;color:var(--text-muted)">点踩率</div></div>'+
+      '<div style="background:var(--cream);padding:12px;text-align:center;border-radius:4px"><div style="font-size:22px;font-weight:700;color:var(--navy)">'+wd.new_users+'</div><div style="font-size:11px;color:var(--text-muted)">新增用户</div></div>'+
+      '</div>'+trendHtml;
+    // Hot questions this week
+    if(wd.hot_questions&&wd.hot_questions.length){
+      weeklyHtml+='<div style="margin-top:12px"><strong style="font-size:13px">本周热门问题</strong>';
+      wd.hot_questions.slice(0,8).forEach(function(q){
+        weeklyHtml+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">'+
+          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(q.question)+'</span>'+
+          '<span style="color:var(--gold);font-weight:600;white-space:nowrap">'+q.count+'次</span></div>';
+      });
+      weeklyHtml+='</div>';
+    }
+    wc.innerHTML=weeklyHtml;
+  }catch(e){
+    dc.innerHTML='<span style="color:#c00">加载失败</span>';
+    wc.innerHTML='<span style="color:#c00">加载失败</span>';
+  }
+}
+
+
+/* ===== 极简录入: smartAdd ===== */
+async function smartAddParse(){
+  var text=document.getElementById('smartAddInput').value.trim();
+  if(!text){document.getElementById('smartAddStatus').textContent='请先粘贴辅导记录';return}
+  var btn=document.getElementById('smartAddParseBtn');
+  btn.disabled=true;btn.textContent='解析中...';
+  document.getElementById('smartAddStatus').textContent='正在调用 AI 解析...';
+  try{
+    var r=await fetch('/api/knowledge/smart-add',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'parse',text:text})
+    });
+    var d=await r.json();
+    if(d.error){document.getElementById('smartAddStatus').textContent='解析失败：'+d.error;return}
+    if(d.preview){
+      document.getElementById('smartAddTitle').value=d.preview.title||'';
+      document.getElementById('smartAddCategory').value=d.preview.category||'';
+      document.getElementById('smartAddTags').value=(d.preview.tags||[]).join(', ');
+      document.getElementById('smartAddContent').value=d.preview.content||'';
+      document.getElementById('smartAddPreview').style.display='block';
+      document.getElementById('smartAddStatus').textContent='解析完成，请确认后入库';
+    }
+  }catch(e){document.getElementById('smartAddStatus').textContent='请求失败：'+e.message}
+  finally{btn.disabled=false;btn.textContent='AI 解析'}
+}
+async function smartAddSave(){
+  var title=document.getElementById('smartAddTitle').value.trim();
+  var content=document.getElementById('smartAddContent').value.trim();
+  var category=document.getElementById('smartAddCategory').value.trim()||'general';
+  var tags=document.getElementById('smartAddTags').value.split(',').map(function(t){return t.trim()}).filter(Boolean);
+  if(!title||!content){document.getElementById('smartAddSaveStatus').textContent='标题和内容不能为空';return}
+  var btn=document.querySelector('#smartAddPreview .btn-sm');
+  btn.disabled=true;
+  try{
+    var r=await fetch('/api/knowledge/smart-add',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'save',title:title,content:content,category:category,tags:tags})
+    });
+    var d=await r.json();
+    if(d.error){document.getElementById('smartAddSaveStatus').textContent='入库失败：'+d.error}
+    else{
+      document.getElementById('smartAddSaveStatus').textContent='✅ 已入库！';
+      document.getElementById('smartAddInput').value='';
+      document.getElementById('smartAddPreview').style.display='none';
+      document.getElementById('smartAddTitle').value='';
+      document.getElementById('smartAddCategory').value='';
+      document.getElementById('smartAddTags').value='';
+      document.getElementById('smartAddContent').value='';
+      setTimeout(function(){document.getElementById('smartAddSaveStatus').textContent=''},3000);
+    }
+  }catch(e){document.getElementById('smartAddSaveStatus').textContent='请求失败：'+e.message}
+  finally{btn.disabled=false}
+}
+
+
+/* ===== 家长入口 ===== */
+function openAsParent(){
+  showPage('chat');
+  // Set a parent context hint in the input
+  var inp=document.getElementById('chatInput');
+  if(inp) inp.placeholder='描述你孩子在留学中遇到的问题...';
+  // After chat inits, set parent context
+  // Will be handled by initChat
+  _isParent=true;
+}
+/* ===== 分享功能 ===== */
+function shareAnswer(answer, question){
+  var url=window.location.origin+'/?q='+encodeURIComponent((question||'').slice(0,100))+'&a='+encodeURIComponent((answer||'').slice(0,200));
+  document.getElementById('shareLinkInput').value=url;
+  document.getElementById('shareOverlay').style.display='flex';
+}
+function closeShareModal(){document.getElementById('shareOverlay').style.display='none'}
+function copyShareLink(){
+  var inp=document.getElementById('shareLinkInput');
+  inp.select();
+  try{navigator.clipboard.writeText(inp.value);document.querySelector('.copy-btn').textContent='已复制!'}catch(e){}
+}
+/* ===== Mobile fix: 锁定 body 滚动 + 实时适配可视高度 ===== */
+(function(){
+  var chatPage = document.getElementById('chatPage');
+  function lockBody(){
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = '0';
+    document.body.style.left = '0';
+    // 立即设置高度
+    if(chatPage && !chatPage.classList.contains('hidden')){
+      chatPage.style.height = window.innerHeight + 'px';
+    }
+  }
+  function unlockBody(){
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    chatPage.style.height = '';
+  }
+  function resizeChat(){
+    if(chatPage && !chatPage.classList.contains('hidden')){
+      chatPage.style.height = window.innerHeight + 'px';
+    }
+  }
+  // 监听页面切换
+  var origShowPage = window.showPage;
+  window.showPage = function(p){
+    if(origShowPage) origShowPage(p);
+    if(p === 'chat') lockBody();
+    else unlockBody();
+  };
+  // 各种尺寸变化事件
+  window.addEventListener('resize', resizeChat);
+  window.addEventListener('orientationchange', function(){ setTimeout(resizeChat, 150); });
+  window.addEventListener('pageshow', resizeChat);
+  if('visualViewport' in window){
+    window.visualViewport.addEventListener('resize', function(){ setTimeout(resizeChat, 50); });
+    window.visualViewport.addEventListener('scroll', function(){ setTimeout(resizeChat, 50); });
+  }
+  // 初始检查（直接打开聊天页的情况）
+  if(chatPage && !chatPage.classList.contains('hidden')) lockBody();
+})();
+
+/* ===== HERO SIDE - PARTICLE NETWORK (SpaceX-style) ===== */
+function initHeroParticles(){
+  var canvas=document.getElementById('heroParticleCanvas');
+  if(!canvas||canvas.offsetWidth===0)return;
+  var ctx=canvas.getContext('2d');
+  function resize(){
+    var parent=canvas.parentElement;
+    canvas.width=parent.offsetWidth;
+    canvas.height=parent.offsetHeight;
+  }
+  resize();
+  
+  // Country nodes (position as % of panel)
+  var nodes=[
+    {x:.78,y:.18,label:'UK',r:3},
+    {x:.15,y:.32,label:'US',r:4},
+    {x:.82,y:.68,label:'AU',r:3},
+    {x:.22,y:.12,label:'CA',r:3},
+    {x:.78,y:.48,label:'SG',r:2.5},
+    {x:.68,y:.38,label:'HK',r:2.5},
+  ];
+  
+  var mouse={x:-1e3,y:-1e3};
+  canvas.addEventListener('mousemove',function(e){
+    var r=canvas.getBoundingClientRect();
+    mouse.x=e.clientX-r.left;
+    mouse.y=e.clientY-r.top;
+  });
+  canvas.addEventListener('mouseleave',function(){mouse.x=-1e3;mouse.y=-1e3});
+  
+  var time=0;
+  function draw(){
+    time+=0.005;
+    var w=canvas.width,h=canvas.height;
+    ctx.clearRect(0,0,w,h);
+    
+    // Connections between nodes
+    for(var i=0;i<nodes.length;i++){
+      for(var j=i+1;j<nodes.length;j++){
+        var ni=nodes[i],nj=nodes[j];
+        var nx=ni.x*w,ny=ni.y*h;
+        var mx=nj.x*w,my=nj.y*h;
+        var pulse=0.6+0.4*Math.sin(time+i+j);
+        ctx.beginPath();
+        ctx.moveTo(nx,ny);
+        ctx.lineTo(mx,my);
+        ctx.strokeStyle='rgba(184,134,76,'+(0.06*pulse)+')';
+        ctx.lineWidth=1;
+        ctx.stroke();
+      }
+    }
+    
+    // Draw nodes with glow
+    for(var i=0;i<nodes.length;i++){
+      var n=nodes[i];
+      var nx=n.x*w,ny=n.y*h;
+      var pulse=0.6+0.4*Math.sin(time+i*1.2);
+      
+      // Subtle repel from mouse
+      var dx=mouse.x-nx,dy=mouse.y-ny;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<150){
+        nx+=dx*(1-dist/150)*0.03;
+        ny+=dy*(1-dist/150)*0.03;
+      }
+      
+      // Outer glow
+      var grad=ctx.createRadialGradient(nx,ny,0,nx,ny,n.r*5*pulse);
+      grad.addColorStop(0,'rgba(184,134,76,'+(0.12*pulse)+')');
+      grad.addColorStop(1,'rgba(184,134,76,0)');
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.arc(nx,ny,n.r*5*pulse,0,Math.PI*2);
+      ctx.fill();
+      
+      // Core dot
+      ctx.fillStyle='rgba(184,134,76,'+(0.35*pulse)+')';
+      ctx.beginPath();
+      ctx.arc(nx,ny,n.r*pulse,0,Math.PI*2);
+      ctx.fill();
+      
+      // Country label
+      ctx.fillStyle='rgba(184,134,76,'+(0.25*pulse)+')';
+      ctx.font='7.5px "Noto Sans SC",sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(n.label,nx,ny+n.r+9);
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+  window.addEventListener('resize',resize);
+}
+
+/* ===== DIAGNOSIS CARD TOGGLE ===== */
+var _lastDiagCard=null;
+function toggleDiagCard(el){
+  if(_lastDiagCard&&_lastDiagCard!==el){
+    var prevDetail=_lastDiagCard.querySelector('.detail');
+    if(prevDetail) prevDetail.classList.remove('open');
+  }
+  var d=el.querySelector('.detail');
+  if(d) d.classList.toggle('open');
+  _lastDiagCard=(d&&d.classList.contains('open'))?el:null;
+}
+
+/* ===== HERO STATS COUNTER ===== */
+function animateHeroStats(){
+  var nums=document.querySelectorAll('.hero-side-stat .num[data-target]');
+  nums.forEach(function(el){
+    var target=parseInt(el.getAttribute('data-target'));
+    if(isNaN(target))return;
+    var duration=1200,start=performance.now();
+    var isPct=el.closest('.hero-side-stat').querySelector('.lbl')&&
+      el.closest('.hero-side-stat').querySelector('.lbl').textContent.includes('%');
+    function tick(now){
+      var p=Math.min(1,(now-start)/duration);
+      p=1-Math.pow(1-p,3); // ease-out cubic
+      var val=Math.round(p*target);
+      el.textContent=val+(isPct&&p>=1?'%':'');
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* Init hero particles and stats on page load */
+(function(){
+  if(document.getElementById('heroParticleCanvas')){
+    initHeroParticles();
+    animateHeroStats();
+  }
+})();
+
+</script>
+</body>
+</html>

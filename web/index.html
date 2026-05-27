@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设计风格样片</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;800;900&display=swap');
+
+    * { font-family: 'Noto Sans SC', sans-serif; }
+
+    /* Subtle noise texture overlay */
+    .noise::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Glass card */
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .glass-light {
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .gradient-text-accent {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Animated grid background */
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* Hover lift effect */
+    .hover-lift {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hover-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.2);
+    }
+
+    /* Shimmer loading */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* Smooth scroll */
+    html { scroll-behavior: smooth; }
+
+    /* Card border gradient */
+    .card-border {
+      position: relative;
+    }
+    .card-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(102,126,234,0.3), rgba(118,75,162,0.1), rgba(102,126,234,0.1));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+
+    /* Stats counter pulse */
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* Reveal animation */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .reveal {
+      animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .reveal-delay-1 { animation-delay: 0.1s; }
+    .reveal-delay-2 { animation-delay: 0.2s; }
+    .reveal-delay-3 { animation-delay: 0.3s; }
+    .reveal-delay-4 { animation-delay: 0.4s; }
+    .reveal-delay-5 { animation-delay: 0.5s; }
+
+    /* Floating animation */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    .float { animation: float 4s ease-in-out infinite; }
+
+    @keyframes float-delay {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    .float-2 { animation: float-delay 5s ease-in-out 1s infinite; }
+  </style>
+</head>
+<body>
+
+<!-- ========== HERO ========== -->
+<section class="relative min-h-screen bg-[#0a0a0f] overflow-hidden grid-bg">
+  <div class="noise absolute inset-0"></div>
+
+  <!-- Ambient glow -->
+  <div class="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#667eea]/10 blur-[120px]"></div>
+  <div class="absolute bottom-[-200px] right-[-100px] w-[400px] h-[400px] rounded-full bg-[#764ba2]/10 blur-[100px]"></div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
+    <div class="text-white text-xl font-bold tracking-tight">
+      <span class="bg-gradient-to-r from-[#667eea] to-[#764ba2] w-8 h-8 rounded-lg inline-flex items-center justify-center text-white text-sm mr-2 font-bold">A</span>
+      AcadAI
+    </div>
+    <div class="hidden md:flex items-center gap-10 text-sm text-white/50">
+      <a href="#" class="hover:text-white/90 transition-colors">产品</a>
+      <a href="#" class="hover:text-white/90 transition-colors">解决方案</a>
+      <a href="#" class="hover:text-white/90 transition-colors">案例</a>
+      <a href="#" class="hover:text-white/90 transition-colors">关于</a>
+    </div>
+    <button class="bg-white/5 hover:bg-white/10 text-white text-sm px-5 py-2.5 rounded-full border border-white/10 transition-all">
+      体验 AI →
+    </button>
+  </nav>
+
+  <!-- Hero content -->
+  <div class="relative z-10 max-w-7xl mx-auto px-8 pt-24 pb-32">
+    <div class="max-w-4xl">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs text-white/50 mb-8 reveal">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        专为中国留学生打造的 AI 学业助手
+      </div>
+
+      <!-- Headline -->
+      <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-[1.08] tracking-tight reveal reveal-delay-1">
+        <span class="gradient-text">学业困境</span><br>
+        <span>不再需要</span><br>
+        <span class="gradient-text-accent">独自面对</span>
+      </h1>
+
+      <!-- Description -->
+      <p class="text-lg md:text-xl text-white/30 max-w-2xl mt-8 leading-relaxed reveal reveal-delay-2">
+        基于数千真实辅导案例，我们用 AI 将经验转化为即时可得的解决方案——<br>
+        让每一位海外的中国学生，随时都能跨过那道坎。
+      </p>
+
+      <!-- CTAs -->
+      <div class="flex items-center gap-4 mt-10 reveal reveal-delay-3">
+        <button class="bg-white text-[#0a0a0f] px-8 py-3.5 rounded-full font-semibold text-sm hover:bg-white/90 transition-all shadow-2xl shadow-white/10">
+          开始提问 →
+        </button>
+        <button class="text-white/50 text-sm px-8 py-3.5 rounded-full border border-white/10 hover:bg-white/5 transition-all">
+          了解更多
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating cards decoration -->
+    <div class="absolute right-8 top-1/3 hidden lg:block">
+      <div class="glass rounded-2xl p-5 w-64 float">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400 to-purple-500"></div>
+          <div>
+            <div class="text-white text-sm font-medium">微积分期末</div>
+            <div class="text-white/30 text-xs">机械工程 · 大二</div>
+          </div>
+        </div>
+        <div class="bg-emerald-400/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full inline-block">已解决</div>
+        <p class="text-white/40 text-xs mt-3 leading-relaxed">"讲了3遍没懂的知识点，AI 一遍就给我理清了..."</p>
+      </div>
+      <div class="glass rounded-2xl p-5 w-56 mt-4 ml-12 float-2">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500"></div>
+          <div>
+            <div class="text-white text-sm font-medium">论文润色</div>
+            <div class="text-white/30 text-xs">经济学 · 硕士</div>
+          </div>
+        </div>
+        <div class="bg-emerald-400/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full inline-block">已解决</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+    <span class="text-white/20 text-xs">向下滚动</span>
+    <div class="w-px h-8 bg-gradient-to-b from-white/20 to-transparent"></div>
+  </div>
+</section>
+
+<!-- ========== LOGO CLOUD ========== -->
+<section class="bg-[#0a0a0f] border-t border-white/[0.02] py-16">
+  <div class="max-w-7xl mx-auto px-8 text-center">
+    <p class="text-white/20 text-xs tracking-widest uppercase mb-8">已覆盖海外名校</p>
+    <div class="flex flex-wrap justify-center gap-x-16 gap-y-6 text-white/15 text-sm font-medium">
+      <span>University of Melbourne</span>
+      <span>UCL</span>
+      <span>University of Sydney</span>
+      <span>NUS</span>
+      <span>University of Toronto</span>
+      <span>Columbia University</span>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PROBLEM ========== -->
+<section class="bg-[#0a0a0f] py-32 relative">
+  <div class="max-w-7xl mx-auto px-8">
+    <div class="max-w-2xl">
+      <span class="text-[#667eea] text-xs tracking-widest uppercase font-medium">The Problem</span>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mt-6 leading-tight">
+        留学之路，<br>
+        <span class="text-white/20">不止学业一道坎</span>
+      </h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mt-16">
+      <!-- Card 1 -->
+      <div class="card-border glass rounded-2xl p-8 hover-lift">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400/20 to-purple-500/20 flex items-center justify-center mb-6">
+          <span class="text-rose-300 text-lg">😰</span>
+        </div>
+        <h3 class="text-white font-semibold text-lg mb-3">学业焦虑</h3>
+        <p class="text-white/30 text-sm leading-relaxed">全英文授课听不懂、论文格式不了解、小组讨论插不上话——每一步都在消耗信心。</p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="card-border glass rounded-2xl p-8 hover-lift">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400/20 to-indigo-500/20 flex items-center justify-center mb-6">
+          <span class="text-sky-300 text-lg">🌍</span>
+        </div>
+        <h3 class="text-white font-semibold text-lg mb-3">文化孤岛</h3>
+        <p class="text-white/30 text-sm leading-relaxed">身边没有可以问的人，国内家长干着急，时差让求助变得更难。</p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="card-border glass rounded-2xl p-8 hover-lift">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 flex items-center justify-center mb-6">
+          <span class="text-emerald-300 text-lg">⏳</span>
+        </div>
+        <h3 class="text-white font-semibold text-lg mb-3">时间紧迫</h3>
+        <p class="text-white/30 text-sm leading-relaxed">DDL 就在眼前，找 tutor、约时间、等回复——每一步都在消耗本就不多的时间。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SOLUTION ========== -->
+<section class="bg-[#0c0c14] py-32 relative">
+  <div class="max-w-7xl mx-auto px-8">
+    <div class="max-w-2xl">
+      <span class="text-[#667eea] text-xs tracking-widest uppercase font-medium">Our Solution</span>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mt-6 leading-tight">
+        你的经验 × AI 的能力
+      </h2>
+      <p class="text-white/30 text-lg mt-4">将数千案例沉淀为即时可用的智慧，7×24 小时在线</p>
+    </div>
+
+    <!-- AI Demo mockup -->
+    <div class="mt-16 glass rounded-3xl p-1 card-border">
+      <div class="bg-[#0a0a0f] rounded-2xl p-6 md:p-10">
+        <!-- Chat header -->
+        <div class="flex items-center gap-3 pb-6 border-b border-white/[0.04] mb-6">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-white text-xs font-bold">A</div>
+          <div>
+            <div class="text-white text-sm font-medium">AcadAI 助手</div>
+            <div class="text-white/20 text-xs">基于数千真实案例</div>
+          </div>
+          <div class="ml-auto flex gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-white/10"></span>
+            <span class="w-2 h-2 rounded-full bg-white/10"></span>
+            <span class="w-2 h-2 rounded-full bg-white/10"></span>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="space-y-5">
+          <div class="flex items-start gap-3 max-w-lg">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex-shrink-0 flex items-center justify-center text-white text-[10px]">U</div>
+            <div class="glass-light rounded-2xl rounded-tl-none px-4 py-3 text-sm text-gray-700">
+             我在澳洲读大一，会计课完全听不懂，马上要 midterm 了，怎么办...
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 max-w-2xl">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#667eea] to-[#764ba2] flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold">A</div>
+            <div class="bg-[#1a1a2e] rounded-2xl rounded-tl-none px-5 py-4 text-sm text-white/80 leading-relaxed">
+              <p class="mb-3">别担心，这种情况我们遇到过非常多。根据往届学生的经验，给你几条马上能用的建议：</p>
+              <ul class="space-y-2 text-white/60">
+                <li class="flex items-start gap-2">1️⃣ 先把课本每章后的 Key Terms 背熟——这是听懂课的基础</li>
+                <li class="flex items-start gap-2">2️⃣ 去 YouTube 搜你的课程代码 + "review"，很多博主有考点串讲</li>
+                <li class="flex items-start gap-2">3️⃣ 如果你学校有 PASS 项目（Peer Assisted Study），一定要参加</li>
+              </ul>
+              <div class="mt-4 pt-3 border-t border-white/5 text-white/30 text-xs">
+                💡 基于 47 个类似案例 · 解决率 92%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input -->
+        <div class="mt-6 flex items-center gap-3 bg-white/5 rounded-2xl px-5 py-3 border border-white/[0.04]">
+          <input type="text" placeholder="描述你的学业问题..." class="bg-transparent text-white/50 text-sm flex-1 outline-none placeholder:text-white/20" readonly>
+          <button class="bg-white/10 hover:bg-white/20 text-white/50 text-xs px-4 py-1.5 rounded-full transition-colors">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== STATS ========== -->
+<section class="bg-[#0a0a0f] py-24">
+  <div class="max-w-7xl mx-auto px-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-bold text-white">2000+</div>
+        <div class="text-white/20 text-sm mt-2">辅导案例</div>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-bold text-white">92%</div>
+        <div class="text-white/20 text-sm mt-2">问题解决率</div>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-bold text-white">15+</div>
+        <div class="text-white/20 text-sm mt-2">覆盖国家</div>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-bold text-white">7×24</div>
+        <div class="text-white/20 text-sm mt-2">即时响应</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CTA ========== -->
+<section class="bg-[#0a0a0f] py-32 relative">
+  <div class="absolute inset-0 bg-gradient-to-t from-[#667eea]/5 to-transparent"></div>
+  <div class="relative z-10 max-w-3xl mx-auto px-8 text-center">
+    <h2 class="text-3xl md:text-5xl font-bold text-white leading-tight">
+      把你的经验，变成每个留学生<br>
+      都能随身携带的 <span class="gradient-text-accent">答案</span>
+    </h2>
+    <p class="text-white/30 text-lg mt-6 max-w-xl mx-auto">
+      告诉我你的项目信息，我帮你搭出这个网站。
+    </p>
+    <button class="mt-10 bg-white text-[#0a0a0f] px-10 py-4 rounded-full font-semibold text-sm hover:bg-white/90 transition-all shadow-2xl shadow-white/10">
+      开始搭建 →
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="relative z-10 max-w-7xl mx-auto px-8 mt-32 pt-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between text-white/15 text-xs">
+    <div class="flex items-center gap-2">
+      <span class="bg-gradient-to-r from-[#667eea] to-[#764ba2] w-5 h-5 rounded flex items-center justify-center text-white text-[8px] font-bold">A</span>
+      AcadAI
+    </div>
+    <div class="mt-4 md:mt-0">© 2026 · 为每一位留学生而建</div>
+  </div>
+</section>
+
+</body>
+</html>

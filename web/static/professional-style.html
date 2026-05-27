@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>专业风格样片 · 留学科辅</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans SC', -apple-system, sans-serif;
+      background: #faf8f5;
+      color: #2c2c2c;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ===== COLOR ===== */
+    :root {
+      --navy: #1a2236;
+      --navy-light: #2a3a5a;
+      --gold: #b8864c;
+      --gold-light: #d4a86a;
+      --cream: #f8f6f1;
+      --white: #fefdfc;
+      --text: #2c2c2c;
+      --text-secondary: #6b6b6b;
+      --text-muted: #999;
+      --border: #e8e4de;
+    }
+
+    /* ===== NAV ===== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 56px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 18px; font-weight: 700; color: var(--navy);
+    }
+    .nav-logo em { font-style: normal; color: var(--gold); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      color: var(--text-secondary); text-decoration: none;
+      font-size: 13px; font-weight: 500; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--navy); }
+    .nav-cta {
+      background: var(--navy); color: #fff; font-size: 12px;
+      font-weight: 600; letter-spacing: 1px; padding: 10px 28px;
+      cursor: pointer; transition: background 0.2s; border: none;
+    }
+    .nav-cta:hover { background: var(--navy-light); }
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 100vh; padding: 180px 56px 100px;
+      display: flex; align-items: center;
+      background: linear-gradient(135deg, #faf8f5 0%, #f5f0ea 50%, #faf8f5 100%);
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -200px; right: -200px;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(184,134,76,0.03) 0%, transparent 70%);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 640px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(26,34,54,0.04); padding: 8px 20px;
+      font-size: 12px; color: var(--text-secondary); font-weight: 500;
+      margin-bottom: 32px;
+    }
+    .hero-badge span { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+    .hero h1 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(36px, 5vw, 60px);
+      font-weight: 700; line-height: 1.25; letter-spacing: 1px;
+      color: var(--navy);
+    }
+    .hero h1 em { font-style: normal; color: var(--gold); }
+    .hero p {
+      font-size: 16px; color: var(--text-secondary); line-height: 1.8;
+      margin-top: 24px; max-width: 480px; font-weight: 400;
+    }
+    .hero-actions { display: flex; gap: 16px; margin-top: 40px; }
+    .btn-primary {
+      background: var(--navy); color: #fff; border: none;
+      padding: 14px 40px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s; letter-spacing: 0.5px;
+    }
+    .btn-primary:hover { background: var(--navy-light); }
+    .btn-secondary {
+      background: transparent; color: var(--navy); border: none;
+      padding: 14px 32px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-secondary:hover { color: var(--gold); }
+
+    .hero-stats {
+      display: flex; gap: 48px; margin-top: 60px;
+      padding-top: 40px; border-top: 1px solid var(--border);
+    }
+    .hero-stat h3 { font-size: 28px; font-weight: 700; color: var(--navy); }
+    .hero-stat span { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+    @media (max-width: 768px) {
+      .hero { padding: 140px 24px 60px; }
+      .hero-stats { gap: 24px; flex-wrap: wrap; }
+    }
+
+    /* ===== SECTION ===== */
+    section { padding: 100px 56px; }
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+      color: var(--gold); text-transform: uppercase; margin-bottom: 8px;
+    }
+    .section-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(28px, 3.5vw, 42px);
+      font-weight: 700; line-height: 1.25; color: var(--navy);
+    }
+    .section-title em { font-style: normal; color: var(--gold); }
+    .section-desc {
+      font-size: 15px; color: var(--text-secondary); line-height: 1.8;
+      margin-top: 16px; max-width: 560px;
+    }
+    @media (max-width: 768px) { section { padding: 60px 24px; } }
+
+    /* ===== PROBLEM ===== */
+    .problem-wrap {
+      background: var(--white); border-bottom: 1px solid var(--border);
+    }
+    .problem-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+      margin-top: 48px; border: 1px solid var(--border);
+    }
+    .problem-card { padding: 48px 36px; background: var(--white); }
+    .problem-card:nth-child(2) { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    .problem-icon { font-size: 28px; margin-bottom: 20px; }
+    .problem-card h3 { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 12px; }
+    .problem-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.8; }
+    @media (max-width: 768px) {
+      .problem-grid { grid-template-columns: 1fr; }
+      .problem-card:nth-child(2) { border: none; }
+    }
+
+    /* ===== MANTRA ===== */
+    .mantra-wrap {
+      background: var(--navy); color: #fff; text-align: center;
+      padding: 100px 56px;
+    }
+    .mantra-wrap h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(22px, 3vw, 36px);
+      font-weight: 400; line-height: 1.6;
+      color: rgba(255,255,255,0.5); max-width: 700px; margin: 0 auto;
+    }
+    .mantra-wrap strong { color: #fff; font-weight: 600; }
+    .mantra-wrap em { font-style: normal; color: var(--gold-light); }
+    @media (max-width: 768px) { .mantra-wrap { padding: 80px 24px; } }
+
+    /* ===== METHODOLOGY ===== */
+    .method-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      margin-top: 48px;
+    }
+    .method-card {
+      padding: 0;
+    }
+    .method-num {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 48px; font-weight: 700; color: rgba(184,134,76,0.15);
+      line-height: 1; margin-bottom: 16px;
+    }
+    .method-card h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+    .method-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+    @media (max-width: 768px) { .method-grid { grid-template-columns: 1fr; } }
+
+    /* ===== SHOWCASE ===== */
+    .showcase-wrap {
+      background: var(--white); border-bottom: 1px solid var(--border);
+    }
+    .showcase-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 56px;
+      align-items: center; max-width: 1100px; margin: 0 auto;
+    }
+    .showcase-text .stat-row {
+      display: flex; gap: 32px; margin-top: 36px;
+      padding-top: 28px; border-top: 1px solid var(--border);
+    }
+    .showcase-text .stat-row h4 { font-size: 24px; font-weight: 700; color: var(--navy); }
+    .showcase-text .stat-row span { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    .chat-box {
+      background: #faf8f5; border: 1px solid var(--border);
+    }
+    .chat-box-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+    }
+    .chat-box-header span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ddd;
+    }
+    .chat-box-header span:first-child { background: #e8a0a0; }
+    .chat-box-header span:nth-child(2) { background: #e8d5a0; }
+    .chat-box-header span:nth-child(3) { background: #a0c4a0; }
+    .chat-body { padding: 24px; }
+    .msg { display: flex; gap: 12px; margin-bottom: 24px; }
+    .msg:last-child { margin-bottom: 0; }
+    .msg-avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
+    .msg-avatar.user { background: #e8e4de; color: var(--text-secondary); }
+    .msg-avatar.ai { background: var(--navy); color: #fff; }
+    .msg-content {
+      background: var(--white); padding: 16px 20px;
+      font-size: 13px; line-height: 1.7; color: var(--text-secondary);
+    }
+    .msg-content strong { color: var(--text); font-weight: 600; }
+    .msg-source { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    @media (max-width: 900px) { .showcase-grid { grid-template-columns: 1fr; } }
+
+    /* ===== CASE STORIES ===== */
+    .case-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;
+      margin-top: 48px;
+    }
+    .case-card {
+      background: var(--white); border: 1px solid var(--border);
+      padding: 36px;
+    }
+    .case-card .country {
+      font-size: 10px; font-weight: 600; letter-spacing: 2px;
+      color: var(--gold); text-transform: uppercase; margin-bottom: 8px;
+    }
+    .case-card h3 { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 12px; }
+    .case-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+    .case-tag {
+      display: inline-block; margin-top: 16px;
+      font-size: 11px; color: var(--gold); font-weight: 500;
+    }
+    @media (max-width: 768px) { .case-grid { grid-template-columns: 1fr; } }
+
+    /* ===== CTA ===== */
+    .cta-wrap {
+      background: var(--navy); text-align: center; padding: 100px 56px;
+    }
+    .cta-wrap h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(26px, 3.5vw, 42px);
+      font-weight: 700; color: #fff; max-width: 600px;
+      margin: 0 auto 16px; line-height: 1.25;
+    }
+    .cta-wrap h2 em { font-style: normal; color: var(--gold-light); }
+    .cta-wrap p { font-size: 15px; color: rgba(255,255,255,0.4); margin-bottom: 40px; }
+    .cta-btn {
+      background: transparent; border: 1.5px solid rgba(255,255,255,0.25);
+      color: #fff; padding: 14px 48px; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.5px; cursor: pointer; transition: all 0.3s;
+    }
+    .cta-btn:hover { background: #fff; color: var(--navy); border-color: #fff; }
+    @media (max-width: 768px) { .cta-wrap { padding: 80px 24px; } }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: var(--navy); border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 24px 56px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    footer .legal { font-size: 11px; color: rgba(255,255,255,0.2); }
+    footer .links { display: flex; gap: 20px; list-style: none; }
+    footer .links a { font-size: 11px; color: rgba(255,255,255,0.2); text-decoration: none; transition: color 0.2s; }
+    footer .links a:hover { color: var(--gold-light); }
+    @media (max-width: 768px) { footer { flex-direction: column; gap: 12px; padding: 20px 24px; } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Aca<em>dAI</em></div>
+  <ul class="nav-links">
+    <li><a href="#">使命</a></li>
+    <li><a href="#">方法论</a></li>
+    <li><a href="#">产品</a></li>
+    <li><a href="#">案例</a></li>
+    <li><a href="#">关于</a></li>
+  </ul>
+  <div class="nav-cta">体验 AI →</div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge"><span></span>基于 2,000+ 真实辅导案例</div>
+    <h1>
+      学业困境<br>
+      不必<em>独自面对</em>
+    </h1>
+    <p>
+      我们是经验最丰富的过来人。将数千案例沉淀为 AI 智能引擎，<br>
+      让每一位海外学子，随时都能找到精准的解决方案。
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary">开始提问</button>
+      <button class="btn-secondary">了解更多 →</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><h3>2,000+</h3><span>真实辅导案例</span></div>
+      <div class="hero-stat"><h3>92%</h3><span>问题解决率</span></div>
+      <div class="hero-stat"><h3>15+</h3><span>覆盖国家</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROBLEM ===== -->
+<section class="problem-wrap">
+  <div class="section-label">洞察</div>
+  <h2 class="section-title">
+    每一道坎，我们<em>都见过</em>
+  </h2>
+  <p class="section-desc">
+    经手数千案例后，我们发现留学生的困境高度相似——不是能力不够，而是缺少一个"问对人"的渠道。
+  </p>
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="problem-icon">📚</div>
+      <h3>学业脱节</h3>
+      <p>全英文授课听不懂教学节奏、论文引用格式不熟悉、小组讨论找不到切入点——不是因为笨，而是因为没人带你过一遍"游戏规则"。</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🌐</div>
+      <h3>信息孤岛</h3>
+      <p>学校的 Support 资源没人告诉你怎么用，身边的同学也都在摸索。时差让国内家人干着急，很多问题拖到 DDL 前才爆发。</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">⏰</div>
+      <h3>响应滞后</h3>
+      <p>约 Tutor 要排期、等回复要过夜、找对的人要反复试错——而 DDL 从不等人。等找到帮助，往往已经来不及了。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MANTRA ===== -->
+<div class="mantra-wrap">
+  <h2>
+    我们相信，<strong>最好的指南针</strong>，是那些<strong>已经走过这条路的人</strong>。<br>
+    我们把他们走过的路，变成了 <em>AI</em>。
+  </h2>
+</div>
+
+<!-- ===== METHODOLOGY ===== -->
+<section>
+  <div class="section-label">方法论</div>
+  <h2 class="section-title">
+    经验 <em>× AI</em> = 即时答案
+  </h2>
+  <p class="section-desc">
+    不是简单的问答机器人。每一段回答背后，是结构化的案例沉淀和严谨的匹配逻辑。
+  </p>
+  <div class="method-grid">
+    <div class="method-card">
+      <div class="method-num">01</div>
+      <h3>案例结构化沉淀</h3>
+      <p>每一份辅导记录都被拆解为问题类型、学科背景、学生阶段、解决方案、效果追踪五个维度，形成可检索的知识节点。</p>
+    </div>
+    <div class="method-card">
+      <div class="method-num">02</div>
+      <h3>智能匹配与溯源</h3>
+      <p>当用户提问时，AI 从知识库中召回最相关的案例组合，并标注每个建议的来源案例数和解决率——不是凭空生成。</p>
+    </div>
+    <div class="method-card">
+      <div class="method-num">03</div>
+      <h3>持续迭代进化</h3>
+      <p>每一次新的辅导、每一份用户反馈，都会经过清洗和标注后纳入知识库。回答质量随着案例积累持续提升。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SHOWCASE ===== -->
+<section class="showcase-wrap">
+  <div class="section-label">产品</div>
+  <div class="showcase-grid">
+    <div class="showcase-text">
+      <h2 class="section-title">
+        输入问题<br>
+        <em>即时获得</em>精准方案
+      </h2>
+      <p class="section-desc" style="max-width:100%;">
+        描述你的学业困境，AI 从数千案例中提取最相关的经验，给出具体、可执行的建议，并标注来源和可信度。
+      </p>
+      <div class="stat-row">
+        <div><h4>2,000+</h4><span>案例库</span></div>
+        <div><h4>92%</h4><span>解决率</span></div>
+        <div><h4>7×24</h4><span>即时响应</span></div>
+      </div>
+    </div>
+    <div class="chat-box">
+      <div class="chat-box-header">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="chat-body">
+        <div class="msg">
+          <div class="msg-avatar user">你</div>
+          <div class="msg-content">我在澳洲读大一，会计课完全听不懂，马上要 midterm 了，不知道从哪里开始复习...</div>
+        </div>
+        <div class="msg">
+          <div class="msg-avatar ai">AI</div>
+          <div>
+            <div class="msg-content">
+              别担心，这个情况我们遇到过很多。根据过往 <strong>47 个类似案例</strong>的经验，建议你：<br><br>
+              <strong>1.</strong> 先把每章 Key Terms 背熟——这是听懂课的基础<br>
+              <strong>2.</strong> 去 YouTube 搜课程代码 + "review"，很多博主有考点串讲<br>
+              <strong>3.</strong> 参加学校的 PASS 项目——这是往届反馈最有效的方式
+              <div class="msg-source">基于 47 个类似案例 · 解决率 92%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CASES ===== -->
+<section>
+  <div class="section-label">真实案例</div>
+  <h2 class="section-title">
+    从困境到突破，<em>他们做到了</em>
+  </h2>
+  <div class="case-grid">
+    <div class="case-card">
+      <div class="country">United Kingdom · 硕士</div>
+      <h3>挂科边缘到 Merit 毕业</h3>
+      <p>经济学硕士第一学期两门核心课挂科，面临被劝退风险。通过针对性论文辅导和研究方法训练，第二学期全部逆袭到 Distinction，最终以 Merit 等级毕业。</p>
+      <div class="case-tag">论文辅导 · 研究方法</div>
+    </div>
+    <div class="case-card">
+      <div class="country">Australia · 本科</div>
+      <h3>从听不懂课到 Dean's List</h3>
+      <p>会计专业大一新生，前六周完全跟不上教学节奏，midterm 险些挂科。通过系统化的课程梳理和习题训练，期末拿到全科 High Distinction，入选学院优秀学生名单。</p>
+      <div class="case-tag">课业补习 · 考试冲刺</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<div class="cta-wrap">
+  <h2>让每一个留学生<br>都能随时<em>跨过那道坎</em></h2>
+  <p>告诉我你的项目信息，我帮你搭出这个网站。</p>
+  <button class="cta-btn">开始搭建</button>
+</div>
+
+<footer>
+  <div class="legal">AcadAI · 为每一位留学生而建</div>
+  <ul class="links">
+    <li><a href="#">微信</a></li>
+    <li><a href="#">关于</a></li>
+  </ul>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.DS_Store
+.env
+*.db
+*.db-shm
+*.db-wal
+backups/
+.claude/
+$TMPDIR/
+*.tgz
+*.tar.gz
+*.pem
+TMS_PASSWORDS.md

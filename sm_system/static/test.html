@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Test Login</title>
+</head>
+<body>
+<h1>Test Page</h1>
+<div id="page-login">
+  <form id="login-form" onsubmit="return handleLogin(event)">
+    <input type="text" id="login-username" value="admin">
+    <input type="password" id="login-password" value="admin123">
+    <button type="submit">Login</button>
+  </form>
+</div>
+<script>
+const API = {
+  async post(path, data) {
+    const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    return r.json();
+  }
+};
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  const res = await API.post('/api/sm/login', { username, password });
+  document.title = res.user ? 'LOGGED IN' : 'FAILED: ' + (res.error || 'unknown');
+  return false;
+}
+document.addEventListener('DOMContentLoaded', async function() {
+  const res = await API.get ? await API.get('/api/sm/me') : {user:null};
+  if (res.user) document.title = 'AUTHED';
+});
+</script>
+</body>
+</html>
