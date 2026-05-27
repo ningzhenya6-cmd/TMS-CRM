@@ -183,6 +183,8 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 <body>
 
 <div id="app">
+  <!-- Global error container -->
+  <div id="global-error" class="d-none"></div>
   <!-- Hamburger button (mobile only) -->
   <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()">☰</button>
   <!-- Sidebar overlay (mobile only) -->
@@ -1650,6 +1652,26 @@ document.addEventListener('DOMContentLoaded', function(){
   document.body.appendChild(s);
 });
 // ═══════════════════════════════════════════════════════════════════════════
+// Global Error Handler
+// ═══════════════════════════════════════════════════════════════════════════
+window.onerror = function(msg, url, line, col, error) {
+  console.error('TMS_ERROR:', msg, 'at', line, ':', col, error);
+  const el = document.getElementById('global-error');
+  if (el) {
+    el.innerHTML = '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;margin:10px;font-size:.82rem;color:#991b1b;">'
+      + '<strong>⚠️ 页面异常</strong>: ' + msg
+      + '<br><span style="font-size:.72rem;">位置: 第' + line + '行</span>'
+      + '<br><button onclick="this.parentElement.style.display=\'none\'" style="background:none;border:1px solid #991b1b;border-radius:4px;padding:2px 8px;margin-top:4px;cursor:pointer;">关闭</button>'
+      + '</div>';
+    el.classList.remove('d-none');
+  }
+  return true;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('TMS_PROMISE_ERROR:', e.reason);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // State
 // ═══════════════════════════════════════════════════════════════════════════
 const state = { user: null, currentLeadId: null, leads: [], users: [], tutors: [], leadsPage: 1, leadsTotal: 0 };
@@ -1779,6 +1801,9 @@ function showApp() {
   loadNotifications();  // immediate first load
 }
 function switchPage(page) {
+  try {
+  // Debug: log page switch
+  console.log('switchPage:', page);
   closeSidebar(); // Close mobile sidebar when navigating
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1806,6 +1831,29 @@ function switchPage(page) {
   else if (page === 'quick-add') { document.getElementById('qa-text')?.focus(); }
   else if (page === 'enrolled') loadEnrolled();
   else if (page === 'finance') { loadSettlements(); loadCommissions(); loadFinanceReport(); }
+  // Debug: verify section is visible
+  const debugEl = document.getElementById('section-' + page);
+  if (debugEl) {
+    const isVis = debugEl.classList.contains('active');
+    console.log('  section-' + page + ' active:', isVis);
+    if (!isVis) {
+      debugEl.classList.add('active');
+      console.warn('  -> forced active');
+    }
+  }
+  } catch(e) {
+    console.error('switchPage error:', e);
+    const target = document.getElementById('section-' + page);
+    if (target) {
+      target.classList.add('active');
+      target.innerHTML = '<div style="padding:40px;text-align:center;">'
+        + '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:20px;max-width:500px;margin:0 auto;">'
+        + '<h4 style="color:#991b1b;margin:0 0 8px;">⚠️ 页面加载异常</h4>'
+        + '<p style="color:#6b7280;font-size:.85rem;">' + e.message + '</p>'
+        + '<button onclick="location.reload()" style="background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;">刷新页面</button>'
+        + '</div></div>';
+    }
+  }
 }
 function backToLeads() {
   document.getElementById('section-lead-detail').classList.remove('active');
