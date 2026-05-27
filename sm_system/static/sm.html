@@ -100,7 +100,8 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 .progress-bar-fill.danger { background: #ef4444; }
 
 /* Section toggles */
-.section { display: none; }
+.section[hidden] { display: none !important; }
+.section { display: block; }
 .section.active { display: block; }
 .page { display: none; }
 .page.active { display: block; }
@@ -1804,20 +1805,16 @@ function switchPage(page) {
   try {
   // Debug: log page switch
   console.log('switchPage:', page);
-  closeSidebar(); // Close mobile sidebar when navigating
+  closeSidebar();
   document.querySelectorAll('.section').forEach(function(s) {
-    s.style.display = 'none';
+    s.hidden = true;
     s.classList.remove('active');
   });
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   const target = document.getElementById('section-' + page);
   if (target) {
-    target.style.display = 'block';
+    target.hidden = false;
     target.classList.add('active');
-    // Force browser reflow (critical for WeChat X5 browser)
-    void target.offsetHeight;
-    void target.offsetTop;
-    void target.offsetWidth;
   }
   // Show sub-sections for the same page
   if (page === 'schedules') {
@@ -1844,23 +1841,22 @@ function switchPage(page) {
   // Debug: verify section is visible
   const debugEl = document.getElementById('section-' + page);
   if (debugEl) {
-    const displayVal = debugEl.style.display;
+    const isHidden = debugEl.hidden;
     const hasActive = debugEl.classList.contains('active');
-    console.log('  section-' + page + ' display=' + displayVal + ' active=' + hasActive);
-    if (displayVal !== 'block') {
-      debugEl.style.display = 'block';
+    console.log('  section-' + page + ' hidden=' + isHidden + ' active=' + hasActive);
+    if (isHidden) {
+      debugEl.hidden = false;
       debugEl.classList.add('active');
-      void debugEl.offsetHeight;
-      console.warn('  -> forced display:block');
+      console.warn('  -> forced hidden=false');
     }
   }
   } catch(e) {
     console.error('switchPage error:', e);
     // Always try to show the section, even on error
-    document.querySelectorAll('.section').forEach(function(s) { s.style.display = 'none'; });
+    document.querySelectorAll('.section').forEach(function(s) { s.hidden = true; });
     const target = document.getElementById('section-' + page);
     if (target) {
-      target.style.display = 'block';
+      target.hidden = false;
       target.classList.add('active');
       target.innerHTML = '<div style="padding:40px;text-align:center;">'
         + '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:20px;max-width:500px;margin:0 auto;">'
@@ -1872,9 +1868,9 @@ function switchPage(page) {
   }
 }
 function backToLeads() {
-  document.getElementById('section-lead-detail').style.display = 'none';
+  document.getElementById('section-lead-detail').hidden = true;
   document.getElementById('section-lead-detail').classList.remove('active');
-  document.getElementById('section-leads').style.display = 'block';
+  document.getElementById('section-leads').hidden = false;
   document.getElementById('section-leads').classList.add('active');
   loadLeads();
 }
@@ -2133,8 +2129,8 @@ async function viewLead(id) {
   } else {
     editBtnArea.innerHTML = '';
   }
-  document.querySelectorAll('.section').forEach(function(s) { s.style.display = 'none'; s.classList.remove('active'); });
-  document.getElementById('section-lead-detail').style.display = 'block';
+  document.querySelectorAll('.section').forEach(function(s) { s.hidden = true; s.classList.remove('active'); });
+  document.getElementById('section-lead-detail').hidden = false;
   document.getElementById('section-lead-detail').classList.add('active');
   document.getElementById('detail-lead-name').textContent = l.name;
   // Inline status editor
