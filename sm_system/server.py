@@ -1081,7 +1081,7 @@ class TMSHandler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Cookie')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Cookie, X-Session-Token')
 
     def do_OPTIONS(self):
         self.send_response(204)
