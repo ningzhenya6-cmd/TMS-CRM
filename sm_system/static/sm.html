@@ -100,7 +100,7 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 .progress-bar-fill.danger { background: #ef4444; }
 
 /* Section toggles */
-/* Section visibility controlled by JavaScript inline styles only */
+.section { display: none; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -1674,15 +1674,6 @@ window.addEventListener('unhandledrejection', function(e) {
 // State
 // ═══════════════════════════════════════════════════════════════════════════
 const state = { user: null, currentLeadId: null, leads: [], users: [], tutors: [], leadsPage: 1, leadsTotal: 0 };
-
-// Init: hide all sections except dashboard (use inline style directly)
-(function() {
-  document.querySelectorAll('.section').forEach(function(s) {
-    if (!s.classList.contains('active')) {
-      s.style.cssText = 'display:none!important;';
-    }
-  });
-})();
 let modalInstances = {};
 let _aiAvailable = false;
 let _aiReports = [];
@@ -1810,18 +1801,22 @@ function showApp() {
 }
 function switchPage(page) {
   try {
-  // Debug: log page switch
+  if (!page) return;
   console.log('switchPage:', page);
   closeSidebar();
-  document.querySelectorAll('.section').forEach(function(s) {
-    s.style.cssText = 'display:none!important;';
-    s.classList.remove('active');
-  });
-  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
-  const target = document.getElementById('section-' + page);
-  if (target) {
-    target.style.cssText = 'display:block!important;';
-    target.classList.add('active');
+  var allSec = document.querySelectorAll('.section');
+  for (var i = 0; i < allSec.length; i++) {
+    allSec[i].style.display = 'none';
+    allSec[i].classList.remove('active');
+  }
+  var navItems = document.querySelectorAll('.nav-item');
+  for (var j = 0; j < navItems.length; j++) {
+    navItems[j].classList.remove('active');
+  }
+  var tgt = document.getElementById('section-' + page);
+  if (tgt) {
+    tgt.style.display = 'block';
+    tgt.classList.add('active');
   }
   // Show sub-sections for the same page
   if (page === 'schedules') {
@@ -1875,11 +1870,16 @@ function switchPage(page) {
   }
 }
 function backToLeads() {
-  document.getElementById('section-lead-detail').style.cssText = 'display:none!important;';
-  document.getElementById('section-lead-detail').classList.remove('active');
-  document.getElementById('section-leads').style.cssText = 'display:block!important;';
-  document.getElementById('section-leads').classList.add('active');
-  loadLeads();
+  switchPage('leads');
+}
+// Hash-based navigation for browser compatibility
+window.addEventListener('hashchange', function() {
+  var p = window.location.hash.replace('#/', '');
+  if (p) switchPage(p);
+});
+function navTo(page) {
+  window.location.hash = '#/' + page;
+  switchPage(page);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
