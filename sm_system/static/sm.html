@@ -1803,6 +1803,9 @@ function showApp() {
 }
 function switchPage(page) {
   try {
+  // Always force spinner hidden first (prevents white overlay)
+  var sp = document.getElementById('spinner');
+  if (sp) { sp.classList.remove('show'); sp.style.display = 'none'; }
   // Debug: log page switch
   console.log('switchPage:', page);
   closeSidebar(); // Close mobile sidebar when navigating
@@ -1855,10 +1858,16 @@ function switchPage(page) {
       console.warn('  -> forced display:block');
     }
   }
+  // Ensure spinner is always hidden after navigation
+  document.getElementById('spinner')?.classList.remove('show');
+  document.querySelector('.spinner-overlay')?.classList.remove('show');
   } catch(e) {
     console.error('switchPage error:', e);
+    // Always try to show the section, even on error
+    document.querySelectorAll('.section').forEach(function(s) { s.style.display = 'none'; });
     const target = document.getElementById('section-' + page);
     if (target) {
+      target.style.display = 'block';
       target.classList.add('active');
       target.innerHTML = '<div style="padding:40px;text-align:center;">'
         + '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:20px;max-width:500px;margin:0 auto;">'
