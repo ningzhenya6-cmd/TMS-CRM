@@ -1144,6 +1144,11 @@ class TMSHandler(BaseHTTPRequestHandler):
                 return self._handle_public_captcha()
             return json_resp(self, {"error": "Not Found"}, 404)
 
+        # DingTalk webhook (no session auth, uses its own signature)
+        if path == '/api/dingtalk/webhook':
+            data = read_body(self)
+            return self._handle_dingtalk_webhook(data)
+
         r = parse_path(path)
         if not r:
             return json_resp(self, {"error": "Not Found"}, 404)
@@ -4350,6 +4355,93 @@ class TMSHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         if '/api/' in str(args[0]):
             print(f"[TMS] {args[0]} - {args[1]} {args[2]}")
+
+    # ═══════════════════════ DINGTALK WEBHOOK ═══════════════════════════════
+
+    def _handle_dingtalk_webhook(self, data):
+        """Receive DingTalk webhook, parse auto-reply messages, create leads."""
+        msgtype = data.get('msgtype', '')
+        if msgtype != 'text':
+            return json_resp(self, {"msgtype": "text", "text": {"content": "暂不支持该消息类型"}})
+
+        text = data.get('text', {}).get('content', '').strip()
+        sender = data.get('senderNick', '')
+
+        # Only process messages containing auto-reply format
+        if '自动回复私信' not in text:
+            return json_resp(self, {"msgtype": "text", "text": {"content": "收到 ✅"}})
+
+        # Skip if already processed (dedup by msgId)
+        msg_id = data.get('msgId', '')
+        _last_msg_id = getattr(self, '_last_dingtalk_msg_id', '')
+        if msg_id and msg_id == _last_msg_id:
+            return json_resp(self, {"msgtype": "text", "text": {"content": "已处理，跳过重复"}})
+        self._last_dingtalk_msg_id = msg_id
+
+        # Parse the message
+        result = parse_lead_text(text)
+
+        if not result.get('name') and not result.get('phone') and not result.get('wechat'):
+            return json_resp(self, {
+                "msgtype": "text",
+                "text": {"content": f"⚠️ 解析失败，未能识别有效线索信息，请手动录入。\n来源: {sender}"}
+            })
+
+        # Check duplicates
+        dup_name = ''
+        db = get_db()
+        if result.get('phone'):
+            dup = db.execute(
+                "SELECT name FROM leads WHERE phone=? AND status NOT IN ('lost','closed') AND merge_target_id IS NULL",
+                (result['phone'],)
+            ).fetchone()
+            if dup:
+                dup_name = dup['name']
+        if not dup_name and result.get('wechat'):
+            dup = db.execute(
+                "SELECT name FROM leads WHERE wechat=? AND status NOT IN ('lost','closed') AND merge_target_id IS NULL",
+                (result['wechat'],)
+            ).fetchone()
+            if dup:
+                dup_name = dup['name']
+
+        if dup_name:
+            db.close()
+            return json_resp(self, {
+                "msgtype": "text",
+                "text": {"content": f"⚠️ 该线索已存在: {dup_name}，跳过重复创建"}
+            })
+
+        # Create lead
+        lead_id = gen_id('l_')
+        now = datetime.now().strftime('%Y-%m-%d %H:%M')
+        source = result.get('source') or '钉钉'
+        notes = result.get('notes') or '来自钉钉自动回复'
+        db.execute(
+            "INSERT INTO leads (id,name,phone,wechat,country,grade,subject,source,notes,created_at,updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (lead_id, result['name'], result.get('phone',''), result.get('wechat',''),
+             result.get('country',''), result.get('grade',''), result.get('subject',''),
+             source, notes, now, now)
+        )
+        db.execute(
+            "INSERT INTO activities (id,lead_id,user_id,type,content,created_at) VALUES (?,?,?,?,?,?)",
+            (gen_id('a_'), lead_id, 'u_admin', 'note',
+             f'来自钉钉机器人自动创建 (来源: {sender})', now)
+        )
+        db.commit()
+        db.close()
+
+        # Build response
+        contact_info = result.get('phone') or result.get('wechat') or ''
+        account_info = f" [{result.get('account_name','')}]" if result.get('account_name') else ''
+        return json_resp(self, {
+            "msgtype": "text",
+            "text": {
+                "content": f"✅ 线索已创建: {result['name']} ({contact_info}){account_info}\n"
+                           f"来源: {source} | 提交人: {sender}"
+            }
+        })
 
     # ═══════════════════════ BACKUP & EXPORT ═══════════════════════════════
 
