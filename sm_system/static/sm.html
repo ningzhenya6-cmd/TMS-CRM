@@ -100,9 +100,8 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 .progress-bar-fill.danger { background: #ef4444; }
 
 /* Section toggles */
-.section { display: none; visibility: hidden; }
-.section.active { display: block !important; visibility: visible !important; animation: sectionIn 0.01s ease; }
-@keyframes sectionIn { from { opacity: 0.999; } to { opacity: 1; } }
+.section { display: none; }
+.section.active { display: block; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -1803,9 +1802,6 @@ function showApp() {
 }
 function switchPage(page) {
   try {
-  // Always force spinner hidden first (prevents white overlay)
-  var sp = document.getElementById('spinner');
-  if (sp) { sp.classList.remove('show'); sp.style.display = 'none'; }
   // Debug: log page switch
   console.log('switchPage:', page);
   closeSidebar(); // Close mobile sidebar when navigating
@@ -1858,9 +1854,6 @@ function switchPage(page) {
       console.warn('  -> forced display:block');
     }
   }
-  // Ensure spinner is always hidden after navigation
-  document.getElementById('spinner')?.classList.remove('show');
-  document.querySelector('.spinner-overlay')?.classList.remove('show');
   } catch(e) {
     console.error('switchPage error:', e);
     // Always try to show the section, even on error
@@ -1879,7 +1872,9 @@ function switchPage(page) {
   }
 }
 function backToLeads() {
+  document.getElementById('section-lead-detail').style.display = 'none';
   document.getElementById('section-lead-detail').classList.remove('active');
+  document.getElementById('section-leads').style.display = 'block';
   document.getElementById('section-leads').classList.add('active');
   loadLeads();
 }
@@ -2138,7 +2133,8 @@ async function viewLead(id) {
   } else {
     editBtnArea.innerHTML = '';
   }
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(function(s) { s.style.display = 'none'; s.classList.remove('active'); });
+  document.getElementById('section-lead-detail').style.display = 'block';
   document.getElementById('section-lead-detail').classList.add('active');
   document.getElementById('detail-lead-name').textContent = l.name;
   // Inline status editor
