@@ -100,8 +100,9 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 .progress-bar-fill.danger { background: #ef4444; }
 
 /* Section toggles */
-.section { display: none; }
-.section.active { display: block; }
+.section { display: none; visibility: hidden; }
+.section.active { display: block !important; visibility: visible !important; animation: sectionIn 0.01s ease; }
+@keyframes sectionIn { from { opacity: 0.999; } to { opacity: 1; } }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -1814,8 +1815,10 @@ function switchPage(page) {
   if (target) {
     target.style.display = 'block';
     target.classList.add('active');
-    // Force reflow in WeChat X5 browser (known issue with display changes)
+    // Force browser reflow (critical for WeChat X5 browser)
     void target.offsetHeight;
+    void target.offsetTop;
+    void target.offsetWidth;
   }
   // Show sub-sections for the same page
   if (page === 'schedules') {
@@ -1848,6 +1851,7 @@ function switchPage(page) {
     if (displayVal !== 'block') {
       debugEl.style.display = 'block';
       debugEl.classList.add('active');
+      void debugEl.offsetHeight;
       console.warn('  -> forced display:block');
     }
   }
