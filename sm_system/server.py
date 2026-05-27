@@ -938,11 +938,16 @@ def parse_lead_text(text):
 
 
 def get_token(handler):
+    # Try cookie first (standard browsers)
     cookie = handler.headers.get('Cookie', '')
     for c in cookie.split(';'):
         c = c.strip()
         if c.startswith('sm_session='):
             return c.split('=', 1)[1].strip()
+    # Try X-Session-Token header (X5 WeChat compatibility)
+    token = handler.headers.get('X-Session-Token', '')
+    if token:
+        return token
     return None
 
 

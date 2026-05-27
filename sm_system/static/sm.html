@@ -1686,10 +1686,15 @@ let _currentReportId = null;
 // ═══════════════════════════════════════════════════════════════════════════
 // API Client
 // ═══════════════════════════════════════════════════════════════════════════
+/* X5-compatible API: sends auth token via header (X5 fetch ignores Set-Cookie) */
+function _apiHeaders() {
+  var h = { 'X-Session-Token': localStorage.getItem('sm_token') || '' };
+  return h;
+}
 const API = {
-  async get(path) { const r = await fetch(path, { credentials: 'same-origin' }); return r.json(); },
-  async post(path, data={}) { const r = await fetch(path, { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); return r.json(); },
-  async put(path, data={}) { const r = await fetch(path, { method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); return r.json(); }
+  async get(path) { const r = await fetch(path, { credentials:'same-origin', headers:_apiHeaders() }); return r.json(); },
+  async post(path, data) { const r = await fetch(path, { method:'POST', credentials:'same-origin', headers:Object.assign({'Content-Type':'application/json'}, _apiHeaders()), body:JSON.stringify(data||{}) }); return r.json(); },
+  async put(path, data) { const r = await fetch(path, { method:'PUT', credentials:'same-origin', headers:Object.assign({'Content-Type':'application/json'}, _apiHeaders()), body:JSON.stringify(data||{}) }); return r.json(); }
 };
 
 // Fallback tab handling (if Bootstrap JS not loaded)
@@ -1753,9 +1758,10 @@ async function handleLogin(e) {
   document.getElementById('login-error').classList.add('d-none');
   const res = await API.post('/api/sm/login', { username, password });
   if (res.error) { const el = document.getElementById('login-error'); el.textContent = res.error; el.classList.remove('d-none'); return false; }
+  if (res.token) localStorage.setItem('sm_token', res.token);
   state.user = res.user; renderUser(); showApp(); return false;
 }
-async function handleLogout() { await API.post('/api/sm/logout'); state.user = null; showLogin(); }
+async function handleLogout() { await API.post('/api/sm/logout'); state.user = null; localStorage.removeItem('sm_token'); showLogin(); }
 function renderUser() {
   if (!state.user) return;
   document.getElementById('sidebar-user-name').textContent = state.user.name;
@@ -1794,37 +1800,31 @@ function closeSidebar() {
 }
 function showLogin() { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-login').classList.add('active'); document.getElementById('hamburger-btn').style.display = 'none'; }
 function showApp() {
-  // Check if we arrived from a page reload
-  var p = _getParam('p');
-  if (p) {
-    document.getElementById('hamburger-btn').style.display = 'block';
-    document.querySelectorAll('.page').forEach(function(pg) { pg.classList.remove('active'); });
-    document.getElementById('page-app').classList.add('active');
-    _initPage(p);
-    // Load data for the current page
-    if (p === 'dashboard') { loadNotifications(); loadDashboard(); }
-    else if (p === 'leads') loadLeads();
-    else if (p === 'today') loadToday();
-    else if (p === 'coordinator') loadCoordinatorDashboard();
-    else if (p === 'schedules') { loadSchedules(); loadSeries(); }
-    else if (p === 'packages') loadPackages();
-    else if (p === 'tutors') loadTutors();
-    else if (p === 'pool') loadPool();
-    else if (p === 'assignment') loadAssignmentDashboard();
-    else if (p === 'followup-plan') { switchFupTab('overdue'); }
-    else if (p === 'ai-reports') loadAiReportsGlobal();
-    else if (p === 'quick-add') { var qa = document.getElementById('qa-text'); if (qa) qa.focus(); }
-    else if (p === 'enrolled') loadEnrolled();
-    else if (p === 'finance') { loadSettlements(); loadCommissions(); loadFinanceReport(); }
-    // Notification polling
-    if (window._notifInterval) clearInterval(window._notifInterval);
-    window._notifInterval = setInterval(loadNotifications, 60000);
-    loadNotifications();
-  } else {
-    // First login - redirect with page parameter to force clean page load
-    window.location.href = window.location.pathname + '?p=dashboard';
-    return;
-  }
+  document.getElementById('hamburger-btn').style.display = 'block';
+  document.querySelectorAll('.page').forEach(function(pg) { pg.classList.remove('active'); });
+  document.getElementById('page-app').classList.add('active');
+  // Check if arrived from a page reload with ?p= parameter
+  var p = _getParam('p') || 'dashboard';
+  _initPage(p);
+  // Load data for the current page
+  if (p === 'dashboard') { loadNotifications(); loadDashboard(); }
+  else if (p === 'leads') loadLeads();
+  else if (p === 'today') loadToday();
+  else if (p === 'coordinator') loadCoordinatorDashboard();
+  else if (p === 'schedules') { loadSchedules(); loadSeries(); }
+  else if (p === 'packages') loadPackages();
+  else if (p === 'tutors') loadTutors();
+  else if (p === 'pool') loadPool();
+  else if (p === 'assignment') loadAssignmentDashboard();
+  else if (p === 'followup-plan') { switchFupTab('overdue'); }
+  else if (p === 'ai-reports') loadAiReportsGlobal();
+  else if (p === 'quick-add') { var qa = document.getElementById('qa-text'); if (qa) qa.focus(); }
+  else if (p === 'enrolled') loadEnrolled();
+  else if (p === 'finance') { loadSettlements(); loadCommissions(); loadFinanceReport(); }
+  // Notification polling
+  if (window._notifInterval) clearInterval(window._notifInterval);
+  window._notifInterval = setInterval(loadNotifications, 60000);
+  loadNotifications();
   // Auto-poll notifications every 60s
   if (window._notifInterval) clearInterval(window._notifInterval);
   window._notifInterval = setInterval(loadNotifications, 60000);
