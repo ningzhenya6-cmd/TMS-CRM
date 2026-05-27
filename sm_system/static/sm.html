@@ -1805,6 +1805,7 @@ function switchPage(page) {
   if (!page) return;
   console.log('switchPage:', page);
   closeSidebar();
+  // First pass: hide ALL sections
   var allSec = document.querySelectorAll('.section');
   for (var i = 0; i < allSec.length; i++) {
     allSec[i].style.display = 'none';
@@ -1814,10 +1815,13 @@ function switchPage(page) {
   for (var j = 0; j < navItems.length; j++) {
     navItems[j].classList.remove('active');
   }
+  // Show target section with delay to ensure X5 processes the display change
   var tgt = document.getElementById('section-' + page);
   if (tgt) {
-    tgt.style.display = 'block';
-    tgt.classList.add('active');
+    setTimeout(function() {
+      tgt.style.display = 'block';
+      tgt.classList.add('active');
+    }, 20);
   }
   // Show sub-sections for the same page
   if (page === 'schedules') {
