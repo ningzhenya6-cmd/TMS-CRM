@@ -198,7 +198,7 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
       <div class="login-card">
         <h3>TMS 辅导管理系统</h3>
         <p>留学生课业辅导 — Tutoring Management System</p>
-        <form id="login-form" onsubmit="return handleLogin(event)">
+        <form id="login-form" onsubmit="handleLogin(event);return false">
           <div class="mb-3">
             <label class="form-label">用户名</label>
             <input type="text" class="form-control" id="login-username" placeholder="请输入用户名" required autofocus>
@@ -1752,14 +1752,16 @@ async function checkAuth() {
   return false;
 }
 async function handleLogin(e) {
+  try {
   e.preventDefault();
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value.trim();
+  var username = document.getElementById('login-username').value.trim();
+  var password = document.getElementById('login-password').value.trim();
   document.getElementById('login-error').classList.add('d-none');
-  const res = await API.post('/api/sm/login', { username, password });
-  if (res.error) { const el = document.getElementById('login-error'); el.textContent = res.error; el.classList.remove('d-none'); return false; }
-  if (res.token) localStorage.setItem('sm_token', res.token);
-  state.user = res.user; renderUser(); showApp(); return false;
+  var res = await API.post('/api/sm/login', { username:username, password:password });
+  if (res && res.error) { document.getElementById('login-error').textContent = res.error; document.getElementById('login-error').classList.remove('d-none'); return; }
+  if (res && res.token) { try { localStorage.setItem('sm_token', res.token); } catch(e) {} }
+  if (res && res.user) { state.user = res.user; renderUser(); showApp(); }
+  } catch(e) { console.error('login error:', e); }
 }
 async function handleLogout() { await API.post('/api/sm/logout'); state.user = null; localStorage.removeItem('sm_token'); showLogin(); }
 function renderUser() {
