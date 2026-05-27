@@ -21,7 +21,7 @@ except Exception as e:
     _AI_AVAILABLE = False
     print(f"[TMS] AI report module not loaded: {e}")
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 8
 
 # ─── Database ───────────────────────────────────────────────────────────────
 
@@ -314,6 +314,36 @@ def _run_migrations(db, old_version):
         # Add schedule_type to schedules (differentiates trial vs regular vs makeup)
         try: db.execute("ALTER TABLE schedules ADD COLUMN schedule_type TEXT DEFAULT 'regular'")
         except: pass
+
+    if old_version < 7:
+        # v7: lead enrichment fields + academic manager assignment
+        for col in ('rating', 'lead_type', 'service_type', 'academic_manager_id'):
+            try: db.execute(f"ALTER TABLE leads ADD COLUMN {col} TEXT DEFAULT ''")
+            except: pass
+        try: db.execute("CREATE INDEX IF NOT EXISTS idx_leads_academic ON leads(academic_manager_id)")
+        except: pass
+
+    if old_version < 8:
+        # v8: account_name + tags (JSON array for service needs)
+        for col in ('account_name', 'tags'):
+            try: db.execute(f"ALTER TABLE leads ADD COLUMN {col} TEXT DEFAULT ''")
+            except: pass
+        # Migrate existing account names from notes
+        db.executescript("""
+            UPDATE leads SET account_name =
+                CASE
+                    WHEN notes LIKE '%账号:宁振亚（视频号1）%' THEN '宁振亚（视频号1）'
+                    WHEN notes LIKE '%账号:留学赋能宁老师（视频号2）%' THEN '留学赋能宁老师（视频号2）'
+                    WHEN notes LIKE '%账号:宁振亚（抖音1）%' THEN '宁振亚（抖音1）'
+                    WHEN notes LIKE '%账号:易维一留学赋能宁老师（抖音2）%' THEN '易维一留学赋能宁老师（抖音2）'
+                    ELSE ''
+                END;
+            UPDATE leads SET tags =
+                CASE
+                    WHEN service_type != '' THEN '["""' || service_type || '"""]'
+                    ELSE '[]'
+                END;
+        """)
 
 
 def init_db():
@@ -940,6 +970,8 @@ def parse_path(path):
     # Match patterns
     if len(parts) == 1:
         if parts[0] == 'leads': return ('leads', None, 'list')
+        if parts[0] == 'academic': return ('academic', None, 'dashboard')
+        if parts[0] == 'enrolled': return ('enrolled', None, 'list')
         if parts[0] == 'dashboard': return ('dashboard', None, 'stats')
         if parts[0] == 'users': return ('users', None, 'list')
         if parts[0] == 'me': return ('me', None, 'get')
@@ -1016,6 +1048,7 @@ def parse_path(path):
         if parts[0] == 'schedules' and parts[2] == 'reschedule': return ('schedules', parts[1], 'reschedule')
         if parts[0] == 'schedules' and parts[2] == 'complete': return ('schedules', parts[1], 'complete')
         if parts[0] == 'leads' and parts[2] == 'self-claim': return ('leads', parts[1], 'self_claim')
+        if parts[0] == 'leads' and parts[2] == 'assign-academic': return ('leads', parts[1], 'assign_academic')
         if parts[0] == 'notifications' and parts[2] == 'read': return ('notifications', parts[1], 'read')
         if parts[0] == 'followup' and parts[1] == 'templates': return ('followup_templates', parts[2], 'get')
 
@@ -1246,6 +1279,8 @@ class TMSHandler(BaseHTTPRequestHandler):
             'tutors@match': lambda: self._handle_match_tutors(user, params),
             'notifications@list': lambda: self._handle_list_notifications(user, params),
             'notifications@get': lambda: self._handle_get_notification(user, res_id),
+            'academic@dashboard': lambda: self._handle_academic_dashboard(user),
+            'enrolled@list': lambda: self._handle_enrolled_list(user, params),
             'assignment@dashboard': lambda: self._handle_assignment_dashboard(user),
             'assignment@rules': lambda: self._handle_assignment_rules(user),
             'backup@export': lambda: self._handle_backup_export(user),
@@ -1291,6 +1326,7 @@ class TMSHandler(BaseHTTPRequestHandler):
             'schedules@reschedule': lambda: self._handle_reschedule_schedule(user, res_id, data),
             'schedules@complete': lambda: self._handle_complete_schedule(user, res_id, data),
             'leads@self_claim': lambda: self._handle_self_claim(user, res_id),
+            'leads@assign_academic': lambda: self._handle_assign_academic(user, res_id, data),
             'leads@batch': lambda: self._handle_batch_leads(user, data),
             'leads@import_leads': lambda: self._handle_import_leads(user, data),
             'notifications@read': lambda: self._handle_mark_read(user, res_id),
@@ -1727,6 +1763,20 @@ class TMSHandler(BaseHTTPRequestHandler):
             pkg_name = data.get('package_name', f'合同{contract_no} 课时包')
             valid_from = data.get('valid_from', now[:10])
             valid_until = data.get('valid_until', '')
+            # Auto-calculate valid_until from period_months
+            period_months = int(data.get('period_months', 0))
+            if period_months > 0 and not valid_until:
+                try:
+                    from_dt = datetime.strptime(valid_from, '%Y-%m-%d') if valid_from else datetime.now()
+                    # Add months manually (no external deps)
+                    m = from_dt.month - 1 + period_months
+                    y = from_dt.year + m // 12
+                    m = m % 12 + 1
+                    import calendar
+                    d = min(from_dt.day, calendar.monthrange(y, m)[1])
+                    valid_until = f'{y:04d}-{m:02d}-{d:02d}'
+                except:
+                    valid_until = ''
             db.execute(
                 "INSERT INTO course_packages (id,lead_id,package_name,total_hours,used_hours,price,unit_price,valid_from,valid_until,status,contract_id,created_at) "
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -1935,7 +1985,7 @@ class TMSHandler(BaseHTTPRequestHandler):
             conditions.append("l.assignee_id=?")
             args.append(uid)
 
-        for key, col in [('status', 'l.status'), ('source', 'l.source'), ('pool_status', 'l.pool_status')]:
+        for key, col in [('status', 'l.status'), ('source', 'l.source'), ('pool_status', 'l.pool_status'), ('service_type', 'l.service_type')]:
             v = params.get(key, [None])[0]
             if v and v != 'all':
                 conditions.append(f"{col}=?")
@@ -1945,6 +1995,11 @@ class TMSHandler(BaseHTTPRequestHandler):
         if assignee_filter and assignee_filter != 'all':
             conditions.append("l.assignee_id=?")
             args.append(assignee_filter)
+
+        academic_filter = params.get('academic_manager', [None])[0]
+        if academic_filter and academic_filter != 'all':
+            conditions.append("l.academic_manager_id=?")
+            args.append(academic_filter)
 
         search = params.get('search', [None])[0]
         if search:
@@ -1960,9 +2015,10 @@ class TMSHandler(BaseHTTPRequestHandler):
         page, size, offset = get_page_params(params)
 
         rows = db.execute(
-            f"SELECT l.*, u.name as assignee_name, cr.name as creator_name "
+            f"SELECT l.*, u.name as assignee_name, cr.name as creator_name, ac.name as academic_name "
             f"FROM leads l LEFT JOIN users u ON l.assignee_id = u.id "
-            f"LEFT JOIN users cr ON l.created_by_id = cr.id {where} "
+            f"LEFT JOIN users cr ON l.created_by_id = cr.id "
+            f"LEFT JOIN users ac ON l.academic_manager_id = ac.id {where} "
             f"ORDER BY l.created_at DESC LIMIT ? OFFSET ?", args + [size, offset]
         ).fetchall()
 
@@ -1973,9 +2029,10 @@ class TMSHandler(BaseHTTPRequestHandler):
     def _handle_get_lead(self, user, lead_id):
         db = get_db()
         lead = db.execute(
-            "SELECT l.*, u.name as assignee_name, cr.name as creator_name "
+            "SELECT l.*, u.name as assignee_name, cr.name as creator_name, ac.name as academic_name "
             "FROM leads l LEFT JOIN users u ON l.assignee_id = u.id "
-            "LEFT JOIN users cr ON l.created_by_id = cr.id WHERE l.id=?", (lead_id,)
+            "LEFT JOIN users cr ON l.created_by_id = cr.id "
+            "LEFT JOIN users ac ON l.academic_manager_id = ac.id WHERE l.id=?", (lead_id,)
         ).fetchone()
         if not lead:
             db.close()
@@ -2202,14 +2259,19 @@ class TMSHandler(BaseHTTPRequestHandler):
 
         db.execute(
             "INSERT INTO leads (id,name,phone,wechat,country,grade,subject,source,status,created_by_id,notes,created_at,updated_at,"
-            "utm_source,utm_campaign,utm_medium,campaign,ad_source,landing_page) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "utm_source,utm_campaign,utm_medium,campaign,ad_source,landing_page,"
+            "rating,lead_type,service_type,account_name,tags) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (lead_id, name, phone, wechat, data.get('country', '').strip(), data.get('grade', '').strip(),
              data.get('subject', '').strip(), data.get('source', '').strip(), 'pending', user['id'],
              data.get('notes', '').strip(), now, now,
              data.get('utm_source', '').strip(), data.get('utm_campaign', '').strip(),
              data.get('utm_medium', '').strip(), data.get('campaign', '').strip(),
-             data.get('ad_source', '').strip(), data.get('landing_page', '').strip())
+             data.get('ad_source', '').strip(), data.get('landing_page', '').strip(),
+             data.get('rating', '').strip(), data.get('lead_type', '').strip(),
+             data.get('service_type', '').strip(),
+             data.get('account_name', '').strip(),
+             data.get('tags', '[]').strip())
         )
         # Auto-assign if strategy is configured
         assignee_id = self._auto_assign_lead(db, lead_id, data)
@@ -2236,11 +2298,13 @@ class TMSHandler(BaseHTTPRequestHandler):
             db.close()
             return json_resp(self, {"error": "Not Found"}, 404)
         role, uid = user['role'], user['id']
-        if role not in ('admin', 'supervisor') and lead['assignee_id'] != uid:
+        if role not in ('admin', 'supervisor', 'consultant') and lead['assignee_id'] != uid:
             db.close()
             return json_resp(self, {"error": "无权限修改此线索"}, 403)
         updates = {}
-        for field in ('name', 'phone', 'wechat', 'country', 'grade', 'subject', 'source', 'notes', 'status', 'classin_account', 'referral_source_id'):
+        for field in ('name', 'phone', 'wechat', 'country', 'grade', 'subject', 'source', 'notes', 'status',
+                       'classin_account', 'referral_source_id', 'rating', 'lead_type', 'service_type',
+                       'academic_manager_id', 'account_name', 'tags'):
             if field in data:
                 updates[field] = data[field].strip() if isinstance(data[field], str) else data[field]
         if not updates:
@@ -4355,6 +4419,111 @@ class TMSHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         if '/api/' in str(args[0]):
             print(f"[TMS] {args[0]} - {args[1]} {args[2]}")
+
+    # ═══════════════════════ ACADEMIC MANAGEMENT ════════════════════════════
+
+    def _handle_assign_academic(self, user, lead_id, data):
+        """Assign an enrolled lead to an academic manager (教务)."""
+        db = get_db()
+        lead = db.execute("SELECT * FROM leads WHERE id=?", (lead_id,)).fetchone()
+        if not lead:
+            db.close()
+            return json_resp(self, {"error": "线索不存在"}, 404)
+        acad_id = data.get('academic_manager_id', '').strip()
+        if not acad_id:
+            db.close()
+            return json_resp(self, {"error": "请选择教务"}, 400)
+        acad = db.execute("SELECT id, name FROM users WHERE id=? AND role='academic' AND is_active=1", (acad_id,)).fetchone()
+        if not acad:
+            db.close()
+            return json_resp(self, {"error": "教务不存在或非活跃"}, 400)
+        now = datetime.now().strftime('%Y-%m-%d %H:%M')
+        db.execute("UPDATE leads SET academic_manager_id=?, updated_at=? WHERE id=?", (acad_id, now, lead_id))
+        # Notify
+        self._create_notification_simple(db, lead_id, 'academic_assignment',
+            f'学生 {lead["name"]} 已分配给您',
+            f'{user["name"]} 将 {lead["name"]} 分配给您跟进',
+            'lead', acad_id)
+        # Audit
+        db.execute(
+            "INSERT INTO activities (id,lead_id,user_id,type,content,created_at) VALUES (?,?,?,?,?,?)",
+            (gen_id('a_'), lead_id, user['id'], 'note',
+             f'系统: 分配给教务 {acad["name"]} 跟进', now)
+        )
+        db.commit()
+        db.close()
+        _audit(user['id'], 'assign_academic', 'lead', lead_id, f'分配给教务 {acad_id}')
+        return json_resp(self, {"status": "assigned", "academic_name": acad['name']})
+
+    def _handle_academic_dashboard(self, user):
+        """教务工作台 - 查看自己管理的学生"""
+        if user['role'] not in ('academic', 'admin', 'supervisor'):
+            return json_resp(self, {"error": "无权限"}, 403)
+        db = get_db()
+        if user['role'] == 'academic':
+            rows = db.execute(
+                "SELECT l.*, u.name as assignee_name FROM leads l "
+                "LEFT JOIN users u ON l.assignee_id = u.id "
+                "WHERE l.academic_manager_id=? AND l.status IN ('enrolled','following') "
+                "AND l.merge_target_id IS NULL ORDER BY l.updated_at DESC",
+                (user['id'],)
+            ).fetchall()
+        else:
+            rows = db.execute(
+                "SELECT l.*, u.name as assignee_name, ac.name as academic_name FROM leads l "
+                "LEFT JOIN users u ON l.assignee_id = u.id "
+                "LEFT JOIN users ac ON l.academic_manager_id = ac.id "
+                "WHERE l.academic_manager_id IS NOT NULL AND l.academic_manager_id != '' "
+                "AND l.status IN ('enrolled','following') "
+                "AND l.merge_target_id IS NULL ORDER BY l.updated_at DESC"
+            ).fetchall()
+        # Low hours alerts
+        low = db.execute(
+            "SELECT l.id, l.name, p.package_name, p.total_hours, p.used_hours "
+            "FROM course_packages p JOIN leads l ON p.lead_id=l.id "
+            "WHERE p.status='active' AND (p.used_hours * 1.0 / p.total_hours) >= 0.7 "
+            "ORDER BY (p.used_hours * 1.0 / p.total_hours) DESC LIMIT 10"
+        ).fetchall()
+        db.close()
+        return json_resp(self, {
+            "students": [dict(r) for r in rows],
+            "low_hours_alerts": [dict(r) for r in low]
+        })
+
+    # ═══════════════════════ ENROLLED STUDENTS ══════════════════════════════
+
+    def _handle_enrolled_list(self, user, params):
+        """Return enrolled students with package info and academic manager."""
+        db = get_db()
+        rows = db.execute("""
+            SELECT l.*, u.name as assignee_name, ac.name as academic_name,
+                p.id as pkg_id, p.package_name, p.total_hours, p.used_hours,
+                p.status as pkg_status, p.valid_until
+            FROM leads l
+            LEFT JOIN users u ON l.assignee_id = u.id
+            LEFT JOIN users ac ON l.academic_manager_id = ac.id
+            LEFT JOIN course_packages p ON p.lead_id = l.id AND p.status = 'active'
+            WHERE l.status = 'enrolled' AND l.merge_target_id IS NULL
+            ORDER BY l.updated_at DESC
+        """).fetchall()
+        # Group by lead
+        enrolled = {}
+        for r in rows:
+            lid = r['id']
+            if lid not in enrolled:
+                enrolled[lid] = dict(r)
+                enrolled[lid]['packages'] = []
+            if r['pkg_id']:
+                enrolled[lid]['packages'].append({
+                    'id': r['pkg_id'],
+                    'name': r['package_name'],
+                    'total': r['total_hours'],
+                    'used': r['used_hours'],
+                    'status': r['pkg_status'],
+                    'valid_until': r['valid_until'],
+                })
+        db.close()
+        return json_resp(self, {"enrolled": list(enrolled.values())})
 
     # ═══════════════════════ DINGTALK WEBHOOK ═══════════════════════════════
 

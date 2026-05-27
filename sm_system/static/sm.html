@@ -160,18 +160,33 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 .notif-item:hover { background:#f9fafb; }
 .notif-item.unread { background:#eef2ff; border-left:3px solid #6366f1; }
 
+/* Hamburger button */
+.hamburger { display: none; position: fixed; top: 10px; left: 10px; z-index: 2000; background: #1e1b4b; color: #fff; border: none; border-radius: 8px; width: 40px; height: 40px; font-size: 1.3rem; cursor: pointer; }
+.hamburger:hover { background: #3730a3; }
+
+/* Mobile overlay when sidebar open */
+.sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); z-index: 998; }
+
 /* Responsive */
 @media (max-width: 768px) {
-  .sidebar { width: 56px; }
-  .sidebar .nav-text, .sidebar-user .info { display: none; }
-  .sidebar-brand h5, .sidebar-brand small { display: none; }
-  .main { margin-left: 56px; padding: 14px; }
+  .hamburger { display: block; }
+  .sidebar { transform: translateX(-100%); transition: transform .2s ease; width: 240px; z-index: 999; }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.show { display: block; }
+  .main { margin-left: 0; padding: 14px; padding-top: 56px; }
+  .stat-card .value { font-size: 1.2rem; }
+  .stat-card .icon { font-size: 1rem; }
+  .page-header h3 { font-size: 1.1rem; }
 }
 </style>
 </head>
 <body>
 
 <div id="app">
+  <!-- Hamburger button (mobile only) -->
+  <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()">☰</button>
+  <!-- Sidebar overlay (mobile only) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
   <!-- ───── Login Page ───── -->
   <div id="page-login" class="page active">
     <div class="login-page">
@@ -242,6 +257,9 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
           <i class="bi bi-robot"></i> <span class="nav-text">AI 报告</span>
         </div>
         <div class="nav-divider"></div>
+        <div class="nav-item" data-roles="admin,supervisor,academic,coordinator" data-page="enrolled" onclick="switchPage('enrolled')">
+          <i class="bi bi-trophy-fill"></i> <span class="nav-text">已签约</span>
+        </div>
         <div class="nav-item" data-roles="admin,supervisor,cs,consultant" data-page="pool" onclick="switchPage('pool')">
           <i class="bi bi-water"></i> <span class="nav-text">公海池</span>
         </div>
@@ -379,6 +397,13 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
               <option value="线上">线上</option>
               <option value="其他">其他</option>
             </select>
+            <select id="filter-svctype" onchange="loadLeads()">
+              <option value="all">全部服务</option>
+              <option value="留学申请">留学申请</option>
+              <option value="课业辅导">课业辅导</option>
+              <option value="合作办学">合作办学</option>
+              <option value="学管护航">学管护航</option>
+            </select>
             <span id="leads-count" style="font-size:.78rem;color:#9ca3af;margin-left:auto;"></span>
           </div>
           <div id="batch-bar" class="d-none px-3 py-2" style="background:#f0fdf4;border-bottom:1px solid #d1fae5;display:flex;align-items:center;gap:8px;">
@@ -400,9 +425,16 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
           </div>
           <div style="overflow-x:auto;">
             <table class="sm-table">
-              <thead><tr><th style="width:32px;"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" style="cursor:pointer;"></th><th>姓名</th><th>微信/手机</th><th>来源</th><th>意向</th><th>状态</th><th>跟进人</th><th>创建时间</th></tr></thead>
-              <tbody id="leads-tbody"><tr><td colspan="8"><div class="empty-state"><p>加载中...</p></div></td></tr></tbody>
+              <thead><tr><th style="width:28px;">#</th><th style="width:32px;"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" style="cursor:pointer;"></th><th>创建时间</th><th>姓名</th><th>微信/手机</th><th>来源</th><th>账号</th><th>画像</th><th>阶段</th><th>状态</th><th>跟进人</th></tr></thead>
+              <tbody id="leads-tbody"><tr><td colspan="10"><div class="empty-state"><p>加载中...</p></div></td></tr></tbody>
             </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center px-3 py-2" id="leads-pagination">
+            <span style="font-size:.78rem;color:#9ca3af;" id="leads-page-info"></span>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-outline-secondary btn-sm" id="btn-prev-page" onclick="loadLeadsPage(state.leadsPage-1)" style="display:none;"><i class="bi bi-chevron-left"></i> 上一页</button>
+              <button class="btn btn-outline-secondary btn-sm" id="btn-next-page" onclick="loadLeadsPage(state.leadsPage+1)" style="display:none;"><i class="bi bi-chevron-right"></i> 下一页</button>
+            </div>
           </div>
         </div>
       </div>
@@ -446,18 +478,62 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
         <div class="row g-3">
           <div class="col-md-5">
             <div class="detail-card">
-              <h6>基本信息</h6>
+              <h6>基本信息 <span id="edit-lead-btn-area"></span></h6>
               <div class="info-grid" id="detail-info-grid">
                 <div class="info-item"><div class="label">手机</div><div class="value" id="d-phone">-</div></div>
                 <div class="info-item"><div class="label">微信</div><div class="value" id="d-wechat">-</div></div>
                 <div class="info-item"><div class="label">意向国家</div><div class="value" id="d-country">-</div></div>
-                <div class="info-item"><div class="label">年级</div><div class="value" id="d-grade">-</div></div>
-                <div class="info-item"><div class="label">辅导科目</div><div class="value" id="d-subject">-</div></div>
-                <div class="info-item"><div class="label">来源</div><div class="value" id="d-source">-</div></div>
+                <div class="info-item"><div class="label">阶段</div><div class="value" id="d-grade">
+                  <span id="d-grade-text">-</span>
+                  <select id="d-grade-select" class="form-select form-select-sm d-none" style="width:auto;display:inline-block;" onchange="saveLeadField('grade', this.value)">
+                    <option value="">选择阶段</option>
+                    <option>高中</option><option>本科预科</option><option>本科</option>
+                    <option>硕士预科</option><option>硕士</option><option>申博</option><option>博士</option>
+                    <option value="__custom__">其他...</option>
+                  </select>
+                  <input id="d-grade-input" class="form-control form-control-sm d-none" style="width:120px;display:inline-block;" placeholder="输入阶段" onblur="saveLeadField('grade', this.value)">
+                  <i class="bi bi-pencil-square" style="font-size:.7rem;opacity:.4;cursor:pointer;" onclick="editLeadField('grade')" title="点击修改"></i>
+                </div>
+                <div class="info-item"><div class="label">客户类型</div><div class="value" id="d-lead-type">
+                  <span id="d-lead-type-text">-</span>
+                  <select id="d-lead-type-select" class="form-select form-select-sm d-none" style="width:auto;display:inline-block;" onchange="saveLeadField('lead_type', this.value)">
+                    <option value="">选择</option><option value="parent">家长</option><option value="student">学生</option>
+                    <option value="agent">留学机构</option><option value="__custom__">其他...</option>
+                  </select>
+                  <input id="d-lead-type-input" class="form-control form-control-sm d-none" style="width:120px;display:inline-block;" placeholder="输入" onblur="saveLeadField('lead_type', this.value)">
+                  <i class="bi bi-pencil-square" style="font-size:.7rem;opacity:.4;cursor:pointer;" onclick="editLeadField('lead_type')" title="点击修改"></i>
+                </div></div>
+                <div class="info-item"><div class="label">客户评级</div><div class="value" id="d-rating">
+                  <span id="d-rating-text">-</span>
+                  <select id="d-rating-select" class="form-select form-select-sm d-none" style="width:auto;display:inline-block;" onchange="saveLeadField('rating', this.value)">
+                    <option value="">选择</option><option>A类</option><option>B类</option><option>C类</option><option>D类</option>
+                    <option value="__custom__">其他...</option>
+                  </select>
+                  <input id="d-rating-input" class="form-control form-control-sm d-none" style="width:120px;display:inline-block;" placeholder="输入" onblur="saveLeadField('rating', this.value)">
+                  <i class="bi bi-pencil-square" style="font-size:.7rem;opacity:.4;cursor:pointer;" onclick="editLeadField('rating')" title="点击修改"></i>
+                </div></div>
+                <div class="info-item"><div class="label">来源账号</div><div class="value" id="d-account-name">
+                  <span id="d-account-name-text">-</span>
+                  <select id="d-account-name-select" class="form-select form-select-sm d-none" style="width:auto;display:inline-block;" onchange="saveLeadField('account_name', this.value)">
+                    <option value="">选择</option>
+                    <option>宁振亚（视频号1）</option><option>留学赋能宁老师（视频号2）</option>
+                    <option>宁振亚（抖音1）</option><option>易维一留学赋能宁老师（抖音2）</option>
+                    <option value="__custom__">其他...</option>
+                  </select>
+                  <input id="d-account-name-input" class="form-control form-control-sm d-none" style="width:120px;display:inline-block;" placeholder="输入" onblur="saveLeadField('account_name', this.value)">
+                  <i class="bi bi-pencil-square" style="font-size:.7rem;opacity:.4;cursor:pointer;" onclick="editLeadField('account_name')" title="点击修改"></i>
+                </div></div>
                 <div class="info-item"><div class="label">创建人</div><div class="value" id="d-creator">-</div></div>
                 <div class="info-item"><div class="label">创建时间</div><div class="value" id="d-created">-</div></div>
               </div>
               <div class="mt-3"><div class="label">备注</div><div id="d-notes" style="font-size:.85rem;color:#374151;white-space:pre-wrap;">-</div></div>
+            </div>
+            <!-- Tags / Service Needs -->
+            <div class="detail-card" id="detail-tags-card">
+              <h6>辅导需求 <button class="btn btn-outline-primary btn-sm float-end" onclick="openTagEditor()"><i class="bi bi-plus-lg"></i> 编辑标签</button></h6>
+              <div id="detail-tags-list" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;">
+                <span style="color:#9ca3af;font-size:.85rem;">暂无标签</span>
+              </div>
             </div>
             <div class="detail-card">
               <h6>跟进人信息</h6>
@@ -470,6 +546,19 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
                   <select id="assign-select" class="form-select form-select-sm" style="width:auto;display:inline-block;"></select>
                   <button class="btn btn-primary btn-sm ms-2" onclick="assignLead()">分配</button>
                 </div>
+              </div>
+            </div>
+            <!-- Academic Manager Assignment -->
+            <div class="detail-card" id="detail-academic-card">
+              <h6>学管跟进</h6>
+              <div id="academic-info" style="font-size:.85rem;color:#374151;">
+                <div id="academic-current">未分配教务</div>
+              </div>
+              <div id="academic-assign-action" class="d-none mt-2">
+                <select id="academic-select" class="form-select form-select-sm" style="width:auto;display:inline-block;">
+                  <option value="">选择教务...</option>
+                </select>
+                <button class="btn btn-primary btn-sm ms-2" onclick="assignAcademic()">分配教务</button>
               </div>
             </div>
             <!-- Marketing source card -->
@@ -917,6 +1006,26 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
         </div>
       </div>
 
+      <!-- ═══ Enrolled Students ═══ -->
+      <div id="section-enrolled" class="section">
+        <div class="page-header"><h3>已签约学生</h3><p>查看所有已签约学生 · 课时消耗情况 · 学管分配</p></div>
+        <div class="row g-3 mb-3" id="enrolled-stats">
+          <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">已签约</div><div class="value" id="enr-total">-</div></div><div class="icon"><i class="bi bi-trophy"></i></div></div></div></div>
+          <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">有课时包</div><div class="value" id="enr-with-pkg">-</div></div><div class="icon"><i class="bi bi-box-seam"></i></div></div></div></div>
+          <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">需续费提醒</div><div class="value" id="enr-low-hours">-</div></div><div class="icon"><i class="bi bi-exclamation-triangle"></i></div></div></div></div>
+          <div class="col-md-3 col-6"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="label">未分配教务</div><div class="value" id="enr-no-academic">-</div></div><div class="icon"><i class="bi bi-person-plus"></i></div></div></div></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h6>签约学生列表</h6></div>
+          <div style="overflow-x:auto;">
+            <table class="sm-table">
+              <thead><tr><th>姓名</th><th>跟进人</th><th>教务</th><th>课时包</th><th>消耗进度</th><th>来源</th><th>签约时间</th><th>操作</th></tr></thead>
+              <tbody id="enrolled-tbody"><tr><td colspan="8"><div class="empty-state"><p>加载中...</p></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ Finance Management ═══ -->
       <div id="section-finance" class="section">
         <div class="page-header"><h3>财务管理</h3><p>老师课时费结算 · 销售提成 · 月度报表</p></div>
@@ -1277,12 +1386,43 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
           <select class="form-select" id="ct-new-lead"><option value="">选择学生...</option></select>
         </div>
         <div class="row g-3 mb-3">
-          <div class="col-md-6"><label class="form-label">合同金额</label><input type="number" class="form-control" id="ct-new-amount" value="0"></div>
-          <div class="col-md-6"><label class="form-label">已收款</label><input type="number" class="form-control" id="ct-new-paid" value="0"></div>
+          <div class="col-md-6"><label class="form-label">合同金额（元）</label><input type="number" class="form-control" id="ct-new-amount" value="0"></div>
+          <div class="col-md-6"><label class="form-label">已收款（元）</label><input type="number" class="form-control" id="ct-new-paid" value="0"></div>
         </div>
         <div class="row g-3 mb-3">
           <div class="col-md-6"><label class="form-label">签约日期</label><input type="date" class="form-control" id="ct-new-signed"></div>
-          <div class="col-md-6"><label class="form-label">有效期止</label><input type="date" class="form-control" id="ct-new-until"></div>
+          <div class="col-md-6"><label class="form-label">有效期至</label><input type="date" class="form-control" id="ct-new-until"></div>
+        </div>
+        <!-- 课时包信息 -->
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <input type="checkbox" id="ct-create-pkg" checked style="width:18px;height:18px;cursor:pointer;">
+            <label for="ct-create-pkg" style="font-weight:600;font-size:.88rem;color:#065f46;cursor:pointer;">创建课时包</label>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:.78rem;">课时包名称</label>
+              <input type="text" class="form-control form-control-sm" id="ct-pkg-name" placeholder="如: 金融数学 30小时">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" style="font-size:.78rem;">课时数</label>
+              <input type="number" class="form-control form-control-sm" id="ct-pkg-hours" value="30" min="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" style="font-size:.78rem;">护航周期</label>
+              <div class="d-flex gap-1">
+                <select class="form-select form-select-sm" id="ct-pkg-period" onchange="if(this.value==='__custom__'){this.classList.add('d-none');document.getElementById('ct-pkg-period-input').classList.remove('d-none');document.getElementById('ct-pkg-period-input').focus();}">
+                  <option value="1">1个月</option>
+                  <option value="3" selected>3个月</option>
+                  <option value="6">6个月</option>
+                  <option value="12">12个月</option>
+                  <option value="24">24个月</option>
+                  <option value="__custom__">自定义...</option>
+                </select>
+                <input type="text" class="form-control form-control-sm d-none" id="ct-pkg-period-input" style="width:80px;" placeholder="月数" onblur="if(this.value){document.getElementById('ct-pkg-period').value=this.value;}">
+              </div>
+            </div>
+          </div>
         </div>
         <div class="mb-3"><label class="form-label">备注</label><textarea class="form-control" id="ct-new-notes" rows="2"></textarea></div>
         <div id="ct-error" class="alert alert-danger py-2 d-none"></div>
@@ -1404,6 +1544,82 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 </div>
 
 <!-- Tutor Match Panel -->
+<!-- Tag Editor Modal -->
+<div class="modal fade" id="tagEditorModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">编辑辅导需求标签</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div style="font-size:.82rem;color:#6b7280;margin-bottom:8px;">选择或输入该资源的辅导需求（可多选）</div>
+        <div id="tag-options" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+        <div class="input-group mb-3">
+          <input type="text" id="tag-custom-input" class="form-control" placeholder="输入自定义标签" style="font-size:.85rem;">
+          <button class="btn btn-outline-primary" onclick="addCustomTag()">添加</button>
+        </div>
+        <div class="d-flex flex-wrap gap-2" id="tag-selected-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button class="btn btn-primary" onclick="saveTags()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Lead Modal -->
+<div class="modal fade" id="editLeadModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">编辑资料</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label">姓名</label><input type="text" class="form-control" id="edit-name"></div>
+          <div class="col-md-4"><label class="form-label">手机</label><input type="text" class="form-control" id="edit-phone"></div>
+          <div class="col-md-4"><label class="form-label">微信</label><input type="text" class="form-control" id="edit-wechat"></div>
+          <div class="col-md-3"><label class="form-label">阶段</label>
+            <div class="d-flex gap-1"><select class="form-select" id="edit-grade"><option value="">选择</option><option>高中</option><option>本科预科</option><option>本科</option><option>硕士预科</option><option>硕士</option><option>申博</option><option>博士</option></select>
+            <input type="text" class="form-control d-none" id="edit-grade-custom" style="width:100px;" placeholder="其他"></div>
+          </div>
+          <div class="col-md-3"><label class="form-label">国家</label>
+            <select class="form-select" id="edit-country"><option value="">选择</option><option>英国</option><option>美国</option><option>澳洲</option><option>加拿大</option><option>新加坡</option><option>马来西亚</option><option>新西兰</option><option>其他</option></select>
+          </div>
+          <div class="col-md-3"><label class="form-label">科目</label><input type="text" class="form-control" id="edit-subject"></div>
+          <div class="col-md-3"><label class="form-label">来源平台</label>
+            <select class="form-select" id="edit-source"><option value="">选择</option><option>抖音</option><option>视频号</option><option>小红书</option><option>转介绍</option><option>线上</option><option>其他</option></select>
+          </div>
+          <div class="col-md-3"><label class="form-label">来源账号</label>
+            <select class="form-select" id="edit-account"><option value="">选择</option><option>宁振亚（视频号1）</option><option>留学赋能宁老师（视频号2）</option><option>宁振亚（抖音1）</option><option>易维一留学赋能宁老师（抖音2）</option></select>
+          </div>
+          <div class="col-md-3"><label class="form-label">客户类型</label>
+            <select class="form-select" id="edit-lead-type"><option value="">选择</option><option value="parent">家长</option><option value="student">学生</option><option value="agent">留学机构</option></select>
+          </div>
+          <div class="col-md-3"><label class="form-label">客户评级</label>
+            <select class="form-select" id="edit-rating"><option value="">选择</option><option>A类</option><option>B类</option><option>C类</option><option>D类</option></select>
+          </div>
+          <div class="col-md-3"><label class="form-label">辅导需求（标签）</label>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;" id="edit-tags-container">
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="咨询留学申请" onclick="toggleEditTag(this)">咨询留学申请</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="学管护航" onclick="toggleEditTag(this)">学管护航</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="作业辅导" onclick="toggleEditTag(this)">作业辅导</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="考前辅导" onclick="toggleEditTag(this)">考前辅导</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="论文辅导" onclick="toggleEditTag(this)">论文辅导</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="毕业论文" onclick="toggleEditTag(this)">毕业论文</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="同步辅导" onclick="toggleEditTag(this)">同步辅导</span>
+              <span class="tag-option btn btn-sm btn-outline-secondary" data-tag="学术写作" onclick="toggleEditTag(this)">学术写作</span>
+            </div>
+          </div>
+          <div class="col-12"><label class="form-label">备注</label><textarea class="form-control" id="edit-notes" rows="2"></textarea></div>
+        </div>
+        <div id="edit-error" class="alert alert-danger py-2 mt-3 d-none"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button class="btn btn-primary" onclick="submitEditLead()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="tutorMatchModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -1435,7 +1651,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // ═══════════════════════════════════════════════════════════════════════════
 // State
 // ═══════════════════════════════════════════════════════════════════════════
-const state = { user: null, currentLeadId: null, leads: [], users: [], tutors: [] };
+const state = { user: null, currentLeadId: null, leads: [], users: [], tutors: [], leadsPage: 1, leadsTotal: 0 };
 let modalInstances = {};
 let _aiAvailable = false;
 let _aiReports = [];
@@ -1542,8 +1758,17 @@ function renderUser() {
 // ═══════════════════════════════════════════════════════════════════════════
 // Navigation
 // ═══════════════════════════════════════════════════════════════════════════
-function showLogin() { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-login').classList.add('active'); }
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+function showLogin() { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-login').classList.add('active'); document.getElementById('hamburger-btn').style.display = 'none'; }
 function showApp() {
+  document.getElementById('hamburger-btn').style.display = 'block';
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-app').classList.add('active');
   switchPage('dashboard');
@@ -1553,6 +1778,7 @@ function showApp() {
   loadNotifications();  // immediate first load
 }
 function switchPage(page) {
+  closeSidebar(); // Close mobile sidebar when navigating
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('section-' + page);
@@ -1577,6 +1803,7 @@ function switchPage(page) {
   else if (page === 'followup-plan') { switchFupTab('overdue'); }
   else if (page === 'ai-reports') loadAiReportsGlobal();
   else if (page === 'quick-add') { document.getElementById('qa-text')?.focus(); }
+  else if (page === 'enrolled') loadEnrolled();
   else if (page === 'finance') { loadSettlements(); loadCommissions(); loadFinanceReport(); }
 }
 function backToLeads() {
@@ -1681,29 +1908,47 @@ function loadScheduleAction() {
 // Leads
 // ═══════════════════════════════════════════════════════════════════════════
 async function loadLeads() {
+  return loadLeadsPage(state.leadsPage);
+}
+async function loadLeadsPage(page) {
   const status = document.getElementById('filter-status').value;
   const source = document.getElementById('filter-source').value;
+  const svcType = document.getElementById('filter-svctype').value;
   const search = document.getElementById('leads-search').value.trim();
-  let url = '/api/sm/leads?status=' + status + '&source=' + source;
+  let url = '/api/sm/leads?page=' + page + '&status=' + status + '&source=' + source + '&service_type=' + svcType;
   if (search) url += '&search=' + encodeURIComponent(search);
   const res = await API.get(url);
   if (res.error) return;
   state.leads = res.leads || [];
-  document.getElementById('leads-count').textContent = '共 ' + (res.total || 0) + ' 条';
+  state.leadsPage = res.page || 1;
+  state.leadsTotal = res.total || 0;
+  document.getElementById('leads-count').textContent = '共 ' + state.leadsTotal + ' 条';
   const tbody = document.getElementById('leads-tbody');
-  if (state.leads.length === 0) { tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>暂无数据</p></div></td></tr>'; return; }
+  if (state.leads.length === 0) { tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>暂无数据</p></div></td></tr>'; return; }
   const selected = new Set(getSelectedIds());
-  tbody.innerHTML = state.leads.map(l =>
+  const pageSize = res.page_size || 50;
+  const totalPages = Math.ceil(state.leadsTotal / pageSize) || 1;
+  tbody.innerHTML = state.leads.map((l, i) =>
     '<tr class="row-clickable" onclick="if(!event.target.closest(\'input[type=checkbox]\'))viewLead(\'' + l.id + '\')">' +
+    '<td style="text-align:center;color:#9ca3af;font-size:.78rem;font-weight:500;">' + ((state.leadsPage-1)*pageSize + i + 1) + '</td>' +
     '<td style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox" class="lead-checkbox" value="' + l.id + '" onchange="updateBatchBar()"' + (selected.has(l.id)?' checked':'') + '></td>' +
+    '<td style="font-size:.78rem;color:#9ca3af;white-space:nowrap;">' + (l.created_at ? l.created_at.slice(0,10) : '-') + '</td>' +
     '<td><strong>' + esc(l.name) + '</strong></td>' +
     '<td style="font-size:.8rem;color:#6b7280;">' + esc(l.wechat || l.phone || '-') + '</td>' +
     '<td>' + esc(l.source || '-') + '</td>' +
-    '<td>' + esc(l.country || '-') + ' ' + esc(l.grade || '') + '</td>' +
+    '<td style="font-size:.78rem;color:#6b7280;">' + esc(l.account_name || '-') + '</td>' +
+    '<td>' + (l.rating ? '<span style="font-size:.75rem;padding:1px 6px;border-radius:4px;background:' + (l.rating==='A类'||l.rating==='A'?'#d1fae5':l.rating==='B类'||l.rating==='B+'?'#e0e7ff':l.rating==='C类'||l.rating==='C+'?'#fef3c7':'#f3f4f6') + ';">' + esc(l.rating) + '</span>' : '-') + '</td>' +
+    '<td style="font-size:.78rem;color:#6b7280;">' + esc(l.grade || '-') + '</td>' +
     '<td>' + statusBadge(l.status) + '</td>' +
-    '<td>' + esc(l.assignee_name || '-') + '</td>' +
-    '<td style="font-size:.8rem;color:#9ca3af;">' + (l.created_at ? l.created_at.slice(0,10) : '-') + '</td></tr>'
+    '<td>' + esc(l.assignee_name || '-') + '</td></tr>'
   ).join('');
+  // Pagination buttons
+  const prevBtn = document.getElementById('btn-prev-page');
+  const nextBtn = document.getElementById('btn-next-page');
+  const pageInfo = document.getElementById('leads-page-info');
+  pageInfo.textContent = '第 ' + state.leadsPage + '/' + totalPages + ' 页';
+  prevBtn.style.display = state.leadsPage > 1 ? 'inline-block' : 'none';
+  nextBtn.style.display = state.leadsPage < totalPages ? 'inline-block' : 'none';
 }
 function debounceSearch() { clearTimeout(window._searchTimer); window._searchTimer = setTimeout(loadLeads, 300); }
 
@@ -1803,6 +2048,14 @@ async function viewLead(id) {
   hideSpinner();
   if (res.error) { toast(res.error, 'error'); return; }
   const l = res.lead;
+  state.currentLead = l;
+  // Edit button visible only for admin/supervisor
+  const editBtnArea = document.getElementById('edit-lead-btn-area');
+  if (state.user && (state.user.role === 'admin' || state.user.role === 'supervisor' || state.user.role === 'consultant')) {
+    editBtnArea.innerHTML = '<button class="btn btn-outline-primary btn-sm float-end" onclick="openEditLeadModal()"><i class="bi bi-pencil"></i> 编辑</button>';
+  } else {
+    editBtnArea.innerHTML = '';
+  }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-lead-detail').classList.add('active');
   document.getElementById('detail-lead-name').textContent = l.name;
@@ -1820,9 +2073,23 @@ async function viewLead(id) {
   document.getElementById('d-phone').textContent = l.phone || '-';
   document.getElementById('d-wechat').textContent = l.wechat || '-';
   document.getElementById('d-country').textContent = l.country || '-';
-  document.getElementById('d-grade').textContent = l.grade || '-';
+  document.getElementById('d-grade-text').textContent = l.grade || '-';
   document.getElementById('d-subject').textContent = l.subject || '-';
   document.getElementById('d-source').textContent = l.source || '-';
+  const ltMap = {'student':'学生','parent':'家长','agent':'留学机构','机构':'留学机构','':'-'};
+  document.getElementById('d-lead-type-text').textContent = ltMap[l.lead_type] || l.lead_type || '-';
+  document.getElementById('d-rating-text').textContent = l.rating || '-';
+  // Account name
+  document.getElementById('d-account-name-text').textContent = l.account_name || '-';
+  // Tags
+  let tags = [];
+  try { tags = JSON.parse(l.tags || '[]'); } catch(e) {}
+  const tagsEl = document.getElementById('detail-tags-list');
+  if (tags.length > 0) {
+    tagsEl.innerHTML = tags.map(t => '<span style="background:#eef2ff;color:#3730a3;padding:2px 10px;border-radius:10px;font-size:.78rem;">' + esc(t) + '</span>').join('');
+  } else {
+    tagsEl.innerHTML = '<span style="color:#9ca3af;font-size:.85rem;">暂无标签</span>';
+  }
   document.getElementById('d-creator').textContent = l.creator_name || '-';
   document.getElementById('d-created').textContent = l.created_at || '-';
   document.getElementById('d-notes').textContent = l.notes || '-';
@@ -1837,10 +2104,24 @@ async function viewLead(id) {
   document.getElementById('d-ad-source').textContent = l.ad_source || '-';
   document.getElementById('d-landing-page').textContent = l.landing_page || '-';
   document.getElementById('d-assignee').textContent = l.assignee_name || '未分配';
+  // Academic manager info
+  const acadEl = document.getElementById('academic-current');
+  if (l.academic_name) {
+    acadEl.innerHTML = '👤 教务: <strong>' + esc(l.academic_name) + '</strong>';
+  } else {
+    acadEl.textContent = l.status === 'enrolled' ? '已签约，尚未分配教务' : '未分配教务';
+  }
+  const acadAssign = document.getElementById('academic-assign-action');
+  if ((state.user.role === 'admin' || state.user.role === 'supervisor') && l.status === 'enrolled') {
+    acadAssign.classList.remove('d-none');
+    loadAcademicUsers();
+  } else {
+    acadAssign.classList.add('d-none');
+  }
   state.currentLeadData = l;  // Store for template placeholder replacement
   loadTemplates();
   const aa = document.getElementById('assign-action');
-  if (state.user && (state.user.role === 'admin' || state.user.role === 'supervisor')) { aa.classList.remove('d-none'); loadAssignUsers(); }
+  if (state.user && (state.user.role === 'admin' || state.user.role === 'supervisor' || state.user.role === 'consultant')) { aa.classList.remove('d-none'); loadAssignUsers(); }
   else { aa.classList.add('d-none'); }
   document.getElementById('first-fup-notice').classList.toggle('d-none', l.status !== 'pending');
   renderTimeline(res.activities || []);
@@ -1986,6 +2267,25 @@ async function assignLead() {
   hideSpinner();
   if (res.error) { toast(res.error, 'error'); return; }
   toast('已分配给 ' + res.assignee_name);
+  viewLead(state.currentLeadId);
+}
+async function loadAcademicUsers() {
+  const res = await API.get('/api/sm/users');
+  if (res.error) return;
+  const sel = document.getElementById('academic-select');
+  sel.innerHTML = '<option value="">选择教务...</option>' +
+    res.users.filter(u => u.role === 'academic' || u.role === 'coordinator').map(u =>
+      '<option value="' + u.id + '">' + esc(u.name) + '</option>'
+    ).join('');
+}
+async function assignAcademic() {
+  const id = document.getElementById('academic-select').value;
+  if (!id) { toast('请选择教务', 'warning'); return; }
+  showSpinner();
+  const res = await API.post('/api/sm/leads/' + state.currentLeadId + '/assign-academic', { academic_manager_id: id });
+  hideSpinner();
+  if (res.error) { toast(res.error, 'error'); return; }
+  toast('已分配给教务 ' + res.academic_name);
   viewLead(state.currentLeadId);
 }
 // Inline status editor
@@ -2635,6 +2935,8 @@ async function submitCreateLead() {
   if (res.warning) toast(res.warning, 'warning');
   toast('线索创建成功');
   if (createLeadModal) createLeadModal.hide();
+  // Reset to page 1 to show newest lead
+  state.leadsPage = 1;
   loadLeads();
 }
 
@@ -2654,8 +2956,186 @@ function schStatusBadge(status) {
   return '<span class="badge-status ' + (c[status]||'badge-pending') + '">' + (l[status]||status) + '</span>';
 }
 function dateInputDefault() {
-  const d = new Date(); const t = new Date(d); t.setDate(t.getDate() + 1);
-  if (!document.getElementById('activity-next-date').value) document.getElementById('activity-next-date').value = t.toISOString().split('T')[0];
+  const el = document.getElementById('activity-next-date');
+  if (!el.value) el.placeholder = '选择日期（可选）';
+}
+
+// ─── Edit Lead Modal ───
+let _editModalInstance = null;
+let _editTags = [];
+
+function openEditLeadModal() {
+  const l = state.currentLead;
+  if (!l) { toast('请先选择线索', 'warning'); return; }
+  // Fill form
+  document.getElementById('edit-name').value = l.name || '';
+  document.getElementById('edit-phone').value = l.phone || '';
+  document.getElementById('edit-wechat').value = l.wechat || '';
+  document.getElementById('edit-grade').value = ['高中','本科预科','本科','硕士预科','硕士','申博','博士'].includes(l.grade) ? l.grade : '';
+  if (!document.getElementById('edit-grade').value) {
+    document.getElementById('edit-grade-custom').value = l.grade || '';
+    document.getElementById('edit-grade-custom').classList.remove('d-none');
+  } else {
+    document.getElementById('edit-grade-custom').classList.add('d-none');
+  }
+  document.getElementById('edit-country').value = ['英国','美国','澳洲','加拿大','新加坡','马来西亚','新西兰'].includes(l.country) ? l.country : '';
+  document.getElementById('edit-subject').value = l.subject || '';
+  document.getElementById('edit-source').value = ['抖音','视频号','小红书','转介绍','线上'].includes(l.source) ? l.source : '';
+  document.getElementById('edit-account').value = ['宁振亚（视频号1）','留学赋能宁老师（视频号2）','宁振亚（抖音1）','易维一留学赋能宁老师（抖音2）'].includes(l.account_name) ? l.account_name : '';
+  document.getElementById('edit-lead-type').value = ['parent','student','agent'].includes(l.lead_type) ? l.lead_type : '';
+  document.getElementById('edit-rating').value = ['A类','B类','C类','D类'].includes(l.rating) ? l.rating : '';
+  document.getElementById('edit-notes').value = l.notes || '';
+  // Tags
+  _editTags = [];
+  try { _editTags = JSON.parse(l.tags || '[]'); } catch(e) {}
+  document.querySelectorAll('#edit-tags-container .tag-option').forEach(el => {
+    el.className = 'tag-option btn btn-sm ' + (_editTags.includes(el.dataset.tag) ? 'btn-primary' : 'btn-outline-secondary');
+  });
+  if (!_editModalInstance) _editModalInstance = safeModal(document.getElementById('editLeadModal'));
+  _editModalInstance.show();
+}
+function toggleEditTag(el) {
+  const tag = el.dataset.tag;
+  const idx = _editTags.indexOf(tag);
+  if (idx >= 0) _editTags.splice(idx, 1);
+  else _editTags.push(tag);
+  el.className = 'tag-option btn btn-sm ' + (_editTags.includes(tag) ? 'btn-primary' : 'btn-outline-secondary');
+}
+async function submitEditLead() {
+  const name = document.getElementById('edit-name').value.trim();
+  if (!name) { toast('姓名不能为空', 'warning'); return; }
+  let grade = document.getElementById('edit-grade').value;
+  if (!grade) grade = document.getElementById('edit-grade-custom').value.trim();
+  const country = document.getElementById('edit-country').value;
+  const data = {
+    name,
+    phone: document.getElementById('edit-phone').value.trim(),
+    wechat: document.getElementById('edit-wechat').value.trim(),
+    grade, country,
+    subject: document.getElementById('edit-subject').value.trim(),
+    source: document.getElementById('edit-source').value,
+    account_name: document.getElementById('edit-account').value,
+    lead_type: document.getElementById('edit-lead-type').value,
+    rating: document.getElementById('edit-rating').value,
+    notes: document.getElementById('edit-notes').value.trim(),
+    tags: JSON.stringify(_editTags),
+  };
+  showSpinner();
+  const res = await API.put('/api/sm/leads/' + state.currentLeadId, data);
+  hideSpinner();
+  if (res.error) { toast(res.error, 'error'); return; }
+  if (_editModalInstance) _editModalInstance.hide();
+  toast('资料已更新');
+  viewLead(state.currentLeadId);
+  loadLeads();
+}
+
+// ─── Inline field editing ───
+const TAG_OPTIONS = ['咨询留学申请', '学管护航', '作业辅导', '考前辅导', '论文辅导', '毕业论文', '同步辅导', '学术写作'];
+
+function editLeadField(field) {
+  const textEl = document.getElementById('d-' + field + '-text');
+  const selEl = document.getElementById('d-' + field + '-select');
+  const inpEl = document.getElementById('d-' + field + '-input');
+  if (!selEl) return;
+  textEl.classList.add('d-none');
+  selEl.classList.remove('d-none');
+  // Show input directly for custom values not in select
+  const curVal = textEl.textContent;
+  if (selEl.querySelector('option[value="' + curVal + '"]') || selEl.querySelector('option:not([value])')?.textContent === curVal) {
+    selEl.value = curVal;
+  } else {
+    selEl.value = '__custom__';
+    inpEl.classList.remove('d-none');
+    inpEl.value = curVal;
+  }
+}
+async function saveLeadField(field, value) {
+  if (value === '__custom__') {
+    document.getElementById('d-' + field + '-select').classList.add('d-none');
+    document.getElementById('d-' + field + '-input').classList.remove('d-none');
+    document.getElementById('d-' + field + '-input').focus();
+    return;
+  }
+  // If input triggered (onblur), use input value
+  const inpEl = document.getElementById('d-' + field + '-input');
+  if (inpEl && !inpEl.classList.contains('d-none')) {
+    value = inpEl.value.trim();
+  }
+  if (!value) return;
+
+  // Check for custom select
+  const selEl = document.getElementById('d-' + field + '-select');
+  if (selEl && !selEl.classList.contains('d-none') && selEl.value === '__custom__') {
+    inpEl.classList.remove('d-none');
+    inpEl.focus();
+    return;
+  }
+
+  const res = await API.put('/api/sm/leads/' + state.currentLeadId, { [field]: value });
+  if (res.error) { toast(res.error, 'error'); return; }
+
+  const textEl = document.getElementById('d-' + field + '-text');
+  textEl.textContent = value;
+  textEl.classList.remove('d-none');
+  if (selEl) selEl.classList.add('d-none');
+  if (inpEl) inpEl.classList.add('d-none');
+  toast(field + ' 已更新', 'success');
+}
+
+// ─── Tag Management ───
+let _selectedTags = [];
+let _tagModalInstance = null;
+
+function openTagEditor() {
+  _selectedTags = [];
+  // Parse current tags
+  const tagsStr = state.currentLead?.tags || '[]';
+  try { _selectedTags = JSON.parse(tagsStr); } catch(e) { _selectedTags = []; }
+  renderTagEditor();
+  if (!_tagModalInstance) _tagModalInstance = safeModal(document.getElementById('tagEditorModal'));
+  _tagModalInstance.show();
+}
+function renderTagEditor() {
+  const container = document.getElementById('tag-options');
+  container.innerHTML = TAG_OPTIONS.map(t =>
+    '<span class="btn btn-sm ' + (_selectedTags.includes(t) ? 'btn-primary' : 'btn-outline-secondary') + '" onclick="toggleTag(\'' + t + '\')" style="font-size:.82rem;">' + t + '</span>'
+  ).join('');
+  const list = document.getElementById('tag-selected-list');
+  if (_selectedTags.length === 0) {
+    list.innerHTML = '<span style="color:#9ca3af;font-size:.82rem;">暂未选择标签</span>';
+  } else {
+    list.innerHTML = _selectedTags.map(t =>
+      '<span style="background:#eef2ff;color:#3730a3;padding:3px 10px;border-radius:12px;font-size:.82rem;">' + t +
+      ' <i class="bi bi-x" style="cursor:pointer;" onclick="removeTag(\'' + t + '\')"></i></span>'
+    ).join('');
+  }
+}
+function toggleTag(tag) {
+  const idx = _selectedTags.indexOf(tag);
+  if (idx >= 0) _selectedTags.splice(idx, 1);
+  else _selectedTags.push(tag);
+  renderTagEditor();
+}
+function addCustomTag() {
+  const val = document.getElementById('tag-custom-input').value.trim();
+  if (!val) return;
+  if (!_selectedTags.includes(val)) _selectedTags.push(val);
+  document.getElementById('tag-custom-input').value = '';
+  renderTagEditor();
+}
+function removeTag(tag) {
+  const idx = _selectedTags.indexOf(tag);
+  if (idx >= 0) _selectedTags.splice(idx, 1);
+  renderTagEditor();
+}
+async function saveTags() {
+  const tagsJson = JSON.stringify(_selectedTags);
+  const res = await API.put('/api/sm/leads/' + state.currentLeadId, { tags: tagsJson });
+  if (res.error) { toast(res.error, 'error'); return; }
+  if (_tagModalInstance) _tagModalInstance.hide();
+  viewLead(state.currentLeadId);
+  toast('标签已更新', 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2832,6 +3312,47 @@ function openRuleModal() {
     toast('规则已创建');
     loadAssignmentDashboard();
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Enrolled Students
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadEnrolled() {
+  const res = await API.get('/api/sm/enrolled');
+  if (res.error) return;
+  const list = res.enrolled || [];
+  document.getElementById('enr-total').textContent = list.length;
+  const withPkg = list.filter(s => (s.packages || []).length > 0);
+  document.getElementById('enr-with-pkg').textContent = withPkg.length;
+  const lowHours = list.filter(s => (s.packages || []).some(p => p.total > 0 && (p.used / p.total) >= 0.7));
+  document.getElementById('enr-low-hours').textContent = lowHours.length;
+  document.getElementById('enr-no-academic').textContent = list.filter(s => !s.academic_name).length;
+  const tbody = document.getElementById('enrolled-tbody');
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>暂无已签约学生</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(s => {
+    const pkgs = s.packages || [];
+    const pkgInfo = pkgs.length > 0 ? pkgs.map(p => {
+      const pct = p.total > 0 ? Math.round(p.used / p.total * 100) : 0;
+      const color = pct >= 80 ? '#ef4444' : pct >= 60 ? '#f59e0b' : '#10b981';
+      return '<div style="font-size:.78rem;margin:2px 0;">' + esc(p.name) + '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+        '<div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;"></div></div>' +
+        '<span style="font-size:.72rem;color:' + color + ';font-weight:600;">' + p.used + '/' + p.total + 'h</span></div>';
+    }).join('') : '<span style="color:#9ca3af;font-size:.78rem;">暂无课时包</span>';
+    return '<tr class="row-clickable" onclick="viewLead(\'' + s.id + '\')">' +
+      '<td><strong>' + esc(s.name) + '</strong></td>' +
+      '<td style="font-size:.82rem;">' + esc(s.assignee_name || '-') + '</td>' +
+      '<td style="font-size:.82rem;">' + esc(s.academic_name || '<span style="color:#ef4444;">未分配</span>') + '</td>' +
+      '<td style="max-width:200px;">' + pkgInfo + '</td>' +
+      '<td>' + (s.total_hours ? '<span style="font-size:.78rem;">' + (s.used_hours||0) + '/' + s.total_hours + 'h</span>' : '-') + '</td>' +
+      '<td style="font-size:.78rem;">' + esc(s.source || '-') + '</td>' +
+      '<td style="font-size:.78rem;color:#9ca3af;">' + (s.updated_at ? s.updated_at.slice(0,10) : '-') + '</td>' +
+      '<td><button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation();viewLead(\'' + s.id + '\')"><i class="bi bi-eye"></i> 查看</button></td></tr>';
+  }).join('');
 }
 
 // Follow-up Plan (Tier 3)
@@ -3045,11 +3566,56 @@ function openCreateContract() {
   const sel = document.getElementById('ct-new-lead');
   sel.innerHTML = '<option value="">选择学生...</option>';
   if (state.currentLeadId) {
-    const currentLead = state.leads.find(l => l.id === state.currentLeadId) || {name: '当前学生', id: state.currentLeadId};
+    const currentLead = state.currentLead || state.leads.find(l => l.id === state.currentLeadId) || {name: '当前学生', id: state.currentLeadId, subject: ''};
     sel.innerHTML += '<option value="' + state.currentLeadId + '" selected>' + esc(currentLead.name) + '</option>';
+    // Auto-fill package name
+    const subject = currentLead.subject || '';
+    const pkgName = document.getElementById('ct-pkg-name');
+    if (subject && !pkgName.value) {
+      pkgName.value = subject + ' 课时包';
+    } else if (!pkgName.value) {
+      pkgName.value = currentLead.name + ' 课时包';
+    }
+    // Set default dates
+    const today = new Date().toISOString().split('T')[0];
+    if (!document.getElementById('ct-new-signed').value) document.getElementById('ct-new-signed').value = today;
   }
   if (!modalInstances.createContract) modalInstances.createContract = safeModal(document.getElementById('createContractModal'));
   modalInstances.createContract.show();
+}
+async function submitCreateContract() {
+  const lead_id = document.getElementById('ct-new-lead').value;
+  if (!lead_id) { document.getElementById('ct-error').textContent = '请选择学生'; document.getElementById('ct-error').classList.remove('d-none'); return; }
+  showSpinner();
+  // Package data
+  const createPkg = document.getElementById('ct-create-pkg').checked;
+  let pkgName = '', estHours = 0, periodMonths = 3;
+  if (createPkg) {
+    pkgName = document.getElementById('ct-pkg-name').value.trim();
+    estHours = parseInt(document.getElementById('ct-pkg-hours').value) || 30;
+    let periodVal = document.getElementById('ct-pkg-period').value;
+    if (!periodVal || periodVal === '__custom__') {
+      periodVal = document.getElementById('ct-pkg-period-input').value.trim();
+    }
+    periodMonths = parseInt(periodVal) || 3;
+  }
+  const res = await API.post('/api/sm/contracts', {
+    lead_id, total_amount: parseFloat(document.getElementById('ct-new-amount').value) || 0,
+    paid_amount: parseFloat(document.getElementById('ct-new-paid').value) || 0,
+    signed_at: document.getElementById('ct-new-signed').value,
+    valid_until: document.getElementById('ct-new-until').value,
+    notes: document.getElementById('ct-new-notes').value.trim(),
+    auto_create_package: createPkg,
+    estimated_hours: estHours,
+    package_name: pkgName,
+    period_months: periodMonths,
+  });
+  hideSpinner();
+  if (res.error) { document.getElementById('ct-error').textContent = res.error; document.getElementById('ct-error').classList.remove('d-none'); return; }
+  toast('合同已创建: ' + res.contract_no);
+  if (createPkg) toast('课时包已自动创建', 'success');
+  if (modalInstances.createContract) modalInstances.createContract.hide();
+  viewLead(state.currentLeadId);
 }
 async function submitCreateContract() {
   const lead_id = document.getElementById('ct-new-lead').value;
