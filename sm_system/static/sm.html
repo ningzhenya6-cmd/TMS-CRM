@@ -896,7 +896,8 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
                 <div class="col-6"><label class="form-label" style="font-size:.78rem;">来源</label>
                   <select class="form-select form-select-sm" id="qa-source"><option value="">自动识别</option><option>抖音</option><option>小红书</option><option>视频号</option><option>转介绍</option><option>钉钉</option><option>微信</option><option>线上</option><option>其他</option></select>
                 </div>
-                <div class="col-12"><label class="form-label" style="font-size:.78rem;">备注</label><input type="text" class="form-control form-control-sm" id="qa-notes" placeholder="其他信息"></div>
+                <div class="col-6"><label class="form-label" style="font-size:.78rem;">短视频账号</label><input type="text" class="form-control form-control-sm" id="qa-account" placeholder="自动识别" readonly></div>
+    <div class="col-12"><label class="form-label" style="font-size:.78rem;">备注</label><input type="text" class="form-control form-control-sm" id="qa-notes" placeholder="其他信息"></div>
               </div>
               <button class="btn btn-success btn-lg mt-3 w-100" onclick="confirmQuickAdd()" id="qa-confirm-btn"><i class="bi bi-check2-circle"></i> 确认创建线索</button>
               <div id="qa-create-error" class="alert alert-danger py-2 mt-2 d-none"></div>
@@ -2930,6 +2931,7 @@ async function parseAndPreview() {
   document.getElementById('qa-grade').value = r.grade || '';
   document.getElementById('qa-subject').value = r.subject || '';
   document.getElementById('qa-source').value = r.source || '';
+  document.getElementById('qa-account').value = r.account_name || '';
   document.getElementById('qa-notes').value = r.notes || '';
   // Confidence badge
   const confEl = document.getElementById('qa-confidence');
