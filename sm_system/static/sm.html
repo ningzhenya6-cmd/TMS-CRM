@@ -101,7 +101,7 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 
 /* Section toggles */
 .section { display: none; }
-.section.active { display: block; }
+.section.active { display: block !important; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -1805,23 +1805,18 @@ function switchPage(page) {
   if (!page) return;
   console.log('switchPage:', page);
   closeSidebar();
-  // First pass: hide ALL sections
+  // Only use CSS class switching (X5 compatible with !important)
   var allSec = document.querySelectorAll('.section');
   for (var i = 0; i < allSec.length; i++) {
-    allSec[i].style.display = 'none';
     allSec[i].classList.remove('active');
   }
   var navItems = document.querySelectorAll('.nav-item');
   for (var j = 0; j < navItems.length; j++) {
     navItems[j].classList.remove('active');
   }
-  // Show target section with delay to ensure X5 processes the display change
   var tgt = document.getElementById('section-' + page);
   if (tgt) {
-    setTimeout(function() {
-      tgt.style.display = 'block';
-      tgt.classList.add('active');
-    }, 20);
+    tgt.classList.add('active');
   }
   // Show sub-sections for the same page
   if (page === 'schedules') {
@@ -1848,13 +1843,12 @@ function switchPage(page) {
   // Debug: verify section is visible
   const debugEl = document.getElementById('section-' + page);
   if (debugEl) {
-    const isHidden = debugEl.hidden;
-    const hasActive = debugEl.classList.contains('active');
-    console.log('  section-' + page + ' hidden=' + isHidden + ' active=' + hasActive);
-    if (isHidden) {
-      debugEl.hidden = false;
+    var hasActive = debugEl.classList.contains('active');
+    var hasImportant = debugEl.style.display;
+    console.log('  section-' + page + ' active=' + hasActive + ' display=' + (hasImportant||'CSS'));
+    if (!hasActive) {
       debugEl.classList.add('active');
-      console.warn('  -> forced hidden=false');
+      console.warn('  -> forced active');
     }
   }
   } catch(e) {
@@ -2141,8 +2135,7 @@ async function viewLead(id) {
   } else {
     editBtnArea.innerHTML = '';
   }
-  document.querySelectorAll('.section').forEach(function(s) { s.style.cssText = 'display:none!important;'; s.classList.remove('active'); });
-  document.getElementById('section-lead-detail').style.cssText = 'display:block!important;';
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById('section-lead-detail').classList.add('active');
   document.getElementById('detail-lead-name').textContent = l.name;
   // Inline status editor
