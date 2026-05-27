@@ -100,9 +100,7 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
 .progress-bar-fill.danger { background: #ef4444; }
 
 /* Section toggles */
-.section[hidden] { display: none !important; }
-.section { display: block; }
-.section.active { display: block; }
+/* Section visibility controlled by JavaScript inline styles only */
 .page { display: none; }
 .page.active { display: block; }
 
@@ -1676,6 +1674,15 @@ window.addEventListener('unhandledrejection', function(e) {
 // State
 // ═══════════════════════════════════════════════════════════════════════════
 const state = { user: null, currentLeadId: null, leads: [], users: [], tutors: [], leadsPage: 1, leadsTotal: 0 };
+
+// Init: hide all sections except dashboard (use inline style directly)
+(function() {
+  document.querySelectorAll('.section').forEach(function(s) {
+    if (!s.classList.contains('active')) {
+      s.style.cssText = 'display:none!important;';
+    }
+  });
+})();
 let modalInstances = {};
 let _aiAvailable = false;
 let _aiReports = [];
@@ -1807,13 +1814,13 @@ function switchPage(page) {
   console.log('switchPage:', page);
   closeSidebar();
   document.querySelectorAll('.section').forEach(function(s) {
-    s.hidden = true;
+    s.style.cssText = 'display:none!important;';
     s.classList.remove('active');
   });
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   const target = document.getElementById('section-' + page);
   if (target) {
-    target.hidden = false;
+    target.style.cssText = 'display:block!important;';
     target.classList.add('active');
   }
   // Show sub-sections for the same page
@@ -1868,9 +1875,9 @@ function switchPage(page) {
   }
 }
 function backToLeads() {
-  document.getElementById('section-lead-detail').hidden = true;
+  document.getElementById('section-lead-detail').style.cssText = 'display:none!important;';
   document.getElementById('section-lead-detail').classList.remove('active');
-  document.getElementById('section-leads').hidden = false;
+  document.getElementById('section-leads').style.cssText = 'display:block!important;';
   document.getElementById('section-leads').classList.add('active');
   loadLeads();
 }
@@ -2129,8 +2136,8 @@ async function viewLead(id) {
   } else {
     editBtnArea.innerHTML = '';
   }
-  document.querySelectorAll('.section').forEach(function(s) { s.hidden = true; s.classList.remove('active'); });
-  document.getElementById('section-lead-detail').hidden = false;
+  document.querySelectorAll('.section').forEach(function(s) { s.style.cssText = 'display:none!important;'; s.classList.remove('active'); });
+  document.getElementById('section-lead-detail').style.cssText = 'display:block!important;';
   document.getElementById('section-lead-detail').classList.add('active');
   document.getElementById('detail-lead-name').textContent = l.name;
   // Inline status editor
