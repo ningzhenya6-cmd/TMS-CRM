@@ -405,6 +405,7 @@ body { background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, "Seg
               <option value="学管护航">学管护航</option>
             </select>
             <span id="leads-count" style="font-size:.78rem;color:#9ca3af;margin-left:auto;"></span>
+            <button class="btn btn-outline-primary btn-sm ms-2" onclick="exportExcel()" title="导出Excel"><i class="bi bi-download"></i> 导出</button>
           </div>
           <div id="batch-bar" class="d-none px-3 py-2" style="background:#f0fdf4;border-bottom:1px solid #d1fae5;display:flex;align-items:center;gap:8px;">
             <span style="font-size:.82rem;color:#065f46;"><span id="batch-count">0</span> 条已选</span>
@@ -1951,6 +1952,16 @@ async function loadLeadsPage(page) {
   nextBtn.style.display = state.leadsPage < totalPages ? 'inline-block' : 'none';
 }
 function debounceSearch() { clearTimeout(window._searchTimer); window._searchTimer = setTimeout(loadLeads, 300); }
+function exportExcel() {
+  // Download Excel export from API
+  const a = document.createElement('a');
+  a.href = '/api/sm/export-excel';
+  a.download = 'tms_线索导出_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('正在导出Excel...');
+}
 
 // Batch operations
 function getSelectedIds() {

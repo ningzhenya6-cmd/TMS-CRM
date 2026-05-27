@@ -997,6 +997,7 @@ def parse_path(path):
     if len(parts) == 1:
         if parts[0] == 'backup': return ('backup', None, 'export')
         if parts[0] == 'backup-list': return ('backup', None, 'list')
+        if parts[0] == 'export-excel': return ('export', None, 'excel')
     if len(parts) == 2:
         if parts[0] == 'leads' and parts[1] == 'batch': return ('leads', None, 'batch')
         if parts[0] == 'leads' and parts[1] == 'import': return ('leads', None, 'import_leads')
@@ -1199,12 +1200,12 @@ class TMSHandler(BaseHTTPRequestHandler):
         if not user:
             return json_resp(self, {"error": "Unauthorized"}, 401)
 
-        # Auto-check reminders every 5 minutes
+        # Auto-check reminders every 5 minutes (silent, no response)
         now_ts = time.time()
         if now_ts - TMSHandler._last_reminder_check > 300:
             TMSHandler._last_reminder_check = now_ts
             try:
-                self._handle_check_reminders(user)
+                self._check_reminders_silent(user)
             except:
                 pass
 
@@ -1285,6 +1286,7 @@ class TMSHandler(BaseHTTPRequestHandler):
             'assignment@rules': lambda: self._handle_assignment_rules(user),
             'backup@export': lambda: self._handle_backup_export(user),
             'backup@list': lambda: self._handle_backup_list(user),
+            'export@excel': lambda: self._handle_export_excel(user),
             'followup@templates': lambda: self._handle_list_followup_templates(user),
             'followup@overdue': lambda: self._handle_followup_overdue(user, params),
             'followup@stats': lambda: self._handle_followup_stats(user, params),
@@ -4416,9 +4418,132 @@ class TMSHandler(BaseHTTPRequestHandler):
         db.close()
         return json_resp(self, {"status": "checked", "reminders_created": created})
 
+    def _check_reminders_silent(self, user):
+        """Silent version - creates notifications without sending a response."""
+        db = get_db()
+        today = datetime.now().strftime('%Y-%m-%d')
+        rows = db.execute(
+            "SELECT a.id, a.lead_id, a.next_action, a.next_action_date, "
+            "l.name as lead_name, l.assignee_id "
+            "FROM activities a JOIN leads l ON a.lead_id = l.id "
+            "WHERE a.next_action_date IS NOT NULL AND a.next_action_date != '' "
+            "AND a.next_action_date >= ? AND a.next_action_date <= ? "
+            "AND l.assignee_id IS NOT NULL",
+            (today, (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d'))
+        ).fetchall()
+        for r in rows:
+            assignee_id = r['assignee_id']
+            if not assignee_id: continue
+            dup = db.execute(
+                "SELECT id FROM notifications WHERE user_id=? AND related_id=? AND type='followup_reminder' AND created_at >= ?",
+                (assignee_id, r['lead_id'], today)
+            ).fetchone()
+            if dup: continue
+            self._create_notification_simple(db, r['lead_id'], 'followup_reminder',
+                f'跟进提醒: {r["lead_name"]}',
+                f'计划跟进: {r["next_action"]} (截止 {r["next_action_date"]})',
+                'lead', assignee_id)
+        db.commit()
+        db.close()
+
     def log_message(self, format, *args):
         if '/api/' in str(args[0]):
             print(f"[TMS] {args[0]} - {args[1]} {args[2]}")
+
+    # ═══════════════════════ EXCEL EXPORT ═══════════════════════════════════
+
+    def _handle_export_excel(self, user):
+        """Export all leads as a downloadable Excel file."""
+        if user['role'] not in ('admin', 'supervisor'):
+            return json_resp(self, {"error": "无权限"}, 403)
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            return json_resp(self, {"error": "openpyxl未安装，请先 pip3 install openpyxl"}, 500)
+
+        db = get_db()
+        rows = db.execute("""
+            SELECT l.*, u.name as assignee_name, ac.name as academic_name
+            FROM leads l
+            LEFT JOIN users u ON l.assignee_id = u.id
+            LEFT JOIN users ac ON l.academic_manager_id = ac.id
+            WHERE l.merge_target_id IS NULL
+            ORDER BY l.created_at DESC
+        """).fetchall()
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "线索总表"
+
+        # Headers matching original Excel format
+        headers = ['序号', '姓名', '手机', '微信', '阶段', '国家', '科目',
+                   '来源平台', '来源账号', '客户类型', '客户评级', '辅导需求',
+                   '跟进顾问', '教务/学管', '线索状态', '备注', '创建时间']
+        header_font = Font(bold=True, color='FFFFFF', size=11)
+        header_fill = PatternFill(start_color='4f46e5', end_color='4f46e5', fill_type='solid')
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin'))
+
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+
+        # Data rows
+        lt_map = {'parent': '家长', 'student': '学生', 'agent': '留学机构'}
+        for i, r in enumerate(rows, 1):
+            tags = ''
+            try: tags = ', '.join(json.loads(r['tags'] or '[]'))
+            except: pass
+            ws.cell(row=i+1, column=1, value=i).border = thin_border
+            ws.cell(row=i+1, column=2, value=r['name']).border = thin_border
+            ws.cell(row=i+1, column=3, value=r['phone']).border = thin_border
+            ws.cell(row=i+1, column=4, value=r['wechat']).border = thin_border
+            ws.cell(row=i+1, column=5, value=r['grade']).border = thin_border
+            ws.cell(row=i+1, column=6, value=r['country']).border = thin_border
+            ws.cell(row=i+1, column=7, value=r['subject']).border = thin_border
+            ws.cell(row=i+1, column=8, value=r['source']).border = thin_border
+            ws.cell(row=i+1, column=9, value=r['account_name']).border = thin_border
+            ws.cell(row=i+1, column=10, value=lt_map.get(r['lead_type'], r['lead_type'])).border = thin_border
+            ws.cell(row=i+1, column=11, value=r['rating']).border = thin_border
+            ws.cell(row=i+1, column=12, value=tags).border = thin_border
+            ws.cell(row=i+1, column=13, value=r['assignee_name']).border = thin_border
+            ws.cell(row=i+1, column=14, value=r['academic_name']).border = thin_border
+            status_map = {'pending':'待分配','assigned':'已分配','following':'跟进中','trial':'试听中','enrolled':'已签约','closed':'已关闭','lost':'已流失'}
+            ws.cell(row=i+1, column=15, value=status_map.get(r['status'], r['status'])).border = thin_border
+            ws.cell(row=i+1, column=16, value=r['notes']).border = thin_border
+            ws.cell(row=i+1, column=17, value=r['created_at']).border = thin_border
+
+        # Column widths
+        widths = [6, 14, 16, 20, 10, 8, 14, 10, 26, 10, 8, 30, 10, 10, 10, 50, 16]
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+        db.close()
+
+        # Write to response
+        import tempfile
+        tmp_path = os.path.join(tempfile.gettempdir(), f'tms_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx')
+        wb.save(tmp_path)
+        db.close()
+
+        with open(tmp_path, 'rb') as f:
+            body = f.read()
+        try: os.remove(tmp_path)
+        except: pass
+
+        filename = f'tms_leads_{datetime.now().strftime("%Y%m%d")}.xlsx'
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+        self.send_header('Content-Length', str(len(body)))
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
 
     # ═══════════════════════ ACADEMIC MANAGEMENT ════════════════════════════
 
