@@ -21,7 +21,7 @@ except Exception as e:
     _AI_AVAILABLE = False
     print(f"[TMS] AI report module not loaded: {e}")
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # ─── Database ───────────────────────────────────────────────────────────────
 
@@ -314,6 +314,16 @@ def _run_migrations(db, old_version):
         # Add schedule_type to schedules (differentiates trial vs regular vs makeup)
         try: db.execute("ALTER TABLE schedules ADD COLUMN schedule_type TEXT DEFAULT 'regular'")
         except: pass
+    if old_version < 7:
+        # v7: 标签体系字段
+        for col in ('lead_type', 'rating', 'tags', 'source_account'):
+            try: db.execute(f"ALTER TABLE leads ADD COLUMN {col} TEXT DEFAULT ''")
+            except: pass
+        # Migrate existing grade to be properly stored (no-op, just ensure column exists)
+        try: db.execute("ALTER TABLE leads ADD COLUMN grade_standard TEXT DEFAULT ''")
+        except: pass
+
+
 
 
 def init_db():
@@ -2206,14 +2216,17 @@ class TMSHandler(BaseHTTPRequestHandler):
 
         db.execute(
             "INSERT INTO leads (id,name,phone,wechat,country,grade,subject,source,status,created_by_id,notes,created_at,updated_at,"
-            "utm_source,utm_campaign,utm_medium,campaign,ad_source,landing_page) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "utm_source,utm_campaign,utm_medium,campaign,ad_source,landing_page,"
+            "lead_type,rating,tags,source_account) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (lead_id, name, phone, wechat, data.get('country', '').strip(), data.get('grade', '').strip(),
              data.get('subject', '').strip(), data.get('source', '').strip(), 'pending', user['id'],
              data.get('notes', '').strip(), now, now,
              data.get('utm_source', '').strip(), data.get('utm_campaign', '').strip(),
              data.get('utm_medium', '').strip(), data.get('campaign', '').strip(),
-             data.get('ad_source', '').strip(), data.get('landing_page', '').strip())
+             data.get('ad_source', '').strip(), data.get('landing_page', '').strip(),
+             data.get('lead_type', '').strip(), data.get('rating', '').strip(),
+             data.get('tags', '[]').strip(), data.get('source_account', '').strip())
         )
         # Auto-assign if strategy is configured
         assignee_id = self._auto_assign_lead(db, lead_id, data)
@@ -2244,7 +2257,7 @@ class TMSHandler(BaseHTTPRequestHandler):
             db.close()
             return json_resp(self, {"error": "无权限修改此线索"}, 403)
         updates = {}
-        for field in ('name', 'phone', 'wechat', 'country', 'grade', 'subject', 'source', 'notes', 'status', 'classin_account', 'referral_source_id'):
+        for field in ('name', 'phone', 'wechat', 'country', 'grade', 'subject', 'source', 'notes', 'status', 'classin_account', 'referral_source_id', 'lead_type', 'rating', 'tags', 'source_account'):
             if field in data:
                 updates[field] = data[field].strip() if isinstance(data[field], str) else data[field]
         if not updates:
