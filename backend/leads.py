@@ -14,6 +14,8 @@ def list_leads(handler, token_payload, qs, body):
     source = qs.get("source", [None])[0]
     search = qs.get("search", [None])[0]
     assignee_id = qs.get("assignee_id", [None])[0]
+    date_from = qs.get("date_from", [None])[0]
+    date_to = qs.get("date_to", [None])[0]
 
     role = token_payload["role"]
     user_id = token_payload["sub"]
@@ -39,6 +41,12 @@ def list_leads(handler, token_payload, qs, body):
         like = f"%{search}%"
         where.append("(l.name LIKE ? OR l.phone LIKE ? OR l.wechat LIKE ?)")
         params.extend([like, like, like])
+    if date_from:
+        where.append("date(l.created_at) >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("date(l.created_at) <= ?")
+        params.append(date_to)
 
     where_sql = " AND ".join(where)
 
@@ -71,6 +79,8 @@ def export_leads(handler, token_payload, qs, body):
     status = qs.get("status", [None])[0]
     source = qs.get("source", [None])[0]
     search = qs.get("search", [None])[0]
+    date_from = qs.get("date_from", [None])[0]
+    date_to = qs.get("date_to", [None])[0]
 
     role = token_payload["role"]
     user_id = token_payload["sub"]
@@ -91,6 +101,12 @@ def export_leads(handler, token_payload, qs, body):
         like = f"%{search}%"
         where.append("(l.name LIKE ? OR l.phone LIKE ? OR l.wechat LIKE ?)")
         params.extend([like, like, like])
+    if date_from:
+        where.append("date(l.created_at) >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("date(l.created_at) <= ?")
+        params.append(date_to)
 
     rows = query(
         f"""SELECT l.id, l.name, l.phone, l.wechat, l.source, l.country, l.grade,

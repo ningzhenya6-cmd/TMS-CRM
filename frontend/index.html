@@ -743,6 +743,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <option value="all">全部来源</option>
         <option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option>
       </select>
+      <input type="date" v-model="filters.dateFrom" @change="onDateChange"
+             class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-36"
+             :max="filters.dateTo || undefined" title="开始日期">
+      <input type="date" v-model="filters.dateTo" @change="onDateChange"
+             class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-36"
+             :min="filters.dateFrom || undefined" title="结束日期">
       <span class="text-xs text-gray-400 ml-auto">共 {{ total }} 条</span>
       <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 ml-2" @click="downloadCSV">
         <i class="bi bi-download"></i> 导出CSV
@@ -3087,6 +3093,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=13"></script>
+<script src="js/app.js?v=14"></script>
 </body>
 </html>
