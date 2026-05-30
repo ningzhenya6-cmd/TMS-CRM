@@ -1,5 +1,5 @@
 """跟进记录 API"""
-from router import get, post
+from router import get, post, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
 from statemachine import transition_lead
@@ -63,3 +63,19 @@ def create_followup(handler, token_payload, qs, body):
         (fid,),
     )
     ok_response(handler, followup, 201)
+
+
+@delete("/api/followups/{followup_id}")
+def delete_followup(handler, token_payload, qs, body, followup_id=None):
+    if not can(token_payload["role"], "lead:edit"):
+        error_response(handler, "无权操作", 403)
+        return
+    fid = int(followup_id)
+    f = query_one("SELECT id FROM followups WHERE id=?", (fid,))
+    if not f:
+        error_response(handler, "跟进记录不存在", 404)
+        return
+    execute("DELETE FROM followups WHERE id=?", (fid,))
+    add_oplog(token_payload["sub"], token_payload.get("name", ""),
+              "delete", "followup", fid, "删除跟进记录")
+    ok_response(handler, {"message": "已删除"})

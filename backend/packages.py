@@ -122,3 +122,19 @@ def use_package_hours(handler, token_payload, qs, body, package_id=None):
               f"消耗课时: {hours}h (剩余: {remaining - hours}h)")
     updated = query_one("SELECT * FROM packages WHERE id=?", (pid,))
     ok_response(handler, updated)
+
+
+@delete("/api/packages/{package_id}")
+def delete_package(handler, token_payload, qs, body, package_id=None):
+    if not can(token_payload["role"], "package:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    pid = int(package_id)
+    pkg = query_one("SELECT id, name FROM packages WHERE id=?", (pid,))
+    if not pkg:
+        error_response(handler, "课时包不存在", 404)
+        return
+    execute("DELETE FROM packages WHERE id=?", (pid,))
+    add_oplog(token_payload["sub"], token_payload.get("name", ""),
+              "delete", "package", pid, f"删除课时包: {pkg['name']}")
+    ok_response(handler, {"message": "已删除"})

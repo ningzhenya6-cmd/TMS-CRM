@@ -6,7 +6,7 @@
   - 每笔操作写审计日志
   - 退款不超过已收金额
 """
-from router import get, post
+from router import get, post, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid, get_conn
 from permissions import can
@@ -154,3 +154,45 @@ def create_refund(handler, token_payload, qs, body, contract_id=None):
         (cid,),
     )
     ok_response(handler, contract)
+
+
+@delete("/api/contracts/{contract_id}/payments/{payment_id}")
+def delete_payment(handler, token_payload, qs, body, contract_id=None, payment_id=None):
+    """删除一条付款流水，原子回滚合同的 paid_amount"""
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    cid = int(contract_id)
+    pid = int(payment_id)
+
+    p = query_one("SELECT * FROM payment_records WHERE id=? AND contract_id=?", (pid, cid))
+    if not p:
+        error_response(handler, "付款记录不存在", 404)
+        return
+
+    amount = p["amount"]
+    uid = token_payload["sub"]
+    uname = token_payload.get("name", "")
+
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
+
+        if amount > 0:
+            # 原先的收款 → 扣减已收金额
+            execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) - ?, 2) WHERE id=?", (amount, cid))
+        else:
+            # 原先的退款 → 加回已收金额
+            execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) + ?, 2) WHERE id=?", (abs(amount), cid))
+
+        # 删除流水
+        execute("DELETE FROM payment_records WHERE id=?", (pid,))
+
+        conn.commit()
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        error_response(handler, f"删除失败：{e}", 500)
+        return
+
+    add_oplog(uid, uname, "delete", "payment", pid, f"删除付款流水 ¥{abs(amount):.2f}")
+    ok_response(handler, {"message": "已删除"})

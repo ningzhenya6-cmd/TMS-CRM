@@ -226,6 +226,7 @@ app.component('include-leads', {
       createForm: { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' },
       sourceOptions: ['抖音', '小红书', '视频号', '转介绍', '线下活动', '线上', '其他'],
       searchTimer: null,
+      deleteConfirm: { show: false, title: '', message: '', type: '', id: null, loading: false },
     };
   },
   computed: {
@@ -302,6 +303,28 @@ app.component('include-leads', {
       toast('已回公海', 'success');
       this.selectedIds = []; this.load();
     },
+    confirmDeleteLead(l) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除线索',
+        message: `确定删除线索「${l.name}」？将同时删除关联的合同、课时包、付款记录、排课、跟进等所有数据，此操作不可恢复！`,
+        type: 'lead', id: l.id,
+      };
+    },
+    async executeDelete() {
+      const dc = this.deleteConfirm;
+      if (!dc.type || !dc.id) return;
+      dc.loading = true;
+      let res;
+      if (dc.type === 'lead') {
+        res = await API.del('/leads/' + dc.id);
+      }
+      dc.loading = false;
+      dc.show = false;
+      if (res && res.error) { toast(res.error, 'error'); return; }
+      toast('已删除', 'success');
+      this.load();
+    },
   },
   created() { this.load(); },
 });
@@ -332,6 +355,8 @@ app.component('include-lead-detail', {
       consultingGenPollStart: 0,
       consultingGenReportId: null,
       consultingReport: null,
+      // 删除确认
+      deleteConfirm: { show: false, title: '', message: '', type: '', id: null, loading: false },
     };
   },
   computed: {
@@ -346,6 +371,8 @@ app.component('include-lead-detail', {
       const diff = Math.floor((today - next) / 86400000);
       return diff > 0 ? diff : 0;
     },
+    canDelete() { return this.user && ['admin', 'supervisor'].includes(this.user.role); },
+    canManageContract() { return this.user && ['coordinator', 'academic', 'admin', 'supervisor'].includes(this.user.role); },
   },
   methods: {
     async load() {
@@ -367,6 +394,59 @@ app.component('include-lead-detail', {
       if (res.error) { toast(res.error, 'error'); return; }
       toast('跟进记录已保存', 'success');
       this.followContent = ''; this.followupType = ''; this.nextAction = ''; this.nextDate = '';
+      this.load();
+    },
+    // ── 删除操作 ──
+    confirmDeleteContract(c) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除合同',
+        message: `确定删除合同「${c.contract_no || '—'}」？将同时删除关联的课时包和付款记录。`,
+        type: 'contract', id: c.id,
+      };
+    },
+    confirmDeletePackage(p) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除课时包',
+        message: `确定删除课时包「${p.name || '—'}」？`,
+        type: 'package', id: p.id,
+      };
+    },
+    confirmDeletePayment(cId, p) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除付款记录',
+        message: `确定删除 ¥${Math.abs(p.amount || 0).toFixed(2)} 的付款记录？合同已收金额将同步调整。`,
+        type: 'payment', id: p.id, contractId: cId,
+      };
+    },
+    confirmDeleteFollowup(f) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除跟进记录',
+        message: '确定删除此跟进记录？',
+        type: 'followup', id: f.id,
+      };
+    },
+    async executeDelete() {
+      const dc = this.deleteConfirm;
+      if (!dc.type || !dc.id) return;
+      dc.loading = true;
+      let res;
+      if (dc.type === 'contract') {
+        res = await API.del('/contracts/' + dc.id);
+      } else if (dc.type === 'package') {
+        res = await API.del('/packages/' + dc.id);
+      } else if (dc.type === 'payment') {
+        res = await API.del('/contracts/' + dc.contractId + '/payments/' + dc.id);
+      } else if (dc.type === 'followup') {
+        res = await API.del('/followups/' + dc.id);
+      }
+      dc.loading = false;
+      dc.show = false;
+      if (res && res.error) { toast(res.error, 'error'); return; }
+      toast('已删除', 'success');
       this.load();
     },
     // 标记流失
@@ -1360,6 +1440,8 @@ app.component('include-packages', {
       paymentForm: { amount: '', method: '', note: '' },
       refundForm: { amount: '', reason: '' },
       paymentContractId: null,
+      // 删除确认
+      deleteConfirm: { show: false, title: '', message: '', type: '', id: null, contractId: null, loading: false },
     };
   },
   computed: {
@@ -1470,6 +1552,49 @@ app.component('include-packages', {
       this.showRefundModal = false;
       await this.load();
       await this.loadPayments(this.paymentContractId);
+    },
+    // ── 删除操作 ──
+    confirmDeleteContract(c) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除合同',
+        message: `确定删除「${c.lead_name || ''}」的合同？将同时删除关联的课时包和付款记录。`,
+        type: 'contract', id: c.id,
+      };
+    },
+    confirmDeletePackage(p) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除课时包',
+        message: `确定删除课时包「${p.name || '—'}」？`,
+        type: 'package', id: p.id,
+      };
+    },
+    confirmDeletePayment(cId, p) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除付款记录',
+        message: `确定删除 ¥${Math.abs(p.amount || 0).toFixed(2)} 的付款记录？合同已收金额将同步调整。`,
+        type: 'payment', id: p.id, contractId: cId,
+      };
+    },
+    async executeDelete() {
+      const dc = this.deleteConfirm;
+      if (!dc.type || !dc.id) return;
+      dc.loading = true;
+      let res;
+      if (dc.type === 'contract') {
+        res = await API.del('/contracts/' + dc.id);
+      } else if (dc.type === 'package') {
+        res = await API.del('/packages/' + dc.id);
+      } else if (dc.type === 'payment') {
+        res = await API.del('/contracts/' + dc.contractId + '/payments/' + dc.id);
+      }
+      dc.loading = false;
+      dc.show = false;
+      if (res && res.error) { toast(res.error, 'error'); return; }
+      toast('已删除', 'success');
+      this.load();
     },
   },
   created() { this.load(); },

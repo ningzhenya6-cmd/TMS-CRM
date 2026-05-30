@@ -1,7 +1,7 @@
 """线索 API — CRUD + 分页 + 搜索 + 筛选 + 批量操作"""
 from router import get, post, put, delete
 from utils import json_response, error_response, parse_body, ok_response, add_oplog, csv_response
-from db import query, query_one, execute, execute_lastrowid
+from db import query, query_one, execute, execute_lastrowid, get_conn
 from statemachine import transition_lead, transition_lead_safe, InvalidTransition
 from permissions import can, scope_where
 
@@ -314,11 +314,36 @@ def delete_lead(handler, token_payload, qs, body, lead_id=None):
         error_response(handler, "无权删除", 403)
         return
     lead_id = int(lead_id)
-    lead = query_one("SELECT name FROM leads WHERE id=?", (lead_id,))
+    lead = query_one("SELECT id, name FROM leads WHERE id=?", (lead_id,))
     if not lead:
         error_response(handler, "线索不存在", 404)
         return
-    execute("DELETE FROM leads WHERE id=?", (lead_id,))
+
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
+        # 先删各依赖子表（无 ON DELETE CASCADE 的表）
+        execute("DELETE FROM schedules WHERE lead_id=?", (lead_id,))
+        execute("DELETE FROM exam_results WHERE lead_id=?", (lead_id,))
+        execute("DELETE FROM admission_results WHERE lead_id=?", (lead_id,))
+        execute("DELETE FROM consulting_reports WHERE lead_id=?", (lead_id,))
+        execute("DELETE FROM lesson_feedback WHERE lead_id=?", (lead_id,))
+        # 有 CASCADE 的表（followups, contracts）也会自动删，但显式删以防外键未启用
+        execute("DELETE FROM followups WHERE lead_id=?", (lead_id,))
+        # 删合同前要先删 payment_records 和 packages（无 CASCADE）
+        for r in query("SELECT id FROM contracts WHERE lead_id=?", (lead_id,)):
+            cid = r["id"]
+            execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
+            execute("DELETE FROM packages WHERE contract_id=?", (cid,))
+        execute("DELETE FROM contracts WHERE lead_id=?", (lead_id,))
+        # 最后删线索
+        execute("DELETE FROM leads WHERE id=?", (lead_id,))
+        conn.commit()
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        error_response(handler, f"删除失败：{e}", 500)
+        return
+
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
               "delete", "lead", lead_id, f"删除线索: {lead['name']}")
     ok_response(handler, {"message": "已删除"})

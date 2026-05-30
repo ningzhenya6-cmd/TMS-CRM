@@ -1,7 +1,7 @@
 """合同 API — CRUD"""
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
-from db import query, query_one, execute, execute_lastrowid
+from db import query, query_one, execute, execute_lastrowid, get_conn
 from statemachine import transition_lead
 from permissions import can
 
@@ -148,10 +148,25 @@ def delete_contract(handler, token_payload, qs, body, contract_id=None):
         error_response(handler, "无权操作", 403)
         return
     cid = int(contract_id)
-    c = query_one("SELECT id FROM contracts WHERE id=?", (cid,))
+    c = query_one("SELECT id, contract_no FROM contracts WHERE id=?", (cid,))
     if not c:
         error_response(handler, "合同不存在", 404)
         return
-    execute("DELETE FROM contracts WHERE id=?", (cid,))
-    add_oplog(token_payload["sub"], token_payload.get("name", ""), "delete", "contract", cid, "删除合同")
+
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
+        # 先删付款流水（无 ON DELETE CASCADE）
+        execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
+        # 再删课时包（有 CASCADE 但显式删除更安全）
+        execute("DELETE FROM packages WHERE contract_id=?", (cid,))
+        # 最后删合同
+        execute("DELETE FROM contracts WHERE id=?", (cid,))
+        conn.commit()
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        error_response(handler, f"删除失败：{e}", 500)
+        return
+
+    add_oplog(token_payload["sub"], token_payload.get("name", ""), "delete", "contract", cid, f"删除合同: {c['contract_no']}")
     ok_response(handler, {"message": "已删除"})
