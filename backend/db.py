@@ -94,6 +94,8 @@ def init_db():
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_leads_assignee ON leads(assignee_id);
 
+    CREATE INDEX IF NOT EXISTS idx_leads_coordinator ON leads(coordinator_id);
+
     -- 跟进记录表
     CREATE TABLE IF NOT EXISTS followups (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,6 +141,7 @@ def init_db():
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         lead_id         INTEGER NOT NULL REFERENCES leads(id),
         tutor_id        INTEGER REFERENCES users(id),
+        teacher_id      INTEGER REFERENCES teachers(id),
         subject         TEXT DEFAULT '',
         start_time      TEXT NOT NULL,
         end_time        TEXT NOT NULL,
@@ -149,6 +152,29 @@ def init_db():
         created_at      TEXT NOT NULL DEFAULT (datetime('now','localtime')),
         updated_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
+
+    -- 师资表（独立于用户账号，由教务维护）
+    CREATE TABLE IF NOT EXISTS teachers (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        name                TEXT NOT NULL,
+        academic_background TEXT DEFAULT '',
+        highest_degree      TEXT DEFAULT '',
+        subjects            TEXT DEFAULT '',
+        teaching_direction  TEXT DEFAULT '',
+        tools               TEXT DEFAULT '',
+        teaching_style      TEXT DEFAULT '',
+        level               TEXT DEFAULT '',
+        pay_rate            TEXT DEFAULT '',
+        payment_method      TEXT DEFAULT '',
+        notes               TEXT DEFAULT '',
+        phone               TEXT DEFAULT '',
+        active              INTEGER NOT NULL DEFAULT 1,
+        created_at          TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        updated_at          TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_teachers_name ON teachers(name);
+    CREATE INDEX IF NOT EXISTS idx_teachers_direction ON teachers(teaching_direction);
+    CREATE INDEX IF NOT EXISTS idx_teachers_level ON teachers(level);
 
     -- 操作日志表
     CREATE TABLE IF NOT EXISTS operation_logs (
@@ -164,4 +190,158 @@ def init_db():
     );
     CREATE INDEX IF NOT EXISTS idx_oplog_created ON operation_logs(created_at);
     """)
+
+    # 安全追加列（已有表不会丢失数据，重复执行忽略错误）
+    for ddl in [
+        "ALTER TABLE leads ADD COLUMN coordinator_id INTEGER REFERENCES users(id)",
+        "ALTER TABLE leads ADD COLUMN coordinator_at TEXT",
+        "ALTER TABLE leads ADD COLUMN lost_reason TEXT DEFAULT ''",
+        "ALTER TABLE contracts ADD COLUMN sign_type TEXT NOT NULL DEFAULT 'new'",
+        "ALTER TABLE schedules ADD COLUMN teacher_id INTEGER REFERENCES teachers(id)",
+        "ALTER TABLE schedules ADD COLUMN tutoring_form TEXT DEFAULT ''",
+        "ALTER TABLE schedules ADD COLUMN actual_duration_minutes INTEGER",
+        "ALTER TABLE followups ADD COLUMN followup_type TEXT DEFAULT ''",
+        "ALTER TABLE contracts ADD COLUMN paid_amount REAL DEFAULT 0",
+        "ALTER TABLE consulting_reports ADD COLUMN report_type TEXT NOT NULL DEFAULT 'risk'",
+        "ALTER TABLE consulting_reports ADD COLUMN program_url TEXT DEFAULT ''",
+        "ALTER TABLE consulting_reports ADD COLUMN program_courses TEXT DEFAULT ''",
+    ]:
+        try:
+            conn.execute(ddl)
+        except Exception:
+            pass
+
+    # 付款流水表（收款/退款记录）
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS payment_records (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            contract_id INTEGER NOT NULL REFERENCES contracts(id),
+            amount      REAL NOT NULL,
+            type        TEXT NOT NULL DEFAULT 'payment',
+            method      TEXT DEFAULT '',
+            note        TEXT DEFAULT '',
+            operator_id INTEGER NOT NULL REFERENCES users(id),
+            created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    # ── 课后反馈表 ──
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_feedback (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            schedule_id     INTEGER NOT NULL UNIQUE REFERENCES schedules(id),
+            lead_id         INTEGER NOT NULL REFERENCES leads(id),
+            classin_link    TEXT DEFAULT '',
+            content_covered TEXT DEFAULT '',
+            student_performance TEXT DEFAULT '',
+            difficulties    TEXT DEFAULT '',
+            homework_completion TEXT DEFAULT '',
+            teacher_notes   TEXT DEFAULT '',
+            next_focus      TEXT DEFAULT '',
+            ai_generated    INTEGER DEFAULT 0,
+            created_by      INTEGER NOT NULL REFERENCES users(id),
+            created_at      TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            updated_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    # ── 考试成绩表 ──
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS exam_results (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id     INTEGER NOT NULL REFERENCES leads(id),
+            exam_date   TEXT NOT NULL,
+            exam_type   TEXT NOT NULL,
+            subject     TEXT DEFAULT '',
+            score       REAL,
+            total_score REAL,
+            notes       TEXT DEFAULT '',
+            created_by  INTEGER NOT NULL REFERENCES users(id),
+            created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    # ── 录取结果表 ──
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS admission_results (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id          INTEGER NOT NULL REFERENCES leads(id),
+            target_school    TEXT DEFAULT '',
+            target_major     TEXT DEFAULT '',
+            application_date TEXT DEFAULT '',
+            admission_status TEXT DEFAULT 'pending',
+            admitted_school  TEXT DEFAULT '',
+            admitted_major   TEXT DEFAULT '',
+            final_score      TEXT DEFAULT '',
+            decision_date    TEXT DEFAULT '',
+            notes            TEXT DEFAULT '',
+            created_by       INTEGER NOT NULL REFERENCES users(id),
+            created_at       TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            updated_at       TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    # -- 学业风险分析报告 --
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS consulting_reports (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id         INTEGER NOT NULL REFERENCES leads(id),
+            target_country  TEXT NOT NULL DEFAULT '',
+            target_school   TEXT NOT NULL DEFAULT '',
+            target_major    TEXT NOT NULL DEFAULT '',
+            current_school  TEXT DEFAULT '',
+            current_grade   TEXT DEFAULT '',
+            gpa             TEXT DEFAULT '',
+            language_scores TEXT DEFAULT '',
+            prerequisite_courses TEXT DEFAULT '',
+            additional_info TEXT DEFAULT '',
+            report_json     TEXT DEFAULT '',
+            risk_level      TEXT DEFAULT 'medium',
+            summary         TEXT DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'draft',
+            progress        INTEGER DEFAULT 0,
+            error_message   TEXT DEFAULT '',
+            created_by      INTEGER NOT NULL REFERENCES users(id),
+            created_at      TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            updated_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    # -- 课程数据缓存表（行前准备规划用） --
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS curriculum_cache (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            school          TEXT NOT NULL,
+            major           TEXT NOT NULL,
+            courses_json    TEXT NOT NULL DEFAULT '',
+            source_url      TEXT DEFAULT '',
+            created_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+    conn.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_curriculum_cache_school_major
+        ON curriculum_cache(school, major)
+    """)
+
+    # 额外索引加速常见查询
+    for idx in [
+        "CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_leads_next_followup ON leads(next_followup_at)",
+        "CREATE INDEX IF NOT EXISTS idx_schedules_lead_id ON schedules(lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_schedules_teacher_id ON schedules(teacher_id)",
+        "CREATE INDEX IF NOT EXISTS idx_schedules_start_time ON schedules(start_time)",
+        "CREATE INDEX IF NOT EXISTS idx_contracts_lead_id ON contracts(lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_packages_contract_id ON packages(contract_id)",
+        "CREATE INDEX IF NOT EXISTS idx_payment_records_contract ON payment_records(contract_id)",
+        "CREATE INDEX IF NOT EXISTS idx_lesson_feedback_lead ON lesson_feedback(lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_lesson_feedback_schedule ON lesson_feedback(schedule_id)",
+        "CREATE INDEX IF NOT EXISTS idx_exam_results_lead ON exam_results(lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_admission_results_lead ON admission_results(lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_consulting_reports_lead ON consulting_reports(lead_id)",
+    ]:
+        try:
+            conn.execute(idx)
+        except Exception:
+            pass
+
     conn.commit()

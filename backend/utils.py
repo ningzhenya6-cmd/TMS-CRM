@@ -128,6 +128,37 @@ def add_oplog(user_id: int, username: str, action: str, target_type: str,
 
 # ── 权限检查 ──
 
+# ── CSV 导出 ──
+
+def csv_response(handler, rows, columns, filename="export.csv"):
+    """将 rows（dict 列表）导出为 CSV 响应
+
+    参数:
+        handler: BaseHTTPRequestHandler
+        rows: dict 列表
+        columns: [(字段名, 列标题), ...] 列表，控制列顺序和映射
+        filename: 下载文件名（仅用于 Content-Disposition 提示）
+    """
+    import csv
+    import io
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([col[1] for col in columns])  # 表头
+    for row in rows:
+        writer.writerow([str(row.get(col[0], "") or "") for col in columns])
+
+    body = output.getvalue().encode("utf-8-sig")  # BOM 让 Excel 正确识别中文
+    handler.send_response(200)
+    handler.send_header("Content-Type", "text/csv; charset=utf-8")
+    # 使用 ASCII 安全文件名；前端 downloadCSV 会覆盖实际下载名
+    safe_name = "export.csv"
+    handler.send_header("Content-Disposition", f'attachment; filename="{safe_name}"')
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
 def require_role(token_payload: dict, allowed_roles: list[str]) -> bool:
     """检查角色是否在允许列表中"""
     if not token_payload:

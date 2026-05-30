@@ -17,6 +17,11 @@ def login(handler, token_payload, qs, body):
         error_response(handler, "用户名或密码错误", 401)
         return
 
+    # 教师账号不支持登录系统
+    if user["role"] == "tutor":
+        error_response(handler, "教师账号暂不支持登录", 401)
+        return
+
     token = create_token(user["id"], user["role"], user["display_name"])
     ok_response(handler, {
         "token": token,

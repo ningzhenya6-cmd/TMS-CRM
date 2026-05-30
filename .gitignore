@@ -12,3 +12,6 @@ $TMPDIR/
 *.tar.gz
 *.pem
 TMS_PASSWORDS.md
+CLAUDE.md
+.codegraph/
+*.bak

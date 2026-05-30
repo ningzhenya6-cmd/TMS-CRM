@@ -2,6 +2,8 @@
 from router import get, post
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
+from statemachine import transition_lead
+from permissions import can
 
 
 @get("/api/followups/{lead_id}")
@@ -17,6 +19,9 @@ def list_followups(handler, token_payload, qs, body, lead_id=None):
 
 @post("/api/followups")
 def create_followup(handler, token_payload, qs, body):
+    if not can(token_payload["role"], "lead:edit"):
+        error_response(handler, "无权操作", 403)
+        return
     lead_id = body.get("lead_id")
     content = (body.get("content") or "").strip()
     if not lead_id or not content:
@@ -29,16 +34,24 @@ def create_followup(handler, token_payload, qs, body):
         error_response(handler, "线索不存在", 404)
         return
 
+    followup_type = body.get("followup_type", "")
+    if followup_type not in ("", "电话沟通", "微信沟通", "到访面谈", "试听反馈", "续费沟通", "其他"):
+        followup_type = ""
     fid = execute_lastrowid(
-        "INSERT INTO followups (lead_id, content, next_action, next_date, created_by) VALUES (?,?,?,?,?)",
-        (lead_id, content, body.get("next_action", ""), body.get("next_date", ""), token_payload["sub"]),
+        "INSERT INTO followups (lead_id, content, next_action, next_date, created_by, followup_type) VALUES (?,?,?,?,?,?)",
+        (lead_id, content, body.get("next_action", ""), body.get("next_date", ""), token_payload["sub"], followup_type),
     )
 
-    # 更新线索的跟进时间和状态
-    now_sql = "datetime('now','localtime')"
+    # ── 通过状态机推进线索状态 ──
+    if lead["status"] in ("pending", "assigned"):
+        try:
+            transition_lead(lead_id, "following")
+        except Exception:
+            pass  # 不阻塞跟进记录创建
+
+    # 更新跟进时间
     execute(
-        f"UPDATE leads SET status= CASE WHEN status='pending' OR status='assigned' THEN 'following' ELSE status END, "
-        f"last_followup_at={now_sql}, next_followup_at=? WHERE id=?",
+        "UPDATE leads SET last_followup_at=datetime('now','localtime'), next_followup_at=? WHERE id=?",
         (body.get("next_date", ""), lead_id),
     )
 

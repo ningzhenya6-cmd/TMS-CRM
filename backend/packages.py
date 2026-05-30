@@ -2,6 +2,7 @@
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
+from permissions import can
 
 
 @get("/api/packages")
@@ -42,6 +43,9 @@ def list_packages(handler, token_payload, qs, body):
 
 @post("/api/packages")
 def create_package(handler, token_payload, qs, body):
+    if not can(token_payload["role"], "package:manage"):
+        error_response(handler, "无权操作", 403)
+        return
     contract_id = body.get("contract_id")
     if not contract_id:
         error_response(handler, "缺少合同信息")
@@ -69,6 +73,9 @@ def create_package(handler, token_payload, qs, body):
 
 @put("/api/packages/{package_id}")
 def update_package(handler, token_payload, qs, body, package_id=None):
+    if not can(token_payload["role"], "package:manage"):
+        error_response(handler, "无权操作", 403)
+        return
     pid = int(package_id)
     existing = query_one("SELECT * FROM packages WHERE id=?", (pid,))
     if not existing:
@@ -94,6 +101,9 @@ def update_package(handler, token_payload, qs, body, package_id=None):
 @post("/api/packages/{package_id}/use")
 def use_package_hours(handler, token_payload, qs, body, package_id=None):
     """消耗课时"""
+    if not can(token_payload["role"], "package:manage"):
+        error_response(handler, "无权操作", 403)
+        return
     pid = int(package_id)
     pkg = query_one("SELECT * FROM packages WHERE id=?", (pid,))
     if not pkg:

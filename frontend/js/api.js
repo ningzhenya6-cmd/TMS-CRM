@@ -36,10 +36,26 @@ const API = (() => {
     }
   }
 
+  async function requestRaw(method, path) {
+    const url = BASE + path;
+    const headers = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    try {
+      const res = await fetch(url, { method, headers });
+      if (!res.ok) return null;
+      return await res.blob();
+    } catch (e) {
+      return null;
+    }
+  }
+
   return {
     get: (path) => request('GET', path),
     post: (path, body) => request('POST', path, body),
     put: (path, body) => request('PUT', path, body),
     del: (path, body) => request('DELETE', path, body),
+    getRaw: (path) => requestRaw('GET', path),
   };
 })();

@@ -151,6 +151,12 @@ def run_server(host="0.0.0.0", port=8766):
     import contracts  # noqa
     import packages  # noqa
     import finance  # noqa
+    import trials  # noqa
+    import students  # noqa
+    import teachers  # noqa
+    import payments  # noqa
+    import growth  # noqa
+    import consulting  # noqa
 
     server = HTTPServer((host, port), TMSHandler)
     print(f"[TMS] 🚀 服务启动: http://{host}:{port}")

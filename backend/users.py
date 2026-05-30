@@ -1,12 +1,13 @@
 """用户管理 API"""
 from router import get, post, put
-from utils import ok_response, error_response, hash_password, require_role
+from utils import ok_response, error_response, hash_password
 from db import query, query_one, execute
+from permissions import can
 
 
 @get("/api/users")
 def list_users(handler, token_payload, qs, body):
-    if not require_role(token_payload, ["admin", "supervisor"]):
+    if not can(token_payload["role"], "user:manage"):
         error_response(handler, "无权访问", 403)
         return
     users = query("SELECT id, username, display_name, role, phone, active, created_at FROM users ORDER BY id")
@@ -15,7 +16,7 @@ def list_users(handler, token_payload, qs, body):
 
 @post("/api/users")
 def create_user(handler, token_payload, qs, body):
-    if not require_role(token_payload, ["admin", "supervisor"]):
+    if not can(token_payload["role"], "user:manage"):
         error_response(handler, "无权操作", 403)
         return
     username = (body.get("username") or "").strip()
@@ -38,7 +39,7 @@ def create_user(handler, token_payload, qs, body):
 
 @put("/api/users/{user_id}")
 def update_user(handler, token_payload, qs, body, user_id=None):
-    if not require_role(token_payload, ["admin", "supervisor"]):
+    if not can(token_payload["role"], "user:manage"):
         error_response(handler, "无权操作", 403)
         return
     user_id = int(user_id)

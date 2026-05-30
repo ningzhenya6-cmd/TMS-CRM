@@ -2,10 +2,15 @@
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
+from statemachine import transition_lead
+from permissions import can
 
 
 @get("/api/contracts")
 def list_contracts(handler, token_payload, qs, body):
+    if not can(token_payload["role"], "contract:view"):
+        error_response(handler, "无权访问", 403)
+        return
     page = int(qs.get("page", [1])[0])
     page_size = int(qs.get("page_size", [20])[0])
     lead_id = qs.get("lead_id", [None])[0]
@@ -44,6 +49,9 @@ def list_contracts(handler, token_payload, qs, body):
 
 @get("/api/contracts/{contract_id}")
 def get_contract(handler, token_payload, qs, body, contract_id=None):
+    if not can(token_payload["role"], "contract:view"):
+        error_response(handler, "无权访问", 403)
+        return
     c = query_one(
         """SELECT c.*, l.name as lead_name, u.display_name as creator_name
            FROM contracts c LEFT JOIN leads l ON c.lead_id=l.id LEFT JOIN users u ON c.created_by=u.id
@@ -62,13 +70,28 @@ def get_contract(handler, token_payload, qs, body, contract_id=None):
 
 @post("/api/contracts")
 def create_contract(handler, token_payload, qs, body):
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
     lead_id = body.get("lead_id")
     if not lead_id:
         error_response(handler, "缺少学生信息")
         return
+
+    # 计算新签/续费
+    # 查该学生所有已有合同下课时包的总课时
+    prev_hours = query_one(
+        """SELECT COALESCE(SUM(p.total_hours),0) as h
+           FROM packages p
+           JOIN contracts c ON p.contract_id = c.id
+           WHERE c.lead_id=?""",
+        (int(lead_id),),
+    )["h"]
+    sign_type = "renewal" if prev_hours >= 10 else "new"
+
     cid = execute_lastrowid(
-        """INSERT INTO contracts (lead_id, contract_no, total_amount, status, signed_at, remark, created_by)
-           VALUES (?,?,?,?,?,?,?)""",
+        """INSERT INTO contracts (lead_id, contract_no, total_amount, status, signed_at, remark, created_by, sign_type)
+           VALUES (?,?,?,?,?,?,?,?)""",
         (
             int(lead_id),
             body.get("contract_no", ""),
@@ -77,15 +100,26 @@ def create_contract(handler, token_payload, qs, body):
             body.get("signed_at", ""),
             body.get("remark", ""),
             token_payload["sub"],
+            sign_type,
         ),
     )
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "create", "contract", cid, "创建合同")
+
+    # 通过状态机将线索推进为"已签约"
+    try:
+        transition_lead(int(lead_id), "enrolled")
+    except Exception:
+        pass  # 合同已创建，不阻塞
+
     c = query_one("SELECT * FROM contracts WHERE id=?", (cid,))
     ok_response(handler, c, 201)
 
 
 @put("/api/contracts/{contract_id}")
 def update_contract(handler, token_payload, qs, body, contract_id=None):
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
     cid = int(contract_id)
     existing = query_one("SELECT * FROM contracts WHERE id=?", (cid,))
     if not existing:
@@ -110,6 +144,9 @@ def update_contract(handler, token_payload, qs, body, contract_id=None):
 
 @delete("/api/contracts/{contract_id}")
 def delete_contract(handler, token_payload, qs, body, contract_id=None):
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
     cid = int(contract_id)
     c = query_one("SELECT id FROM contracts WHERE id=?", (cid,))
     if not c:
