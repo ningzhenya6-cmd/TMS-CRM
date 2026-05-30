@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TMS — 辅导管理系统</title>
+<!-- Tailwind CSS (Play CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<!-- Vue 3 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+/* ── 自定义样式 ── */
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", Roboto, sans-serif; }
+.sidebar { width: 220px; min-width: 220px; }
+.main-content { min-height: 100vh; max-height: 100vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.nav-item { cursor: pointer; transition: all .12s; }
+.nav-item:hover { background: rgba(255,255,255,.1); }
+.nav-item.active { background: rgba(255,255,255,.15); border-left: 3px solid #818cf8; }
+.status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .72rem; font-weight: 500; }
+.pagination-btn { min-width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: .82rem; cursor: pointer; transition: all .12s; }
+.pagination-btn:hover { background: #eef2ff; }
+.pagination-btn.active { background: #4f46e5; color: white; }
+.fade-enter-active, .fade-leave-active { transition: opacity .15s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+/* Toast */
+.toast-container { position: fixed; top: 16px; right: 16px; z-index: 99999; }
+.toast-msg { padding: 10px 18px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.1); font-size: .85rem; display: flex; align-items: center; gap: 8px; animation: slideIn .25s ease; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* Utility */
+.text-muted { color: #9ca3af; }
+</style>
+</head>
+<body class="bg-gray-50">
+
+<div id="app">
+  <!-- ═══ 登录页 ═══ -->
+  <div v-if="!user" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 to-indigo-800 px-4">
+    <div class="w-full max-w-md bg-white rounded-2xl p-8 shadow-2xl">
+      <div class="text-center mb-6">
+        <h2 class="text-xl font-bold text-gray-900">TMS 辅导管理系统</h2>
+        <p class="text-sm text-gray-500 mt-1">留学生课业辅导 — Tutoring Management</p>
+      </div>
+      <form @submit.prevent="handleLogin">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+          <input type="text" v-model="loginForm.username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm" placeholder="请输入用户名" required autofocus>
+        </div>
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+          <input type="password" v-model="loginForm.password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm" placeholder="请输入密码" required>
+        </div>
+        <div v-if="loginError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ loginError }}</div>
+        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition" :disabled="loading">
+          {{ loading ? '登录中...' : '登 录' }}
+        </button>
+      </form>
+      <p class="mt-4 text-center text-xs text-gray-400">演示: admin/admin123 · coor01/123456</p>
+    </div>
+  </div>
+
+  <!-- ═══ 主应用（已登录） ═══ -->
+  <div v-else class="flex h-screen overflow-hidden">
+    <!-- 侧边栏 -->
+    <aside class="sidebar bg-indigo-950 text-white flex flex-col">
+      <div class="px-5 py-4 border-b border-white/10">
+        <h5 class="font-bold text-sm">TMS 学管系统</h5>
+        <p class="text-[.65rem] text-indigo-300">Tutoring Management</p>
+      </div>
+      <nav class="flex-1 py-2 overflow-y-auto text-sm">
+        <div v-for="item in menuItems" :key="item.id">
+          <div v-if="item.divider" class="h-px bg-white/10 my-2 mx-4"></div>
+          <div v-else
+               class="nav-item flex items-center gap-3 px-5 py-2.5"
+               :class="{ active: currentView === item.view }"
+               @click="switchView(item.view)"
+               v-show="hasRole(item.roles)">
+            <i :class="item.icon" class="text-base w-5 text-center"></i>
+            <span>{{ item.label }}</span>
+          </div>
+        </div>
+      </nav>
+      <div class="px-5 py-3 border-t border-white/10 flex items-center gap-2 text-xs">
+        <i class="bi bi-person-circle text-lg"></i>
+        <div class="flex-1 min-w-0">
+          <div class="truncate font-medium">{{ user.display_name }}</div>
+          <span class="text-indigo-300">{{ roleLabel(user.role) }}</span>
+        </div>
+        <i class="bi bi-box-arrow-right opacity-50 cursor-pointer hover:opacity-100" @click="handleLogout" title="退出"></i>
+      </div>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="main-content flex-1 p-6">
+      <include-dashboard v-if="currentView === 'dashboard'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-dashboard>
+      <include-leads v-if="currentView === 'leads'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-leads>
+      <include-lead-detail v-if="currentView === 'lead-detail'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-lead-detail>
+      <include-quick-add v-if="currentView === 'quick-add'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-quick-add>
+      <include-followup-plan v-if="currentView === 'followup-plan'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-followup-plan>
+      <include-schedules v-if="currentView === 'schedules'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-schedules>
+      <include-trials v-if="currentView === 'trials'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-trials>
+      <include-teachers v-if="currentView === 'teachers'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-teachers>
+      <include-pool v-if="currentView === 'pool'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-pool>
+      <include-coordinator v-if="currentView === 'coordinator'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-coordinator>
+      <include-assignment v-if="currentView === 'assignment'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-assignment>
+      <include-packages v-if="currentView === 'packages'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-packages>
+      <include-students v-if="currentView === 'students'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-students>
+      <include-finance v-if="currentView === 'finance'"
+          :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+      </include-finance>
+    </main>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div class="toast-container" id="toast-container"></div>
+  <div v-if="loading" class="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-4 shadow-xl flex items-center gap-3">
+      <div class="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-sm text-gray-600">加载中...</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Component Templates ═══ -->
+
+<!-- Dashboard -->
+<script type="text/x-template" id="tpl-dashboard">
+<div>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">工作台</h3>
+      <p class="text-sm text-gray-500 mt-0.5">{{ roleLabel(user.role) }} · 今日概览</p>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div v-for="card in statCards" :key="card.label"
+         class="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:shadow-md transition"
+         @click="switchView(card.view)">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-xs text-gray-500 mb-0.5">{{ card.label }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ card.value ?? '-' }}</p>
+        </div>
+        <i :class="card.icon" class="text-xl text-gray-300"></i>
+      </div>
+      <p class="text-xs text-indigo-600 mt-2">{{ card.sub }}</p>
+    </div>
+  </div>
+  <div v-if="overdueCount > 0" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+    <i class="bi bi-exclamation-triangle-fill text-red-500 text-lg"></i>
+    <span class="text-sm text-red-800">
+      你有 <strong>{{ overdueCount }}</strong> 条逾期跟进未处理，
+      <a href="#" class="text-red-600 font-medium underline" @click.prevent="switchView('followup-plan')">立即查看 →</a>
+    </span>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <h6 class="text-sm font-semibold text-gray-800">最近线索</h6>
+      <a href="#" class="text-xs text-indigo-600" @click.prevent="switchView('leads')">查看全部</a>
+    </div>
+    <div v-if="recentLeads.length === 0" class="p-8 text-center text-sm text-gray-400">暂无数据</div>
+    <div v-else class="divide-y divide-gray-100">
+      <div v-for="l in recentLeads" :key="l.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer" @click="openLead(l.id)">
+        <div>
+          <span class="font-medium text-sm">{{ l.name }}</span>
+          <span class="text-xs text-gray-400 ml-2">{{ l.source }}</span>
+        </div>
+        <div v-html="statusBadge(l.status)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Leads List -->
+<script type="text/x-template" id="tpl-leads">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">资源管理</h3>
+      <p class="text-sm text-gray-500 mt-0.5">所有线索资源，统一管理</p>
+    </div>
+    <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreate">
+      <i class="bi bi-plus-lg"></i> 新增线索
+    </button>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 mb-4">
+    <div class="p-4 flex flex-wrap gap-3 items-center border-b border-gray-100">
+      <input type="text" v-model="search" @input="debounceSearch" placeholder="搜索姓名/手机/微信..."
+             class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-44">
+      <select v-model="filters.status" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+        <option value="all">全部状态</option>
+        <option value="pending">待分配</option>
+        <option value="assigned">已分配</option>
+        <option value="following">跟进中</option>
+        <option value="trial">试听中</option>
+        <option value="enrolled">已签约</option>
+        <option value="closed">已关闭</option>
+        <option value="lost">已流失</option>
+      </select>
+      <select v-model="filters.source" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+        <option value="all">全部来源</option>
+        <option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option>
+      </select>
+      <span class="text-xs text-gray-400 ml-auto">共 {{ total }} 条</span>
+    </div>
+    <div v-if="selectedIds.length > 0" class="px-4 py-2 bg-green-50 border-b border-green-100 flex items-center gap-3 text-sm">
+      <span class="text-green-700">{{ selectedIds.length }} 条已选</span>
+      <button class="px-2 py-1 bg-indigo-600 text-white rounded text-xs" @click="batchAssign">批量分配</button>
+      <button class="px-2 py-1 bg-yellow-600 text-white rounded text-xs" @click="batchPool">回公海</button>
+      <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 ml-auto" @click="selectedIds = []">取消</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-left">
+            <th class="px-4 py-2.5 w-8"><input type="checkbox" :checked="selectedIds.length === list.length && list.length > 0" @change="toggleAll($event)"></th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">姓名</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">微信/手机</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">来源</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">意向</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">状态</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">跟进人</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">创建时间</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="l in list" :key="l.id" class="hover:bg-gray-50 cursor-pointer" @click="openLead(l.id, $event)">
+            <td class="px-4 py-2.5" @click.stop><input type="checkbox" :value="l.id" v-model="selectedIds"></td>
+            <td class="px-4 py-2.5 font-medium">{{ l.name }}</td>
+            <td class="px-4 py-2.5 text-gray-500 text-xs">{{ l.wechat || l.phone || '-' }}</td>
+            <td class="px-4 py-2.5">{{ l.source || '-' }}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-600">{{ [l.country, l.grade].filter(Boolean).join(' ') || '-' }}</td>
+            <td class="px-4 py-2.5" v-html="statusBadge(l.status)"></td>
+            <td class="px-4 py-2.5 text-xs text-gray-500">{{ l.assignee_name || '-' }}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-400">{{ (l.created_at || '').slice(0,10) }}</td>
+          </tr>
+          <tr v-if="list.length === 0"><td colspan="8" class="px-4 py-10 text-center text-sm text-gray-400">暂无数据</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+      <span class="text-xs text-gray-500">第 {{ page }} / {{ totalPages }} 页</span>
+      <div class="flex gap-1">
+        <button class="pagination-btn" :class="{ 'opacity-30': page <= 1 }" :disabled="page <= 1" @click="goPage(page - 1)"><i class="bi bi-chevron-left text-xs"></i></button>
+        <button v-for="p in pageNumbers" :key="p" class="pagination-btn" :class="{ active: p === page, 'opacity-30': p === '...' }" @click="goPage(p)" v-text="p"></button>
+        <button class="pagination-btn" :class="{ 'opacity-30': page >= totalPages }" :disabled="page >= totalPages" @click="goPage(page + 1)"><i class="bi bi-chevron-right text-xs"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <div v-if="showCreate" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showCreate = false">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">新增线索</h5>
+      <div class="space-y-3">
+        <div><label class="block text-xs text-gray-600 mb-1">姓名 *</label><input type="text" v-model="createForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="学生姓名"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs text-gray-600 mb-1">手机</label><input type="text" v-model="createForm.phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="手机号"></div>
+          <div><label class="block text-xs text-gray-600 mb-1">微信</label><input type="text" v-model="createForm.wechat" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="微信号"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs text-gray-600 mb-1">来源</label><select v-model="createForm.source" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"><option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option></select></div>
+          <div><label class="block text-xs text-gray-600 mb-1">国家</label><input type="text" v-model="createForm.country" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 英国"></div>
+        </div>
+        <div><label class="block text-xs text-gray-600 mb-1">年级</label><input type="text" v-model="createForm.grade" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: A-Level"></div>
+        <div><label class="block text-xs text-gray-600 mb-1">备注</label><textarea v-model="createForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="其他信息"></textarea></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showCreate = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitCreate" :disabled="creating">{{ creating ? '创建中...' : '创建' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Modal -->
+  <div v-if="showAssign" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showAssign = false">
+    <div class="bg-white rounded-xl w-full max-w-xs p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">批量分配</h5>
+      <select v-model="assignTarget" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none mb-4">
+        <option value="">选择跟进人...</option>
+        <option v-for="u in users" :key="u.id" :value="u.id">{{ u.display_name }} ({{ roleLabel(u.role) }})</option>
+      </select>
+      <div class="flex justify-end gap-2">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showAssign = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitAssign">分配</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Lead Detail -->
+<script type="text/x-template" id="tpl-lead-detail">
+<div>
+  <button class="text-sm text-indigo-600 mb-4 hover:underline" @click="goBack"><i class="bi bi-arrow-left"></i> 返回列表</button>
+  <div v-if="!lead" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else>
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+      <div class="flex items-start justify-between mb-4">
+        <div><h3 class="text-lg font-bold text-gray-900">{{ lead.name }}</h3><p class="text-xs text-gray-500 mt-0.5">创建于 {{ lead.created_at }}</p></div>
+        <div v-html="statusBadge(lead.status)"></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div><span class="text-gray-500 text-xs">手机</span><p class="font-medium">{{ lead.phone || '-' }}</p></div>
+        <div><span class="text-gray-500 text-xs">微信</span><p class="font-medium">{{ lead.wechat || '-' }}</p></div>
+        <div><span class="text-gray-500 text-xs">来源</span><p class="font-medium">{{ lead.source || '-' }}</p></div>
+        <div><span class="text-gray-500 text-xs">意向国家</span><p class="font-medium">{{ lead.country || '-' }}</p></div>
+        <div><span class="text-gray-500 text-xs">年级</span><p class="font-medium">{{ lead.grade || '-' }}</p></div>
+        <div><span class="text-gray-500 text-xs">跟进人</span><p class="font-medium">{{ lead.assignee_name || '未分配' }}</p></div>
+        <div><span class="text-gray-500 text-xs">教务班主任</span><p class="font-medium">{{ lead.coordinator_name || '未分配' }}</p></div>
+        <div><span class="text-gray-500 text-xs">最近跟进</span><p class="font-medium">{{ lead.last_followup_at ? lead.last_followup_at.slice(0,10) : '-' }}</p></div>
+        <div><span class="text-gray-500 text-xs">下次跟进</span><p class="font-medium">{{ lead.next_followup_at ? lead.next_followup_at.slice(0,10) : '-' }}</p></div>
+      </div>
+      <div v-if="lead.remark" class="mt-4 pt-4 border-t border-gray-100 text-sm">
+        <span class="text-gray-500 text-xs">备注</span>
+        <p class="mt-1 text-gray-700 whitespace-pre-wrap">{{ lead.remark }}</p>
+      </div>
+    </div>
+
+    <!-- 签约学生：合同 + 课时包 + 排课信息 -->
+    <div v-if="lead.status === 'enrolled' && lead.contracts && lead.contracts.length > 0" class="space-y-4 mb-4">
+      <div v-for="c in lead.contracts" :key="c.id" class="bg-white rounded-xl border border-gray-200">
+        <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h6 class="text-sm font-semibold text-gray-800">
+            合同 {{ c.contract_no || '—' }}
+            <span class="text-xs text-gray-400 ml-2">金额: ¥{{ (c.total_amount || 0).toLocaleString() }}</span>
+          </h6>
+          <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
+            :class="c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'">
+            {{ c.status === 'active' ? '进行中' : '已结束' }}
+          </span>
+        </div>
+        <div class="px-5 py-3">
+          <!-- 进度条 -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between text-sm mb-1">
+              <span class="text-gray-600 font-medium">课时进度</span>
+              <span class="text-gray-500">
+                <span class="font-bold" :class="c.remaining_hours <= 5 ? 'text-red-600' : 'text-gray-800'">{{ c.remaining_hours || 0 }}</span>
+                <span class="text-gray-400">/{{ c.total_hours || 0 }}h 剩余</span>
+              </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+              <div class="h-4 rounded-full transition-all"
+                   :class="c.remaining_hours <= 5 ? 'bg-red-500' : 'bg-indigo-500'"
+                   :style="{ width: Math.min(100, (c.total_hours > 0 ? ((c.total_hours - (c.remaining_hours || 0)) / c.total_hours * 100) : 0)) + '%' }">
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1 text-right">
+              已用 {{ c.used_hours || 0 }}h · {{ c.total_hours > 0 ? ((c.used_hours || 0) / c.total_hours * 100).toFixed(1) : 0 }}%
+            </p>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mb-3">
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+              <p class="text-xs text-gray-500 mb-0.5">总课时</p>
+              <p class="text-base font-bold text-gray-800">{{ c.total_hours || 0 }}h</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+              <p class="text-xs text-gray-500 mb-0.5">已消耗</p>
+              <p class="text-base font-bold text-gray-800">{{ c.used_hours || 0 }}h</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+              <p class="text-xs text-gray-500 mb-0.5">剩余</p>
+              <p class="text-base font-bold" :class="c.remaining_hours <= 5 ? 'text-red-600' : 'text-gray-800'">{{ c.remaining_hours || 0 }}h</p>
+            </div>
+          </div>
+          <div v-if="c.packages && c.packages.length > 0" class="divide-y divide-gray-50">
+            <div v-for="p in c.packages" :key="p.id" class="py-2 flex items-center justify-between text-sm">
+              <span class="text-gray-700">{{ p.name || '课时包' }}</span>
+              <span class="text-gray-500">总 {{ p.total_hours }}h · 已用 {{ p.used_hours }}h · ¥{{ p.price_per_hour }}/h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 签约学生：排课记录 -->
+    <div v-if="lead.status === 'enrolled' && lead.schedules && lead.schedules.length > 0" class="bg-white rounded-xl border border-gray-200 mb-4">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h6 class="text-sm font-semibold text-gray-800">课程记录</h6>
+      </div>
+      <div class="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+        <div v-for="sc in lead.schedules" :key="sc.id" class="px-5 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-gray-500">{{ sc.start_time?.slice(0,16) || '-' }}</span>
+            <span class="text-sm text-gray-700">{{ sc.subject || '-' }}</span>
+            <span v-if="sc.tutor_name" class="text-xs text-gray-400">{{ sc.tutor_name }}</span>
+          </div>
+          <div>
+            <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
+              :class="sc.status === 'completed' ? 'bg-green-100 text-green-800' : sc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'">
+              {{ sc.status === 'completed' ? '已完成' : sc.status === 'pending' ? '待上课' : sc.status === 'cancelled' ? '已取消' : sc.status }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100"><h6 class="text-sm font-semibold text-gray-800">跟进记录</h6></div>
+      <div class="p-5" v-if="canFollow">
+        <textarea v-model="followContent" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="输入跟进内容..."></textarea>
+        <div class="flex items-center gap-3 mt-2">
+          <input type="text" v-model="nextAction" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="下次行动">
+          <input type="date" v-model="nextDate" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+          <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700" @click="submitFollow" :disabled="!followContent.trim()">提交</button>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+        <div v-for="f in lead.followups" :key="f.id" class="px-5 py-3">
+          <div class="flex items-center gap-2 text-xs text-gray-400 mb-1"><span>{{ f.creator_name || '未知' }}</span><span>{{ f.created_at }}</span></div>
+          <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ f.content }}</p>
+          <div v-if="f.next_action || f.next_date" class="mt-1 text-xs text-indigo-600">
+            {{ f.next_action ? '下一步: ' + f.next_action : '' }}{{ f.next_date ? ' (截止: ' + f.next_date + ')' : '' }}
+          </div>
+        </div>
+        <div v-if="!lead.followups || lead.followups.length === 0" class="px-5 py-6 text-center text-sm text-gray-400">暂无跟进记录</div>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Quick Add -->
+<script type="text/x-template" id="tpl-quick-add">
+<div class="max-w-lg mx-auto">
+  <div class="mb-6">
+    <h3 class="text-xl font-bold text-gray-900">快速录入</h3>
+    <p class="text-sm text-gray-500 mt-0.5">快速创建新线索</p>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 p-6">
+    <div class="space-y-4">
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">姓名 <span class="text-red-500">*</span></label><input type="text" v-model="form.name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="学生姓名" autofocus></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">手机</label><input type="text" v-model="form.phone" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="手机号"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">微信</label><input type="text" v-model="form.wechat" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="微信号"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">来源</label><select v-model="form.source" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none"><option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option></select></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">国家</label><input type="text" v-model="form.country" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 英国"></div>
+      </div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">年级</label><input type="text" v-model="form.grade" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: A-Level"></div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">备注</label><textarea v-model="form.remark" rows="3" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="其他信息..."></textarea></div>
+      <button class="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg text-sm hover:bg-indigo-700" @click="submit" :disabled="submitting">{{ submitting ? '提交中...' : '提交' }}</button>
+      <div v-if="success" class="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 text-center">创建成功！继续录入下一条</div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Trials / 试听管理 -->
+<script type="text/x-template" id="tpl-trials">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">试听管理</h3>
+      <p class="text-sm text-gray-500 mt-0.5">安排试听 · ClassIn 链接 · 试听反馈 · 转化追踪</p>
+    </div>
+    <button v-if="canSchedule" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreate">
+      <i class="bi bi-plus-lg"></i> 安排试听
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-[.65rem] text-gray-500">待试听</p>
+      <p class="text-xl font-bold text-gray-900">{{ stats.pending ?? 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-[.65rem] text-gray-500">已完成</p>
+      <p class="text-xl font-bold text-gray-900">{{ stats.completed ?? 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-[.65rem] text-gray-500">待反馈</p>
+      <p class="text-xl font-bold text-amber-600">{{ (stats.completed ?? 0) - (stats.has_feedback ?? 0) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-[.65rem] text-gray-500">本月</p>
+      <p class="text-xl font-bold text-gray-900">{{ stats.this_month ?? 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-[.65rem] text-gray-500">转化率</p>
+      <p class="text-xl font-bold text-green-600">{{ stats.conversion_rate ?? 0 }}%</p>
+    </div>
+  </div>
+
+  <!-- Filters + Tabs -->
+  <div class="bg-white rounded-xl border border-gray-200 mb-4">
+    <div class="p-3 flex flex-wrap gap-2 items-center border-b border-gray-100">
+      <button v-for="t in tabs" :key="t.key"
+              class="px-3 py-1.5 text-xs rounded-lg transition"
+              :class="t.key === activeTab ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              @click="switchTab(t.key)">{{ t.label }}</button>
+      <div class="flex-1"></div>
+      <input type="text" v-model="search" @input="debounceSearch" placeholder="搜索学生..."
+             class="px-2 py-1.5 border border-gray-300 rounded text-xs outline-none w-32">
+    </div>
+  </div>
+
+  <!-- List -->
+  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else-if="list.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无试听数据</div>
+  <div v-else class="space-y-3">
+    <div v-for="t in list" :key="t.id" class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition">
+      <div class="flex items-start gap-4">
+        <!-- Time -->
+        <div class="text-center min-w-[52px] pt-1">
+          <div class="text-lg font-bold text-gray-900">{{ (t.start_time || '').slice(11,16) }}</div>
+          <div class="text-[.6rem] text-gray-400">{{ (t.start_time || '').slice(0,10) }}</div>
+          <div class="text-[.6rem] text-gray-400">{{ t.duration_minutes || '-' }}min</div>
+        </div>
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-semibold text-sm">{{ t.lead_name || '-' }}</span>
+            <span class="text-xs text-gray-400">{{ t.subject || '试听课' }}</span>
+            <span class="inline-block px-2 py-0.5 rounded text-[.6rem] font-medium"
+              :class="{
+                'bg-yellow-100 text-yellow-800': t.status === 'pending',
+                'bg-green-100 text-green-800': t.status === 'completed',
+                'bg-red-100 text-red-800': t.status === 'cancelled',
+              }">{{ statusMap[t.status] || t.status }}</span>
+          </div>
+          <div class="text-xs text-gray-500 mt-1 space-y-0.5">
+            <div><i class="bi bi-person"></i> 老师: {{ t.tutor_name || '未分配' }}</div>
+            <div v-if="t.classin_link"><i class="bi bi-link-45deg"></i> <a :href="t.classin_link" target="_blank" class="text-indigo-600 hover:underline">ClassIn 链接</a></div>
+            <div v-if="t.assignee_name"><i class="bi bi-person-check"></i> 顾问: {{ t.assignee_name }}</div>
+          </div>
+          <!-- Feedback section -->
+          <div v-if="t.status === 'completed' && t.trial_feedback" class="mt-2 p-2 bg-gray-50 rounded-lg text-xs">
+            <span class="text-gray-500">试听反馈: </span>
+            <span class="text-gray-700">{{ t.trial_feedback }}</span>
+            <span v-if="t.trial_followup_action" class="text-indigo-600 ml-2">下一步: {{ t.trial_followup_action }}</span>
+          </div>
+          <!-- Feedback form -->
+          <div v-if="t.status === 'completed' && !t.trial_feedback && canFeedback" class="mt-2 border-t border-gray-100 pt-2">
+            <textarea v-model="feedbackForm[t.id]" rows="2" placeholder="填写试听反馈..." class="w-full px-3 py-1.5 border border-gray-300 rounded text-xs outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+            <div class="flex items-center gap-2 mt-1">
+              <select v-model="feedbackAction[t.id]" class="px-2 py-1 border border-gray-300 rounded text-xs outline-none">
+                <option value="following">继续跟进</option>
+                <option value="enrolled">已签约</option>
+                <option value="lost">已流失</option>
+              </select>
+              <input type="text" v-model="feedbackNext[t.id]" placeholder="下次行动..." class="flex-1 px-2 py-1 border border-gray-300 rounded text-xs outline-none">
+              <button class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50" :disabled="!feedbackForm[t.id]?.trim()" @click="submitFeedback(t.id)">提交反馈</button>
+            </div>
+          </div>
+        </div>
+        <!-- Actions -->
+        <div class="shrink-0">
+          <button v-if="canSchedule && t.status === 'pending'" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="openEdit(t)">编辑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeModal">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">{{ editId ? '编辑试听' : '安排试听' }}</h5>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">学生 <span class="text-red-500">*</span></label>
+          <searchable-select
+            :items="leads"
+            label-key="name"
+            sub-label-key="phone"
+            placeholder="搜索学生姓名或手机号..."
+            v-model="form.lead_id">
+          </searchable-select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">授课老师 <span class="text-red-500">*</span></label>
+          <searchable-select
+            :items="tutors"
+            label-key="display_name"
+            sub-label-key=""
+            placeholder="搜索老师姓名..."
+            v-model="form.tutor_id">
+          </searchable-select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">科目</label>
+          <input type="text" v-model="form.subject" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 雅思写作试听">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">开始时间 <span class="text-red-500">*</span></label>
+            <input type="datetime-local" v-model="form.start_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">结束时间 <span class="text-red-500">*</span></label>
+            <input type="datetime-local" v-model="form.end_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">ClassIn 链接</label>
+          <input type="url" v-model="form.classin_link" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="https://www.classin.com/...">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">备注</label>
+          <textarea v-model="form.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeModal">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitSave" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Schedules -->
+<script type="text/x-template" id="tpl-schedules">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">排课管理</h3>
+      <p class="text-sm text-gray-500 mt-0.5">课程安排 · 教师分配 · 上课记录 · 课时看板</p>
+    </div>
+    <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreate">
+      <i class="bi bi-plus-lg"></i> 新增排课
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-xl border border-gray-200 mb-4">
+    <div class="p-4 flex flex-wrap gap-3 items-center border-b border-gray-100">
+      <input type="date" v-model="dateFrom" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+      <span class="text-xs text-gray-400">至</span>
+      <input type="date" v-model="dateTo" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+      <input type="text" v-model="filterLeadName" @input="load" placeholder="搜索学生姓名..."
+             class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none w-36">
+      <searchable-select
+        :items="teachers"
+        label-key="name"
+        sub-label-key="level"
+        placeholder="搜索教师..."
+        v-model="filterTutor"
+        @update:model-value="load">
+      </searchable-select>
+      <select v-model="filterStatus" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+        <option value="">全部状态</option>
+        <option value="pending">待上课</option>
+        <option value="completed">已完成</option>
+        <option value="cancelled">已取消</option>
+      </select>
+      <span class="text-xs text-gray-400 ml-auto">共 {{ total }} 条</span>
+    </div>
+  </div>
+
+  <!-- Schedule list grouped by date -->
+  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else-if="scheduleGroups.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无排课数据</div>
+  <div v-else class="space-y-4">
+    <div v-for="group in scheduleGroups" :key="group.date" class="bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h6 class="text-sm font-semibold text-gray-800">{{ group.dateLabel }}</h6>
+        <span class="text-xs text-gray-500">{{ group.items.length }} 节课</span>
+      </div>
+      <div class="divide-y divide-gray-100">
+        <div v-for="s in group.items" :key="s.id" class="px-5 py-3 flex items-center gap-4 hover:bg-gray-50 cursor-pointer" @click="openDetail(s)">
+          <!-- 时间段 -->
+          <div class="text-center min-w-[90px]">
+            <div class="text-xs font-bold text-gray-900">{{ _timeLabel(s) }}</div>
+            <div class="text-[.6rem] text-gray-400">{{ _durationHint(s) }}</div>
+          </div>
+          <!-- 信息 -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-medium text-sm">{{ s.lead_name || '-' }}</span>
+              <span class="text-xs text-gray-400">{{ s.subject || '-' }}</span>
+              <span v-if="s.tutoring_form" class="text-[.6rem] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">{{ s.tutoring_form }}</span>
+            </div>
+            <div class="text-xs text-gray-500 mt-0.5">
+              <i class="bi bi-person"></i> {{ s.teacher_name || s.tutor_name || '未分配' }}
+              <span v-if="s.remark" class="ml-2 text-gray-400">· {{ s.remark }}</span>
+            </div>
+          </div>
+          <!-- 剩余课时 -->
+          <div @click.stop class="text-center min-w-[60px]">
+            <span v-if="s.remaining_hours !== undefined && s.remaining_hours !== null"
+                  class="text-[.6rem] px-1.5 py-0.5 rounded cursor-pointer"
+                  :class="s.remaining_hours <= 5 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'"
+                  @click="showHoursPopup(s)">
+              剩 {{ s.remaining_hours }}h
+            </span>
+          </div>
+          <!-- 状态 -->
+          <div>
+            <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
+              :class="{
+                'bg-yellow-100 text-yellow-800': s.status === 'pending',
+                'bg-green-100 text-green-800': s.status === 'completed',
+                'bg-red-100 text-red-800': s.status === 'cancelled',
+                'bg-blue-100 text-blue-800': s.status === 'in_progress'
+              }">{{ statusMap[s.status] || s.status }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hours popup -->
+  <div v-if="hoursPopup" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeHoursPopup">
+    <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-1">课时详情</h5>
+      <p class="text-sm text-gray-500 mb-4">学生: <strong>{{ hoursPopup.lead_name }}</strong></p>
+      <div class="space-y-3">
+        <div class="bg-gray-50 rounded-lg p-4 text-center">
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <p class="text-xs text-gray-500">总课时</p>
+              <p class="text-xl font-bold text-gray-900">{{ hoursPopup.total_hours || 0 }}h</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">已消耗</p>
+              <p class="text-xl font-bold text-amber-600">{{ hoursPopup.used_hours || 0 }}h</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">剩余</p>
+              <p class="text-xl font-bold" :class="hoursPopup.remaining_hours <= 5 ? 'text-red-600' : 'text-green-600'">{{ hoursPopup.remaining_hours || 0 }}h</p>
+            </div>
+          </div>
+          <!-- 进度条 -->
+          <div class="mt-3">
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="bg-indigo-500 h-3 rounded-full transition-all" :style="{ width: Math.min(100, (hoursPopup.total_hours > 0 ? (hoursPopup.used_hours / hoursPopup.total_hours * 100) : 0)) + '%' }"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">{{ hoursPopup.total_hours > 0 ? (hoursPopup.used_hours / hoursPopup.total_hours * 100).toFixed(1) : 0 }}% 已消耗</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end mt-4">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeHoursPopup">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeModal">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">{{ editId ? '编辑排课' : '新增排课' }}</h5>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">学生 <span class="text-red-500">*</span></label>
+          <searchable-select
+            :items="leads"
+            label-key="name"
+            sub-label-key="phone"
+            placeholder="搜索学生姓名或手机号..."
+            v-model="form.lead_id">
+          </searchable-select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">教师</label>
+          <searchable-select
+            :items="teachers"
+            label-key="name"
+            placeholder="搜索老师姓名..."
+            v-model="form.teacher_id">
+          </searchable-select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">科目</label>
+          <input type="text" v-model="form.subject" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 雅思写作">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">辅导形式</label>
+          <input type="text" v-model="form.tutoring_form" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 一对一、小组课（3人）">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">开始时间 <span class="text-red-500">*</span></label>
+            <input type="datetime-local" v-model="form.start_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">结束时间 <span class="text-red-500">*</span></label>
+            <input type="datetime-local" v-model="form.end_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
+        </div>
+        <!-- 编辑时才显示实际时长字段 -->
+        <div v-if="editId">
+          <label class="block text-xs text-gray-600 mb-1">实际上课时长（分钟）
+            <span v-if="form.start_time && form.end_time" class="text-gray-400 font-normal">
+              （计划: {{ form.start_time && form.end_time ? Math.round((new Date(form.end_time) - new Date(form.start_time)) / 60000) : '-' }}min）
+            </span>
+          </label>
+          <input type="number" v-model.number="form.actual_duration_minutes" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="录入课后实际分钟数" min="0">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">ClassIn 链接</label>
+          <input type="url" v-model="form.classin_link" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="https://www.classin.com/...">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">状态</label>
+          <select v-model="form.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+            <option value="pending">待上课</option>
+            <option value="completed">已完成</option>
+            <option value="cancelled">已取消</option>
+            <option value="in_progress">进行中</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">备注</label>
+          <textarea v-model="form.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeModal">取消</button>
+        <button v-if="editId" class="px-4 py-2 text-sm border border-red-300 text-red-700 rounded-lg hover:bg-red-50" @click="deleteItem">删除</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitSave" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Pool / 公海池 -->
+<script type="text/x-template" id="tpl-pool">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">公海池</h3>
+      <p class="text-sm text-gray-500 mt-0.5">未分配线索 · 可认领跟进</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200">
+    <div class="p-4 flex flex-wrap gap-3 items-center border-b border-gray-100">
+      <input type="text" v-model="search" @input="debounceSearch" placeholder="搜索姓名/手机..."
+             class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-44">
+      <select v-model="filterSource" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+        <option value="all">全部来源</option>
+        <option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option>
+      </select>
+      <span class="text-xs text-gray-400 ml-auto">共 {{ total }} 条</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-left">
+            <th class="px-4 py-2.5 text-gray-600 font-medium">姓名</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">微信/手机</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">来源</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">意向</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">创建时间</th>
+            <th class="px-4 py-2.5 text-gray-600 font-medium">操作</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="l in list" :key="l.id" class="hover:bg-gray-50">
+            <td class="px-4 py-2.5 font-medium cursor-pointer" @click="openLead(l.id)">{{ l.name }}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-500">{{ l.wechat || l.phone || '-' }}</td>
+            <td class="px-4 py-2.5">{{ l.source || '-' }}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-600">{{ [l.country, l.grade].filter(Boolean).join(' ') || '-' }}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-400">{{ (l.created_at || '').slice(0,10) }}</td>
+            <td class="px-4 py-2.5">
+              <button v-if="canClaim" class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700" @click="claimLead(l.id)">认领</button>
+              <button v-if="canAssign" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 ml-1" @click="showAssignLead(l)">分配</button>
+            </td>
+          </tr>
+          <tr v-if="list.length === 0"><td colspan="6" class="px-4 py-10 text-center text-sm text-gray-400">公海池暂无数据</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+      <span class="text-xs text-gray-500">第 {{ page }} / {{ totalPages }} 页</span>
+      <div class="flex gap-1">
+        <button class="pagination-btn" :class="{ 'opacity-30': page <= 1 }" :disabled="page <= 1" @click="goPage(page - 1)"><i class="bi bi-chevron-left text-xs"></i></button>
+        <button v-for="p in pageNumbers" :key="p" class="pagination-btn" :class="{ active: p === page, 'opacity-30': p === '...' }" @click="goPage(p)" v-text="p"></button>
+        <button class="pagination-btn" :class="{ 'opacity-30': page >= totalPages }" :disabled="page >= totalPages" @click="goPage(page + 1)"><i class="bi bi-chevron-right text-xs"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Modal -->
+  <div v-if="showAssign" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showAssign = false">
+    <div class="bg-white rounded-xl w-full max-w-xs p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">分配线索</h5>
+      <p class="text-xs text-gray-500 mb-3">将 <strong>{{ assignLeadName }}</strong> 分配给：</p>
+      <select v-model="assignTarget" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none mb-4">
+        <option value="">选择跟进人...</option>
+        <option v-for="u in assignUsers" :key="u.id" :value="u.id">{{ u.display_name }} ({{ roleLabel(u.role) }})</option>
+      </select>
+      <div class="flex justify-end gap-2">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showAssign = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitAssign">确认分配</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Coordinator Board / 教班主任台 -->
+<script type="text/x-template" id="tpl-coordinator">
+<div>
+  <div class="mb-4">
+    <h3 class="text-xl font-bold text-gray-900">教班主任台</h3>
+    <p class="text-sm text-gray-500 mt-0.5">排课概览 · 教师管理 · 教学监督</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">我的学生</p>
+      <p class="text-2xl font-bold text-indigo-700">{{ stats.my_students ?? 0 }}</p>
+      <p class="text-[.65rem] text-indigo-500 mt-1">负责跟进排课</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">待排课(我的)</p>
+      <p class="text-2xl font-bold text-amber-600">{{ stats.my_pending_schedules ?? 0 }}</p>
+      <p class="text-[.65rem] text-amber-500 mt-1">需要尽快安排</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">今日课程</p>
+      <p class="text-2xl font-bold text-gray-900">{{ stats.today_classes ?? '-' }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">本周排课</p>
+      <p class="text-2xl font-bold text-gray-900">{{ stats.weekly_classes ?? '-' }}</p>
+    </div>
+  </div>
+
+  <!-- Today's schedule -->
+  <div class="bg-white rounded-xl border border-gray-200 mb-4">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <h6 class="text-sm font-semibold text-gray-800">今日课程安排</h6>
+      <a href="#" class="text-xs text-indigo-600" @click.prevent="switchView('schedules')">查看全部</a>
+    </div>
+    <div v-if="todaySchedules.length === 0" class="p-6 text-center text-sm text-gray-400">今日暂无排课</div>
+    <div v-else class="divide-y divide-gray-100">
+      <div v-for="s in todaySchedules" :key="s.id" class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50">
+        <div class="text-center min-w-[40px]">
+          <div class="text-xs font-bold">{{ (s.start_time || '').slice(11,16) }}</div>
+          <div class="text-[.6rem] text-gray-400">{{ s.duration_minutes }}min</div>
+        </div>
+        <div class="flex-1">
+          <span class="text-sm font-medium">{{ s.lead_name || '-' }}</span>
+          <span class="text-xs text-gray-400 ml-2">{{ s.subject || '-' }}</span>
+          <div class="text-xs text-gray-500"><i class="bi bi-person"></i> {{ s.tutor_name || '未分配' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Newly assigned students -->
+  <div class="bg-white rounded-xl border border-gray-200 mb-4">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <h6 class="text-sm font-semibold text-gray-800">新分配学生 · 及时跟进</h6>
+      <span class="text-xs text-gray-500">{{ newlyAssignedStudents.length }} 人</span>
+    </div>
+    <div v-if="newlyAssignedStudents.length === 0" class="p-6 text-center text-sm text-gray-400">暂无新分配学生</div>
+    <div v-else class="divide-y divide-gray-100">
+      <div v-for="s in newlyAssignedStudents" :key="s.id" class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer" @click="openLead(s.id)">
+        <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">{{ s.name[0] }}</div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium">{{ s.name }}</span>
+            <span class="text-xs text-gray-400">剩余 {{ remainingHours(s) }}h</span>
+          </div>
+          <div class="text-xs text-gray-500">
+            <i class="bi bi-clock"></i> 分配于 {{ (s.coordinator_at || '').slice(0,16) || '-' }}
+          </div>
+        </div>
+        <i class="bi bi-chevron-right text-gray-300"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- My students -->
+  <div class="bg-white rounded-xl border border-gray-200">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <h6 class="text-sm font-semibold text-gray-800">我的签约学生</h6>
+      <a href="#" class="text-xs text-indigo-600" @click.prevent="switchView('students')">查看全部</a>
+    </div>
+    <div v-if="myStudents.length === 0" class="p-6 text-center text-sm text-gray-400">暂无分配给你的学生</div>
+    <div v-else class="divide-y divide-gray-100">
+      <div v-for="s in myStudents" :key="s.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer" @click="openLead(s.id)">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">{{ s.name[0] }}</div>
+          <div>
+            <span class="text-sm font-medium">{{ s.name }}</span>
+            <span class="text-xs text-gray-400 ml-2">剩余 {{ s.remaining_hours }}h</span>
+          </div>
+        </div>
+        <div class="text-xs text-gray-500">
+          {{ s.next_class ? '下次: ' + s.next_class.start_time.slice(5,16) : '未排课' }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Assignment Workbench / 分配工作台 -->
+<script type="text/x-template" id="tpl-assignment">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">分配工作台</h3>
+      <p class="text-sm text-gray-500 mt-0.5">线索分配 · 签约学生分配班主任 · 资源调度</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 mb-4">
+    <button v-if="canAssignLeads"
+            class="px-4 py-2 text-sm rounded-lg transition"
+            :class="activeTab === 'leads' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'"
+            @click="activeTab = 'leads'">
+      <i class="bi bi-people"></i> 线索分配
+    </button>
+    <button v-if="canAssignCoordinator"
+            class="px-4 py-2 text-sm rounded-lg transition"
+            :class="activeTab === 'enrolled' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'"
+            @click="activeTab = 'enrolled'">
+      <i class="bi bi-person-plus"></i> 签约学生分配
+    </button>
+  </div>
+
+  <!-- Tab: 线索分配 -->
+  <div v-if="activeTab === 'leads'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h6 class="text-sm font-semibold text-gray-800">待分配线索</h6>
+        <span class="text-xs text-gray-500">{{ unassignedLeads.length }} 条</span>
+      </div>
+      <div v-if="unassignedLeads.length === 0" class="p-6 text-center text-sm text-gray-400">暂无待分配线索</div>
+      <div v-else class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+        <div v-for="l in unassignedLeads" :key="l.id" class="px-5 py-2.5 flex items-center gap-3 hover:bg-gray-50">
+          <input type="checkbox" :value="l.id" v-model="selectedIds" class="shrink-0">
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-medium">{{ l.name }}</span>
+            <span class="text-xs text-gray-400 ml-2">{{ l.source }}</span>
+            <span class="text-xs text-gray-400 ml-2">{{ l.created_at?.slice(0,10) }}</span>
+          </div>
+          <span v-html="statusBadge(l.status)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h6 class="text-sm font-semibold text-gray-800">批量分配</h6>
+      </div>
+      <div class="p-5">
+        <p class="text-xs text-gray-500 mb-3" v-if="selectedIds.length > 0">已选 <strong>{{ selectedIds.length }}</strong> 条线索</p>
+        <p class="text-xs text-gray-400 mb-3" v-else>请从左侧勾选要分配的线索</p>
+        <label class="block text-xs text-gray-600 mb-1">分配给</label>
+        <select v-model="assignTarget" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none mb-4">
+          <option value="">选择跟进人...</option>
+          <option v-for="u in assignUsers" :key="u.id" :value="u.id">{{ u.display_name }} ({{ roleLabel(u.role) }})</option>
+        </select>
+        <button class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50" :disabled="!assignTarget || selectedIds.length === 0" @click="submitAssign">
+          确认分配
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: 签约学生分配 -->
+  <div v-if="activeTab === 'enrolled'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h6 class="text-sm font-semibold text-gray-800">已签约·无班主任的学生</h6>
+        <span class="text-xs text-gray-500">{{ enrolledNoCoord.length }} 人</span>
+      </div>
+      <div v-if="enrolledNoCoord.length === 0" class="p-6 text-center text-sm text-gray-400">所有签约学生都已分配班主任</div>
+      <div v-else class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+        <div v-for="s in enrolledNoCoord" :key="s.id" class="px-5 py-2.5 flex items-center gap-3 hover:bg-gray-50">
+          <input type="checkbox" :value="s.id" v-model="selectedEnrolledIds" class="shrink-0">
+          <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">{{ s.name[0] }}</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-medium">{{ s.name }}</span>
+            <span class="text-xs text-gray-400 ml-2">{{ s.assignee_name || '无顾问' }}</span>
+            <div class="text-xs text-gray-400">
+              已用 {{ s.used_hours || 0 }}h / 总 {{ s.total_hours || 0 }}h · 签约 {{ (s.contract?.signed_at || '').slice(0,10) || '-' }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h6 class="text-sm font-semibold text-gray-800">分配班主任</h6>
+      </div>
+      <div class="p-5">
+        <p class="text-xs text-gray-500 mb-3" v-if="selectedEnrolledIds.length > 0">已选 <strong>{{ selectedEnrolledIds.length }}</strong> 名学生</p>
+        <p class="text-xs text-gray-400 mb-3" v-else>请从左侧勾选要分配班主任的学生</p>
+        <label class="block text-xs text-gray-600 mb-1">选择班主任</label>
+        <searchable-select
+          :items="coordinators"
+          label-key="display_name"
+          sub-label-key=""
+          placeholder="搜索教务班主任..."
+          v-model="coordTarget">
+        </searchable-select>
+        <button class="w-full py-2 mt-4 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50" :disabled="!coordTarget || selectedEnrolledIds.length === 0" @click="submitAssignCoordinator">
+          确认分配
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Packages / 课时包管理 -->
+<script type="text/x-template" id="tpl-packages">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">课时包管理</h3>
+      <p class="text-sm text-gray-500 mt-0.5">合同管理 · 课时包 · 课时消耗</p>
+    </div>
+    <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreateContract">
+      <i class="bi bi-plus-lg"></i> 新建合同
+    </button>
+  </div>
+
+  <!-- Contract list -->
+  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else-if="contracts.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无合同数据</div>
+  <div v-else class="space-y-4">
+    <div v-for="c in contracts" :key="c.id" class="bg-white rounded-xl border border-gray-200">
+      <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h6 class="text-sm font-semibold text-gray-800">{{ c.lead_name || '-' }}</h6>
+          <p class="text-xs text-gray-400 mt-0.5">{{ c.contract_no || '无合同号' }} · 金额: ¥{{ c.total_amount ?? 0 }} · {{ c.signed_at?.slice(0,10) || '-' }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">{{ c.package_count }} 个课时包</span>
+          <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
+            :class="c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'">
+            {{ c.status === 'active' ? '进行中' : '已结束' }}
+          </span>
+          <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="openAddPackage(c)">+ 课时包</button>
+          <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="toggleExpand(c.id)">
+            <i :class="expandedId === c.id ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+          </button>
+        </div>
+      </div>
+      <div v-if="expandedId === c.id" class="divide-y divide-gray-50">
+        <div v-if="!c._packages || c._packages.length === 0" class="px-5 py-4 text-sm text-gray-400 text-center">暂无课时包</div>
+        <div v-for="p in c._packages" :key="p.id" class="px-5 py-3 flex items-center gap-4">
+          <div class="flex-1">
+            <span class="text-sm font-medium">{{ p.name }}</span>
+            <div class="text-xs text-gray-500 mt-0.5">
+              总课时: <strong>{{ p.total_hours }}</strong>h ·
+              已用: <strong>{{ p.used_hours }}</strong>h ·
+              剩余: <strong>{{ (p.total_hours - p.used_hours).toFixed(1) }}</strong>h
+            </div>
+          </div>
+          <div class="text-xs text-gray-500">¥{{ p.price_per_hour }}/h</div>
+          <!-- Use hours -->
+          <div class="flex items-center gap-1">
+            <input type="number" v-model.number="useHours[p.id]" placeholder="课时" min="0" step="0.5" class="w-16 px-2 py-1 border border-gray-300 rounded text-xs outline-none">
+            <button class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50" :disabled="!useHours[p.id] || useHours[p.id] <= 0" @click="usePackageHours(p.id)">消耗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Contract Modal -->
+  <div v-if="showContractModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showContractModal = false">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">新建合同</h5>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">学生 <span class="text-red-500">*</span></label>
+          <searchable-select
+            :items="leads"
+            label-key="name"
+            sub-label-key="phone"
+            placeholder="搜索学生姓名或手机号..."
+            v-model="contractForm.lead_id">
+          </searchable-select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">合同编号</label>
+          <input type="text" v-model="contractForm.contract_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: HT-2026-001">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">合同金额</label>
+          <input type="number" v-model.number="contractForm.total_amount" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="0">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">签约日期</label>
+          <input type="date" v-model="contractForm.signed_at" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">备注</label>
+          <textarea v-model="contractForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showContractModal = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitContract" :disabled="saving">{{ saving ? '创建中...' : '创建' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Package Modal -->
+  <div v-if="showPackageModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showPackageModal = false">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">添加课时包</h5>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">课时包名称</label>
+          <input type="text" v-model="packageForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 雅思基础课时包">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">总课时 <span class="text-red-500">*</span></label>
+          <input type="number" v-model.number="packageForm.total_hours" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="40">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">单价 (元/小时)</label>
+          <input type="number" v-model.number="packageForm.price_per_hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="375">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">备注</label>
+          <textarea v-model="packageForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showPackageModal = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitPackage" :disabled="saving">{{ saving ? '添加中...' : '添加' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Follow-up Plan -->
+<script type="text/x-template" id="tpl-followup-plan">
+<div>
+  <div class="mb-4">
+    <h3 class="text-xl font-bold text-gray-900">跟进计划</h3>
+    <p class="text-sm text-gray-500 mt-0.5">逾期 · 今日 · 未来跟进一览</p>
+  </div>
+  <div class="flex gap-1 mb-4">
+    <button v-for="t in tabs" :key="t.key"
+            class="px-4 py-2 text-sm rounded-lg transition"
+            :class="t.key === activeTab ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'"
+            @click="switchTab(t.key)">{{ t.label }}</button>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <h6 class="text-sm font-semibold text-gray-800">{{ activeTabLabel }}</h6>
+      <span class="text-xs text-gray-500">{{ followups.length }} 条</span>
+    </div>
+    <div v-if="followups.length === 0" class="p-8 text-center text-sm text-gray-400">暂无数据</div>
+    <div v-else class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+      <div v-for="l in followups" :key="l.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer" @click="openLead(l.id)">
+        <div>
+          <span class="font-medium text-sm">{{ l.name }}</span>
+          <span v-if="l.next_followup_at" class="text-xs text-gray-400 ml-2">截止: {{ l.next_followup_at.slice(0,10) }}</span>
+        </div>
+        <div v-html="statusBadge(l.status)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Students / 签约学生总览 -->
+<script type="text/x-template" id="tpl-students">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">签约学生</h3>
+      <p class="text-sm text-gray-500 mt-0.5">已签约学生 · 课时消耗 · 续费管理</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <input type="text" v-model="search" @input="debounceSearch" placeholder="搜索学生姓名/手机..." class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none w-56">
+    </div>
+  </div>
+
+  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else-if="list.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无签约学生</div>
+  <div v-else class="space-y-3">
+    <div v-for="s in list" :key="s.id"
+         class="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:shadow-md transition"
+         @click="openLead(s.id)">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">{{ s.name[0] }}</div>
+          <div>
+            <h5 class="text-base font-semibold text-gray-900">{{ s.name }}</h5>
+            <p class="text-xs text-gray-400">{{ s.phone || '-' }} · {{ s.source || '-' }}</p>
+          </div>
+        </div>
+        <div class="text-right text-xs">
+          <span class="text-gray-500">跟进人: {{ s.assignee_name || '未分配' }}</span>
+          <br>
+          <span class="text-gray-400">班主任: {{ s.coordinator_name || '未分配' }}</span>
+        </div>
+        <div class="flex items-center gap-1 ml-2" @click.stop>
+          <button v-if="canAssignCoordinator" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-indigo-50 hover:border-indigo-300" @click="openAssignCoordinator(s)">
+            <i class="bi bi-person-plus text-xs"></i> 分配
+          </button>
+        </div>
+      </div>
+
+      <!-- Key stats -->
+      <div class="grid grid-cols-4 gap-3">
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-500 mb-0.5">合同金额</p>
+          <p class="text-sm font-bold text-gray-800">¥{{ s.contract?.total_amount?.toLocaleString() || 0 }}</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-500 mb-0.5">剩余课时</p>
+          <p class="text-sm font-bold" :class="s.remaining_hours <= 5 ? 'text-red-600' : 'text-gray-800'">
+            {{ s.remaining_hours || 0 }}<span class="text-xs font-normal text-gray-400">/{{ s.total_hours || 0 }}h</span>
+          </p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-500 mb-0.5">最近上课</p>
+          <p class="text-sm font-bold text-gray-800">{{ s.last_class?.start_time?.slice(0,10) || '-' }}</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-500 mb-0.5">下次上课</p>
+          <p class="text-sm font-bold text-gray-800">{{ s.next_class?.start_time?.slice(0,10) || '-' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 mt-4">
+    <button class="pagination-btn" @click="goPage(page-1)" :disabled="page===1">&lt;</button>
+    <button v-for="n in pageNumbers" :key="n"
+            class="pagination-btn" :class="{ active: n === page }"
+            @click="goPage(n)" :disabled="n==='...'">{{ n }}</button>
+    <button class="pagination-btn" @click="goPage(page+1)" :disabled="page===totalPages">&gt;</button>
+  </div>
+
+  <!-- Low hours alert -->
+  <div v-if="list.filter(s => s.remaining_hours <= 5).length > 0" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+    <i class="bi bi-exclamation-triangle-fill text-amber-500 text-lg"></i>
+    <span class="text-sm text-amber-800">
+      <strong>{{ list.filter(s => s.remaining_hours <= 5).length }}</strong> 名学生课时即将用完，请及时安排续费沟通
+    </span>
+  </div>
+
+  <!-- Assign Coordinator Modal -->
+  <div v-if="showAssignModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showAssignModal = false">
+    <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-1">分配教务班主任</h5>
+      <p class="text-sm text-gray-500 mb-4">学生: <strong>{{ assignLeadName }}</strong></p>
+      <searchable-select
+        :items="coordinators"
+        label-key="display_name"
+        sub-label-key="role"
+        placeholder="搜索教务班主任..."
+        v-model="assignCoordinatorId">
+      </searchable-select>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showAssignModal = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitAssignCoordinator">确认分配</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- Finance / 财务管理 -->
+
+<!-- Teachers / 师资管理 -->
+<script type="text/x-template" id="tpl-teachers">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">师资管理</h3>
+      <p class="text-sm text-gray-500 mt-0.5">教师信息 · 资质背景 · 筛选匹配</p>
+    </div>
+    <button v-if="canEdit" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreate">
+      <i class="bi bi-plus-lg"></i> 新增老师
+    </button>
+  </div>
+
+  <!-- Search & Filter -->
+  <div class="bg-white rounded-xl border border-gray-200 mb-4">
+    <div class="p-4 flex flex-wrap gap-3 items-center">
+      <input type="text" v-model="search" @input="debounceSearch" placeholder="搜索姓名/科目/教学方向..."
+             class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-56">
+      <select v-model="filterLevel" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+        <option value="">全部等级</option>
+        <option v-for="lv in levels" :key="lv" :value="lv">{{ lv }}</option>
+      </select>
+      <span class="text-xs text-gray-400 ml-auto">共 {{ total }} 位老师</span>
+    </div>
+  </div>
+
+  <!-- Teacher Cards -->
+  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else-if="list.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无师资数据</div>
+  <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-for="t in list" :key="t.id"
+         class="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer"
+         @click="showDetail(t)">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">{{ t.name[0] }}</div>
+          <div>
+            <h5 class="text-base font-semibold text-gray-900">{{ t.name }}</h5>
+            <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
+              :class="t.level ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-500'">
+              {{ t.level || '未定级' }}
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button v-if="canEdit" class="p-1.5 text-xs border border-gray-200 rounded hover:bg-gray-100" @click.stop="openEdit(t)" title="编辑">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </div>
+      </div>
+      <div class="space-y-1 text-xs text-gray-600">
+        <div v-if="t.teaching_direction" class="flex items-center gap-2">
+          <i class="bi bi-compass text-gray-400"></i>
+          <span>{{ t.teaching_direction }}</span>
+        </div>
+        <div v-if="t.subjects" class="flex items-center gap-2">
+          <i class="bi bi-book text-gray-400"></i>
+          <span>{{ t.subjects }}</span>
+        </div>
+        <div v-if="t.academic_background" class="flex items-center gap-2">
+          <i class="bi bi-mortarboard text-gray-400"></i>
+          <span>{{ t.academic_background }}</span>
+          <span v-if="t.highest_degree" class="text-gray-400">· {{ t.highest_degree }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 mt-4">
+    <button class="pagination-btn" @click="goPage(page-1)" :disabled="page===1">&lt;</button>
+    <button v-for="n in pageNumbers" :key="n"
+            class="pagination-btn" :class="{ active: n === page }"
+            @click="goPage(n)" :disabled="n==='...'">{{ n }}</button>
+    <button class="pagination-btn" @click="goPage(page+1)" :disabled="page===totalPages">&gt;</button>
+  </div>
+
+  <!-- Detail Modal -->
+  <div v-if="detailId" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeDetail">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl">
+      <div v-if="!detailTeacher" class="text-center py-6 text-gray-400">加载中...</div>
+      <div v-else>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg">{{ detailTeacher.name[0] }}</div>
+            <div>
+              <h4 class="text-lg font-bold text-gray-900">{{ detailTeacher.name }}</h4>
+              <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
+                :class="detailTeacher.level ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-500'">
+                {{ detailTeacher.level || '未定级' }}
+              </span>
+            </div>
+          </div>
+          <button class="p-1 text-gray-400 hover:text-gray-700" @click="closeDetail"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-sm">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-500 mb-0.5">手机</p>
+              <p class="font-medium">{{ detailTeacher.phone || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-0.5">教学方向</p>
+              <p class="font-medium">{{ detailTeacher.teaching_direction || '-' }}</p>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">学历背景</p>
+            <p class="font-medium">{{ detailTeacher.academic_background || '-' }}
+              <span v-if="detailTeacher.highest_degree" class="text-gray-400 ml-1">· {{ detailTeacher.highest_degree }}</span>
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">教授科目</p>
+            <p class="font-medium">{{ detailTeacher.subjects || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">授课工具</p>
+            <p class="font-medium">{{ detailTeacher.tools || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">教学风格</p>
+            <p class="font-medium">{{ detailTeacher.teaching_style || '-' }}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-500 mb-0.5">课时费标准</p>
+              <p class="font-medium">{{ detailTeacher.pay_rate || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-0.5">结算方式</p>
+              <p class="font-medium">{{ detailTeacher.payment_method || '-' }}</p>
+            </div>
+          </div>
+          <div v-if="detailTeacher.notes">
+            <p class="text-xs text-gray-500 mb-0.5">备注</p>
+            <p class="text-gray-700 whitespace-pre-wrap">{{ detailTeacher.notes }}</p>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-5">
+          <button v-if="canEdit" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="closeDetail(); openEdit(detailTeacher)">编辑</button>
+          <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeDetail">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeModal">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl" style="max-height: 90vh; overflow-y: auto;">
+      <h5 class="font-semibold text-gray-900 mb-4">{{ editId ? '编辑老师信息' : '新增老师' }}</h5>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">姓名 <span class="text-red-500">*</span></label>
+          <input type="text" v-model="form.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="老师姓名">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">手机</label>
+          <input type="text" v-model="form.phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="手机号码">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">等级</label>
+            <select v-model="form.level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+              <option value="">未定级</option>
+              <option v-for="lv in levels" :key="lv" :value="lv">{{ lv }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">课时费标准</label>
+            <input type="text" v-model="form.pay_rate" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 300元/h">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">教学方向</label>
+          <input type="text" v-model="form.teaching_direction" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 出国留学, 雅思托福, 国际课程">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">教授科目</label>
+          <input type="text" v-model="form.subjects" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 雅思写作, A-Level数学">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">学历背景</label>
+          <input type="text" v-model="form.academic_background" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 剑桥大学 教育学硕士">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">最高学位</label>
+          <input type="text" v-model="form.highest_degree" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 硕士, 博士">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">授课工具</label>
+          <input type="text" v-model="form.tools" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: ClassIn, Zoom, 腾讯会议">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">教学风格</label>
+          <input type="text" v-model="form.teaching_style" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 循循善诱, 因材施教">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">结算方式</label>
+          <input type="text" v-model="form.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 月结, 周结">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">备注</label>
+          <textarea v-model="form.notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="其他信息..."></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeModal">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitSave" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<!-- ═══ 可搜索下拉选择器（复用） ═══ -->
+<script type="text/x-template" id="tpl-searchable-select">
+<div class="relative">
+  <!-- 显示区 -->
+  <div class="relative">
+    <input ref="searchInput"
+      v-model="searchText"
+      :placeholder="selectedLabel || placeholder"
+      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none bg-white"
+      :class="{ 'border-indigo-400 ring-1 ring-indigo-200': isOpen }"
+      @focus="isOpen = true"
+      @blur="close"
+      @input="isOpen = true"
+      @keydown.escape="isOpen = false"
+      @keydown.enter.prevent="selectFirst"
+      @keydown.down.prevent="highlightNext"
+      @keydown.up.prevent="highlightPrev">
+    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+      <i class="bi bi-search text-gray-400 text-xs"></i>
+    </div>
+    <!-- 清除按钮 -->
+    <div v-if="modelValue && !searchText" class="absolute inset-y-0 right-7 flex items-center cursor-pointer z-10" @mousedown.prevent="clear">
+      <i class="bi bi-x-circle-fill text-gray-300 hover:text-gray-500 text-xs"></i>
+    </div>
+  </div>
+  <!-- 下拉菜单 -->
+  <div v-if="isOpen" class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+    <div v-if="filteredItems.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">无匹配结果</div>
+    <div v-for="(item, idx) in filteredItems" :key="item[valueKey]"
+      class="px-3 py-2 cursor-pointer flex items-center gap-2"
+      :class="idx === highlightIdx ? 'bg-indigo-50' : 'hover:bg-gray-50'"
+      @mousedown.prevent="select(item)">
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium truncate" :class="modelValue === item[valueKey] ? 'text-indigo-700' : 'text-gray-800'">{{ item[labelKey] }}</div>
+        <div v-if="subLabelKey && item[subLabelKey]" class="text-xs text-gray-400 truncate">{{ item[subLabelKey] }}</div>
+      </div>
+      <i v-if="modelValue === item[valueKey]" class="bi bi-check-lg text-indigo-500 text-sm shrink-0"></i>
+    </div>
+  </div>
+</div>
+</script>
+<script type="text/x-template" id="tpl-finance">
+<div>
+  <div class="mb-4">
+    <h3 class="text-xl font-bold text-gray-900">财务管理</h3>
+    <p class="text-sm text-gray-500 mt-0.5">收入概览 · 合同统计 · 课时利用率</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">合同总数</p>
+      <p class="text-2xl font-bold text-gray-900">{{ summary.total_contracts ?? 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">进行中合同</p>
+      <p class="text-2xl font-bold text-gray-900">{{ summary.active_contracts ?? 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">合同总金额</p>
+      <p class="text-2xl font-bold text-gray-900">¥{{ (summary.total_amount ?? 0).toLocaleString() }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <p class="text-xs text-gray-500 mb-0.5">课时利用率</p>
+      <p class="text-2xl font-bold text-gray-900">{{ utilization }}%</p>
+    </div>
+  </div>
+
+  <!-- Contracts list -->
+  <div class="bg-white rounded-xl border border-gray-200">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <h6 class="text-sm font-semibold text-gray-800">合同列表</h6>
+    </div>
+    <div v-if="contracts.length === 0" class="p-8 text-center text-sm text-gray-400">暂无合同数据</div>
+    <div v-else class="divide-y divide-gray-100">
+      <div v-for="c in contracts" :key="c.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+        <div>
+          <span class="text-sm font-medium">{{ c.lead_name || '-' }}</span>
+          <span class="text-xs text-gray-400 ml-2">{{ c.contract_no || '' }}</span>
+        </div>
+        <div class="text-right">
+          <span class="text-sm font-semibold">¥{{ (c.total_amount || 0).toLocaleString() }}</span>
+          <span class="inline-block ml-2 px-2 py-0.5 rounded text-[.65rem] font-medium"
+            :class="c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'">
+            {{ c.status === 'active' ? '进行中' : '已结束' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
+<script src="js/api.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js?v=2"></script>
+</body>
+</html>
