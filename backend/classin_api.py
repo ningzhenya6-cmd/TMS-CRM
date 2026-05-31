@@ -147,7 +147,14 @@ def fetch_transcript(classin_url, timeout=15):
     errno = data.get("error_info", {}).get("errno", 0)
     if errno != 1:
         err_msg = data.get("error_info", {}).get("error", f"errno={errno}")
-        raise RuntimeError(f"ClassIn API 返回错误: {err_msg}")
+        details = data.get("error_info", {}).get("details", {})
+        # 针对常见错误给出更友好的提示
+        friendly_msg = err_msg
+        if "视频总结生成失败" in err_msg:
+            friendly_msg = "该回放暂无 AI 字幕（视频总结生成失败），请确认该课程有回放录制。如需手动填写反馈，请关闭 AI 生成后直接编辑。"
+        elif details.get("msg") and "fileId" in str(details.get("msg", "")):
+            friendly_msg = f"链接解析异常，请确认链接格式是否正确。{details.get('msg', '')}"
+        raise RuntimeError(f"ClassIn API 返回错误: {friendly_msg}")
 
     # 提取字幕
     children = data.get("data", {}).get("content", {}).get("children", [])

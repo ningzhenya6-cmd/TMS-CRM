@@ -1210,7 +1210,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                 </div>
                 <!-- researching 超时提示 -->
                 <div v-if="consultingGenStatus === 'researching' && consultingGenPollStart > 0 && ((Date.now() - consultingGenPollStart) / 1000 > 20)" class="mt-2">
-                  <button class="text-xs px-2.5 py-1 rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-100" @click="skipResearch(consultingGenReportId, consultingForm.report_type === 'preparation')">
+                  <button class="text-xs px-2.5 py-1 rounded border hover:opacity-80" :class="consultingForm.report_type === 'preparation' ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'border-indigo-300 text-indigo-700 hover:bg-indigo-100'" @click="skipResearch(consultingGenReportId, consultingForm.report_type === 'preparation')">
                     跳过联网，直接生成
                   </button>
                 </div>
@@ -1221,7 +1221,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div class="flex justify-end gap-2 mt-5">
           <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeConsultingCreate">取消</button>
           <button class="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90" :class="consultingForm.report_type === 'preparation' ? 'bg-emerald-600' : 'bg-indigo-600'" @click="submitConsultingCreate" :disabled="consultingGenActive || consultingSaving">
-            {{ consultingGenActive ? '生成中...' : consultingSaving ? '创建中...' : '生成规划' }}
+            {{ consultingGenActive ? '生成中...' : consultingSaving ? '创建中...' : (consultingForm.report_type === 'preparation' ? '生成规划' : '生成分析') }}
           </button>
         </div>
       </div>
@@ -3201,6 +3201,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/app.js?v=20"></script>
 </body>
 </html>

@@ -542,7 +542,7 @@ app.component('include-lead-detail', {
         // researching 状态不算错误
         if (genRes.data && genRes.data.status === 'researching') {
           this.consultingGenStatus = 'researching';
-          this.consultingGenStep = genRes.data.step || '正在联网获取课程信息...';
+          this.consultingGenStep = genRes.data.step || (isPrep ? '正在联网获取课程信息...' : '正在联网搜索院校录取要求...');
           this.consultingGenProgress = genRes.data.progress || 5;
         } else {
           this.consultingGenActive = false;

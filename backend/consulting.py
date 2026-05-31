@@ -41,19 +41,23 @@ def _load_api_key():
     return os.environ.get("DEEPSEEK_API_KEY", "")
 
 
-def _call_deepseek(messages, temperature=0.3, max_tokens=3000):
+def _call_deepseek(messages, temperature=0.3, max_tokens=3000, enable_search=False):
     """调用 DeepSeek API"""
     api_key = _load_api_key()
     if not api_key:
         return {"error": "DEEPSEEK_API_KEY 未配置"}
 
-    data = json.dumps({
+    payload = {
         "model": "deepseek-chat",
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
         "stream": False,
-    }).encode()
+    }
+    if enable_search:
+        payload["enable_search"] = True
+
+    data = json.dumps(payload).encode()
 
     req = urllib.request.Request(
         "https://api.deepseek.com/chat/completions",
@@ -77,7 +81,7 @@ def _call_deepseek(messages, temperature=0.3, max_tokens=3000):
         return {"error": str(e)}
 
 
-def _run_generation(report_id, lead_id):
+def _run_generation(report_id, lead_id, skip_research=False):
     """后台线程：调用 DeepSeek 生成学业风险分析报告"""
     try:
         # 1. 读取报告 + 线索信息
@@ -90,6 +94,31 @@ def _run_generation(report_id, lead_id):
         if not lead:
             _set_progress(report_id, 0, "学生不存在", "error")
             return
+
+        # 1b. 联网搜索目标院校录取要求（risk 类型，非 skip 时执行）
+        search_content = ""
+        if not skip_research and report.get('report_type') == 'risk':
+            _set_progress(report_id, 5, "正在联网搜索院校录取要求...", "researching")
+            school = report.get('target_school', '')
+            major = report.get('target_major', '')
+            if school and major:
+                search_prompt = (
+                    f"请搜索 {school} 的 {major} 专业的官方录取要求，"
+                    f"包括：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
+                    f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
+                    f" 5) 该专业课程特色。请用中文回答，提供具体的数据和信息。"
+                )
+                search_result = _call_deepseek(
+                    [{"role": "user", "content": search_prompt}],
+                    temperature=0.1, max_tokens=2000, enable_search=True,
+                )
+                if "error" not in search_result:
+                    search_content = search_result["content"]
+                    _set_progress(report_id, 20, "院校录取信息已获取，正在分析学生背景...")
+                else:
+                    _set_progress(report_id, 5, "联网获取信息失败，将基于 AI 知识库直接分析")
+            else:
+                _set_progress(report_id, 5, "目标院校信息不完整，跳过联网搜索")
 
         _set_progress(report_id, 10, "正在分析学生背景...")
 
@@ -189,6 +218,15 @@ GPA：{report.get('gpa', '未提供')}
 请基于以上信息，生成学业风险分析报告（JSON 格式）。
 注意：差距分析维度请根据学生实际情况动态判断，不要套固定模板。
 建议方案要具体到可执行的学习计划层面。"""
+
+        # 如果有联网搜索到的院校信息，追加到 prompt 中
+        if search_content:
+            user_prompt += f"""
+
+【目标院校录取要求（联网搜索获取）】
+以下是从目标院校官方网站搜索到的录取要求信息，请基于此进行分析：
+
+{search_content[:2500]}"""
 
         _set_progress(report_id, 30, "正在调用 AI 分析引擎...")
 
@@ -620,6 +658,23 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
                 })
                 return
 
+    # ── 学业风险分析：联网搜索院校录取要求 ──
+    if report_type == "risk" and force != "1":
+        _gen_progress[rid] = {"progress": 5, "step": "正在联网搜索院校录取要求...", "status": "researching"}
+        execute(
+            "UPDATE consulting_reports SET status='researching', progress=5, updated_at=datetime('now','localtime') WHERE id=?",
+            (rid,),
+        )
+        # 线程立即启动，内部先联网搜索再生成报告
+        t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
+        t.start()
+        ok_response(handler, {
+            "status": "researching", "progress": 5,
+            "step": "正在联网搜索院校录取要求...",
+            "message": "正在在线搜索目标院校的录取要求信息，搜索完成后自动生成分析报告",
+        })
+        return
+
     # ── 启动生成线程 ──
     execute(
         "UPDATE consulting_reports SET status='generating', progress=0, updated_at=datetime('now','localtime') WHERE id=?",
@@ -633,7 +688,10 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
         t = threading.Thread(target=_run_generation_preparation, args=(rid, int(lead_id)), daemon=True)
         msg = "AI 规划已启动"
     else:
-        t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
+        # force=1 时跳过联网搜索（用户点了"跳过联网"）
+        skip_research = (force == "1")
+        t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)),
+                             kwargs={"skip_research": skip_research}, daemon=True)
         msg = "AI 分析已启动"
     t.start()
 
