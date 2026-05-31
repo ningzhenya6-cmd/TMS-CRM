@@ -542,11 +542,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="2" v-model="feedbackForm.homework_completion" placeholder="作业完成情况..."></textarea>
         </div>
         <div>
-          <label class="block text-xs text-gray-500 mb-1">下次课重点</label>
-          <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="2" v-model="feedbackForm.next_focus" placeholder="下次课需要重点关注什么..."></textarea>
+          <label class="block text-xs text-gray-500 mb-1">综合评语（内参）</label>
+          <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="3" v-model="feedbackForm.teacher_notes" placeholder="给学管/班主任的参考建议（内部使用）"></textarea>
+          <p class="text-xs text-amber-600 mt-0.5"><i class="bi bi-info-circle"></i> 此字段为内部参考，学管决定是否放入家长反馈</p>
+        </div>
+
+        <!-- 内部参考分隔区 -->
+        <div class="border-t border-dashed border-gray-200 pt-4 mt-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">内部参考</span>
+            <span class="text-xs text-gray-400">顾问/班主任决定是否同步家长</span>
+          </div>
+          <label class="block text-xs text-amber-700 mb-1">后续建议</label>
+          <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="2" v-model="feedbackForm.next_focus" placeholder="后续教学建议，由顾问判断是否给家长..."></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-5">
+        <button class="px-3 py-2 text-sm border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50" @click="copyFeedback(false)">
+          <i class="bi bi-clipboard mr-1"></i>复制家长版
+        </button>
+        <button class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="copyFeedback(true)">
+          <i class="bi bi-clipboard-data mr-1"></i>复制完整版
+        </button>
         <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showFeedbackModal=false">取消</button>
         <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitFeedback" :disabled="feedbackSaving">
           {{ feedbackSaving ? '保存中...' : '保存反馈' }}
@@ -1148,10 +1165,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           {{ consultingForm.report_type === 'preparation' ? '生成行前准备规划' : '生成学业分析报告' }}
         </h5>
         <div class="space-y-3">
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-4 gap-3">
             <div><label class="block text-xs text-gray-500 mb-1">目标国家 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_country" placeholder="如: 英国"></div>
             <div><label class="block text-xs text-gray-500 mb-1">目标院校 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_school" placeholder="如: UCL"></div>
-            <div><label class="block text-xs text-gray-500 mb-1">目标专业 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_major" placeholder="如: Computer Science"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">目标专业 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_major" placeholder="如: CS"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">申请阶段 *</label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" v-model="consultingForm.target_level">
+                <option value="">请选择...</option>
+                <option value="high_to_bachelor">高中 → 本科</option>
+                <option value="bachelor_to_master">本科 → 硕士</option>
+                <option value="master_to_phd">硕士 → 博士</option>
+                <option value="bachelor_to_phd">本科直博</option>
+              </select>
+            </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div><label class="block text-xs text-gray-500 mb-1">当前院校</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.current_school" placeholder="在读学校"></div>
@@ -1207,7 +1233,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div v-if="!consultingReport" class="text-center py-8 text-gray-400">加载中...</div>
         <div v-else>
           <div class="flex items-start justify-between mb-6">
-            <div><h4 class="text-lg font-bold text-gray-900">{{ consultingReport.target_school }}</h4><p class="text-sm text-gray-500">{{ consultingReport.target_country }} · {{ consultingReport.target_major }}</p></div>
+            <div><h4 class="text-lg font-bold text-gray-900">{{ consultingReport.target_school }}</h4>
+              <p class="text-sm text-gray-500">{{ consultingReport.target_country }} · {{ consultingReport.target_major }}
+                <template v-if="consultingReport.target_level">
+                  <span class="mx-1">·</span>
+                  <span v-if="consultingReport.target_level === 'high_to_bachelor'" class="text-indigo-600">高中→本科</span>
+                  <span v-else-if="consultingReport.target_level === 'bachelor_to_master'" class="text-indigo-600">本科→硕士</span>
+                  <span v-else-if="consultingReport.target_level === 'master_to_phd'" class="text-indigo-600">硕士→博士</span>
+                  <span v-else-if="consultingReport.target_level === 'bachelor_to_phd'" class="text-indigo-600">本科直博</span>
+                </template>
+              </p>
+            </div>
             <div class="flex items-center gap-2">
               <!-- risk 类型：风险等级 -->
               <template v-if="consultingReport.report_type !== 'preparation'">
@@ -2137,15 +2173,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
         <div>
           <label class="block text-xs text-gray-500 mb-1">综合评语（内参）</label>
-          <textarea class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 bg-amber-50" rows="3" v-model="feedbackForm.teacher_notes" placeholder="AI 分析 + 给学管/班主任的参考建议（内部使用）"></textarea>
+          <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="3" v-model="feedbackForm.teacher_notes" placeholder="给学管/班主任的参考建议（内部使用）"></textarea>
           <p class="text-xs text-amber-600 mt-0.5"><i class="bi bi-info-circle"></i> 此字段为内部参考，学管决定是否放入家长反馈</p>
         </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">下次课重点</label>
-          <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="2" v-model="feedbackForm.next_focus" placeholder="下次课需要重点关注什么..."></textarea>
+
+        <!-- 内部参考分隔区 -->
+        <div class="border-t border-dashed border-gray-200 pt-4 mt-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">内部参考</span>
+            <span class="text-xs text-gray-400">顾问/班主任决定是否同步家长</span>
+          </div>
+          <label class="block text-xs text-amber-700 mb-1">后续建议</label>
+          <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" rows="2" v-model="feedbackForm.next_focus" placeholder="后续教学建议，由顾问判断是否给家长..."></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-5">
+        <button class="px-3 py-2 text-sm border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50" @click="copyFeedback(false)">
+          <i class="bi bi-clipboard mr-1"></i>复制家长版
+        </button>
+        <button class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="copyFeedback(true)">
+          <i class="bi bi-clipboard-data mr-1"></i>复制完整版
+        </button>
         <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeFeedback">取消</button>
         <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitFeedback" :disabled="feedbackSaving">
           {{ feedbackSaving ? '保存中...' : '保存反馈' }}
@@ -3153,6 +3201,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=15"></script>
+<script src="js/app.js?v=19"></script>
 </body>
 </html>

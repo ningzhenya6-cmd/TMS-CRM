@@ -144,6 +144,24 @@ def _run_generation(report_id, lead_id):
 - 每一条 recommendation 都要有 learning_resources 给出具体资源名称（书/网站/课程/练习材料）
 - overall_risk 要综合评估，给出明确判断"""
 
+
+        target_level = report.get('target_level', '') or ''
+        level_hint = ""
+        if target_level:
+            level_map = {
+                "high_to_bachelor": "当前为高中阶段，目标为申请本科",
+                "bachelor_to_master": "当前为本科阶段，目标为申请硕士",
+                "master_to_phd": "当前为硕士阶段，目标为申请博士",
+                "bachelor_to_phd": "当前为本科阶段，目标为直博",
+            }
+            level_hint = "\n申请阶段：" + level_map.get(target_level, target_level)
+            if target_level in ("high_to_bachelor",):
+                level_hint += "\n提示：该阶段应重点关注高中成绩、语言考试、背景提升活动等"
+            elif target_level in ("bachelor_to_master",):
+                level_hint += "\n提示：该阶段应重点关注GPA、科研/实习经历、语言成绩、GRE/GMAT等"
+            elif target_level in ("master_to_phd", "bachelor_to_phd"):
+                level_hint += "\n提示：该阶段应重点关注科研经历、论文发表、推荐信、研究方向匹配等"
+
         current_date = datetime.datetime.now().strftime("%Y年%m月%d日")
         user_prompt = f"""当前日期：{current_date}
 
@@ -157,6 +175,7 @@ def _run_generation(report_id, lead_id):
 目标国家：{report.get('target_country', '')}
 目标院校：{report.get('target_school', '')}
 目标专业：{report.get('target_major', '')}
+{level_hint}
 
 学生当前情况：
 当前院校：{report.get('current_school', '未提供')}
@@ -292,6 +311,23 @@ def _run_generation_preparation(report_id, lead_id):
 - 整体时间线要基于当前日期给出**具体的月份安排**，如"建议从2026年6月开始准备...6-7月聚焦XX课程...每周投入8-10小时"，不要写笼统的"提前3个月"
 - 确保时间线中出现的年份/月份与当前日期一致，不要使用过去的日期"""
 
+        target_level = report.get('target_level', '') or ''
+        level_hint = ""
+        if target_level:
+            level_map = {
+                "high_to_bachelor": "当前为高中阶段，目标为申请本科",
+                "bachelor_to_master": "当前为本科阶段，目标为申请硕士",
+                "master_to_phd": "当前为硕士阶段，目标为申请博士",
+                "bachelor_to_phd": "当前为本科阶段，目标为直博",
+            }
+            level_hint = "\n申请阶段：" + level_map.get(target_level, target_level)
+            if target_level in ("high_to_bachelor",):
+                level_hint += "\n提示：该阶段应重点关注高中成绩、语言考试、背景提升活动等"
+            elif target_level in ("bachelor_to_master",):
+                level_hint += "\n提示：该阶段应重点关注GPA、科研/实习经历、语言成绩、GRE/GMAT等"
+            elif target_level in ("master_to_phd", "bachelor_to_phd"):
+                level_hint += "\n提示：该阶段应重点关注科研经历、论文发表、推荐信、研究方向匹配等"
+
         # 构建用户 prompt — 如果有真实课程数据则包含
         current_date = datetime.datetime.now().strftime("%Y年%m月%d日")
         user_prompt = f"""当前日期：{current_date}
@@ -305,6 +341,7 @@ def _run_generation_preparation(report_id, lead_id):
 目标院校：{report.get('target_school', '')}
 目标专业：{report.get('target_major', '')}
 目标国家：{report.get('target_country', '')}
+{level_hint}
 
 学生当前情况：
 当前院校：{report.get('current_school', '未提供')}
@@ -428,7 +465,7 @@ def list_all_reports(handler, token_payload, qs, body):
     offset = (page - 1) * page_size
     rows = query(
         f"""SELECT cr.id, cr.lead_id, cr.target_country, cr.target_school, cr.target_major,
-                   cr.risk_level, cr.summary, cr.status, cr.progress,
+                   cr.target_level, cr.risk_level, cr.summary, cr.status, cr.progress,
                    cr.report_type, cr.program_url,
                    cr.created_at, cr.updated_at,
                    l.name as lead_name, l.phone as lead_phone,
@@ -457,7 +494,7 @@ def list_lead_reports(handler, token_payload, qs, body, lead_id=None):
 
     rows = query(
         """SELECT cr.id, cr.target_country, cr.target_school, cr.target_major,
-                  cr.risk_level, cr.summary, cr.status, cr.progress,
+                  cr.target_level, cr.risk_level, cr.summary, cr.status, cr.progress,
                   cr.report_type, cr.program_url,
                   cr.created_at, cr.updated_at,
                   u.display_name as creator_name
@@ -482,6 +519,7 @@ def create_report(handler, token_payload, qs, body, lead_id=None):
     target_school = (body.get("target_school") or "").strip()
     target_major = (body.get("target_major") or "").strip()
     report_type = (body.get("report_type") or "risk").strip()
+    target_level = (body.get("target_level") or "").strip()
 
     if report_type not in ("risk", "preparation"):
         error_response(handler, "报告类型无效（risk / preparation）")
@@ -496,8 +534,8 @@ def create_report(handler, token_payload, qs, body, lead_id=None):
            (lead_id, target_country, target_school, target_major,
             current_school, current_grade, gpa, language_scores,
             prerequisite_courses, additional_info, created_by,
-            report_type, program_url)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            report_type, program_url, target_level)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (int(lead_id), target_country, target_school, target_major,
          (body.get("current_school") or "").strip(),
          (body.get("current_grade") or "").strip(),
@@ -507,7 +545,8 @@ def create_report(handler, token_payload, qs, body, lead_id=None):
          (body.get("additional_info") or "").strip(),
          token_payload["sub"],
          report_type,
-         (body.get("program_url") or "").strip()),
+         (body.get("program_url") or "").strip(),
+         target_level),
     )
 
     report_type_label = "行前准备规划" if report_type == "preparation" else "学业分析报告"
@@ -785,7 +824,7 @@ def update_report(handler, token_payload, qs, body, lead_id=None, report_id=None
 
     allowed = ["target_country", "target_school", "target_major",
                "current_school", "current_grade", "gpa", "language_scores",
-               "prerequisite_courses", "additional_info"]
+               "prerequisite_courses", "additional_info", "target_level"]
     updates = []
     params = []
     for field in allowed:

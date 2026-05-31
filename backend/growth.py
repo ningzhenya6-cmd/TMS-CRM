@@ -3,13 +3,15 @@
 """
 import json
 import os
-import subprocess
 import threading
 import time
+import urllib.request
+import urllib.error
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
 from permissions import can, scope_where
+from classin_api import fetch_transcript
 
 
 # ═══════════════════════════════════════════
@@ -83,9 +85,6 @@ def save_feedback(handler, token_payload, qs, body, schedule_id=None):
         ok_response(handler, fb, 201)
 
 
-from permissions import can, scope_where
-
-
 # ═══════════════════════════════════════════
 # AI 生成进度跟踪（内存）
 # ═══════════════════════════════════════════
@@ -93,10 +92,9 @@ _gen_progress = {}  # schedule_id → {progress, step, status, result, error}
 
 _GEN_STEPS = {
     "starting":       (0,  "🐣 小书僮准备开工..."),
-    "pipeline":       (10, "🔍 打开 ClassIn 提取 AI 字幕..."),
-    "transcribed":    (55, "📝 AI 字幕提取完成..."),
-    "llm":            (65, "🤖 小脑瓜思考ing..."),
-    "generating":     (80, "✍️ 整理报告..."),
+    "extracting":     (20, "📡 获取 ClassIn 字幕..."),
+    "transcribing":   (50, "📝 字幕提取完成，正在分析..."),
+    "generating":     (70, "🤖 AI 生成反馈中..."),
     "saving":         (90, "💾 保存反馈..."),
     "done":           (100,"🎉 完成啦！"),
     "error":          (0,  "❌ 生成失败"),
@@ -110,114 +108,187 @@ def _set_progress(schedule_id, status_key, extra_step=""):
         "status": status_key,
     }
 
-def _run_generation(schedule_id, classin_link, generator_path, uid, name, lead_id):
-    """后台线程：执行 feedback_generator 并更新进度"""
+
+def _load_deepseek_key():
+    """加载 DeepSeek API Key"""
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                if line.startswith("DEEPSEEK_API_KEY="):
+                    return line.split("=", 1)[1].strip()
+    return os.environ.get("DEEPSEEK_API_KEY", "")
+
+
+def _call_deepseek(system_prompt, user_prompt, temperature=0.3, max_tokens=2000):
+    """调用 DeepSeek API"""
+    api_key = _load_deepseek_key()
+    if not api_key:
+        raise RuntimeError("DEEPSEEK_API_KEY 未配置")
+
+    data = json.dumps({
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }).encode()
+
+    req = urllib.request.Request(
+        "https://api.deepseek.com/v1/chat/completions",
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+
     try:
-        _set_progress(schedule_id, "pipeline")
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            result = json.loads(resp.read())
+            return result["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")[:200]
+        raise RuntimeError(f"DeepSeek API HTTP {e.code}: {body}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"DeepSeek API 请求失败: {e.reason}")
+    except (json.JSONDecodeError, KeyError) as e:
+        raise RuntimeError(f"DeepSeek API 返回格式异常: {e}")
 
-        process = subprocess.Popen(
-            ["python3", generator_path, classin_link],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+
+def _generate_structured_feedback(transcript, info):
+    """将转录文本发送给 DeepSeek，返回结构化反馈"""
+    # 截断转录
+    max_chars = 6000
+    truncated = transcript[:max_chars]
+    if len(transcript) > max_chars:
+        truncated += "\n\n[...以下内容因长度限制已截断...]"
+
+    system_prompt = """你是一位留学生学科辅导老师，负责根据课堂录音转录写课后反馈。
+
+## 核心原则
+
+1. **绝对客观，不美化学生水平** — 学生实际掌握到什么程度就写什么程度。如果学生回答错误、卡壳、混淆概念，如实描述，不要写"整体基础较好"等美化表述。
+2. **英语专业术语必须准确** — 涉及学科英语术语（如 covalent bond, ionic bond, electron configuration, cation/anion 等）拼写和使用必须精确。
+3. **标注时间戳** — 在描述具体表现、困难、错误时，标注转录中的时间戳 [mm:ss] 作为参考。
+
+## 输出字段（JSON）
+
+【公开字段 — 发给家长】
+- content_covered: 本节课教学内容（2-4句话）。包含准确的学科英语术语。
+- student_performance: 学生课堂表现（2-4句话）。客观描述：学生能完成什么、在哪里犯错、老师给了什么建议。标注时间戳。
+- difficulties: 课堂中暴露的具体薄弱环节（2-3句话）。标注具体出错点和时间戳，没有则写"无明显难点"。
+- homework_completion: 作业完成情况（1-2句话）。未涉及则如实写"本次未检查作业"。
+
+【内部字段 — 供学管/班主任参考】
+- teacher_notes: 综合评语（3-5句话）。包含：整体观察、学生反映的困扰和老师建议、AI 观察到的学习模式、给学管的参考建议。标注时间戳。
+- suggestions: 后续教学建议（2-3句话）。给顾问和班主任判断是否要同步给家长的内容，包括下次课重点、需要额外关注的点。
+
+输出纯 JSON，不要 markdown 代码块。"""
+
+    user_prompt = f"""学生信息：
+姓名：{info.get('student', '未知')}
+课程：{info.get('course', '未知')}
+日期：{info.get('date', '未知')}
+时长：{info.get('duration', '未知')}
+教师：{info.get('teacher', '未知')}
+
+课堂录音转录：
+{truncated}
+
+请输出 JSON："""
+
+    content = _call_deepseek(system_prompt, user_prompt)
+
+    # 清理 markdown 代码块标记
+    content = content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1] if "\n" in content else content[3:]
+    if content.endswith("```"):
+        content = content.rsplit("```", 1)[0]
+    content = content.strip()
+
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"AI 返回非 JSON 格式: {content[:200]}")
+
+    defaults = {
+        "content_covered": "",
+        "student_performance": "",
+        "difficulties": "",
+        "homework_completion": "",
+        "teacher_notes": "",
+        "next_focus": "",
+        "suggestions": "",
+    }
+    for k in defaults:
+        if k not in parsed or not parsed[k]:
+            parsed[k] = defaults[k]
+
+    # AI 输出 suggestions → DB 兼容 next_focus（suggestions 优先）
+    if parsed.get("suggestions"):
+        parsed["next_focus"] = parsed["suggestions"]
+
+    return parsed
+
+
+def _run_generation(schedule_id, classin_link, uid, name, lead_id):
+    """后台线程：直接调 ClassIn API → DeepSeek → 保存"""
+    try:
+        _set_progress(schedule_id, "extracting")
+
+        # Step 1: 从 ClassIn API 获取字幕（秒级）
+        try:
+            transcript = fetch_transcript(classin_link)
+        except Exception as e:
+            _gen_progress[schedule_id] = {
+                "progress": 0, "step": f"❌ 获取字幕失败: {e}",
+                "status": "error", "error": str(e),
+            }
+            return
+
+        transcript_len = len(transcript)
+        _set_progress(schedule_id, "transcribing", extra_step=f"{transcript_len}字")
+
+        # Step 2: 从链接中提取展示信息
+        info = {"student": "", "teacher": "", "course": "", "date": "", "duration": ""}
+        # 排课信息
+        sched = query_one(
+            """SELECT s.*, t.name as teacher_name, l.name as student_name
+               FROM schedules s
+               LEFT JOIN teachers t ON s.teacher_id = t.id
+               LEFT JOIN leads l ON s.lead_id = l.id
+               WHERE s.id=?""",
+            (schedule_id,),
         )
+        if sched:
+            info["student"] = sched.get("student_name", "") or ""
+            info["teacher"] = sched.get("teacher_name", "") or ""
+            info["course"] = sched.get("subject", "") or ""
+            info["date"] = (sched.get("start_time") or "")[:10]
+            dur = sched.get("actual_duration_minutes") or sched.get("duration_minutes") or 0
+            if dur:
+                info["duration"] = f"{int(dur)}min"
 
-        # 读取 stderr 实时解析进度
-        last_line = ""
-        stderr_lines = []
-        for line in iter(process.stderr.readline, ""):
-            stderr_lines.append(line)
-            line = line.strip()
-            if not line:
-                continue
-            last_line = line
-            if "Step 1/3" in line:
-                _set_progress(schedule_id, "pipeline")
-            elif "转录" in line and "字" in line:
-                _set_progress(schedule_id, "transcribed", extra_step=line.split(":")[-1].strip())
-            elif "pipeline 已生成反馈" in line:
-                _set_progress(schedule_id, "llm")
-            elif "Step 2/3" in line:
-                _set_progress(schedule_id, "llm")
-            elif "DeepSeek" in line or "结构化" in line:
-                _set_progress(schedule_id, "generating")
-            elif "Step 3/3" in line:
-                _set_progress(schedule_id, "saving")
-
-        stdout, stderr = process.communicate()
-
-        if process.returncode != 0:
-            err_msg = stderr.strip()[-200:] if stderr.strip() else last_line[-200:]
+        # Step 3: DeepSeek 生成结构化反馈
+        _set_progress(schedule_id, "generating")
+        try:
+            feedback = _generate_structured_feedback(transcript, info)
+        except Exception as e:
             _gen_progress[schedule_id] = {
-                "progress": 0, "step": f"❌ {err_msg}", "status": "error", "error": err_msg,
+                "progress": 0, "step": f"❌ AI 生成失败: {e}",
+                "status": "error", "error": str(e),
             }
             return
 
-        # 解析 JSON 输出（最后一行）
-        lines = stdout.strip().split("\n")
-        json_line = None
-        for line in reversed(lines):
-            try:
-                json.loads(line)
-                json_line = line
-                break
-            except json.JSONDecodeError:
-                continue
+        # Step 4: 保存到数据库
+        _set_progress(schedule_id, "saving")
+        _save_feedback(schedule_id, classin_link, feedback, lead_id, uid, name)
 
-        if not json_line:
-            _gen_progress[schedule_id] = {
-                "progress": 0, "step": "❌ AI 返回格式异常", "status": "error", "error": "返回格式异常",
-            }
-            return
-
-        data = json.loads(json_line)
-
-        if "error" in data:
-            _gen_progress[schedule_id] = {
-                "progress": 0, "step": f"❌ {data['error']}", "status": "error", "error": data["error"],
-            }
-            return
-
-        feedback = data.get("feedback", {})
-
-        # 保存到数据库
-        existing = query_one("SELECT id FROM lesson_feedback WHERE schedule_id=?", (schedule_id,))
-
-        if existing:
-            execute(
-                """UPDATE lesson_feedback SET
-                   classin_link=?, content_covered=?, student_performance=?,
-                   difficulties=?, homework_completion=?, teacher_notes=?,
-                   next_focus=?, ai_generated=1, updated_at=datetime('now','localtime')
-                   WHERE schedule_id=?""",
-                (classin_link,
-                 feedback.get("content_covered", ""),
-                 feedback.get("student_performance", ""),
-                 feedback.get("difficulties", ""),
-                 feedback.get("homework_completion", ""),
-                 feedback.get("teacher_notes", ""),
-                 feedback.get("next_focus", ""),
-                 schedule_id),
-            )
-        else:
-            execute_lastrowid(
-                """INSERT INTO lesson_feedback
-                   (schedule_id, lead_id, classin_link, content_covered, student_performance,
-                    difficulties, homework_completion, teacher_notes, next_focus, ai_generated, created_by)
-                   VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
-                (schedule_id, lead_id, classin_link,
-                 feedback.get("content_covered", ""),
-                 feedback.get("student_performance", ""),
-                 feedback.get("difficulties", ""),
-                 feedback.get("homework_completion", ""),
-                 feedback.get("teacher_notes", ""),
-                 feedback.get("next_focus", ""),
-                 uid),
-            )
-
-        add_oplog(uid, name,
-                  "ai_generate", "lesson_feedback", schedule_id,
-                  f"AI 生成课后反馈: schedule#{schedule_id}")
-
-        # 返回完整反馈
+        # Step 5: 返回结果
         fb = query_one(
             """SELECT lf.*, u.display_name as creator_name
                FROM lesson_feedback lf
@@ -232,8 +303,7 @@ def _run_generation(schedule_id, classin_link, generator_path, uid, name, lead_i
             "status": "done",
             "result": {
                 "feedback": fb,
-                "info": data.get("info", {}),
-                "transcript_length": data.get("transcript_length", 0),
+                "transcript_length": transcript_len,
             },
         }
 
@@ -247,6 +317,47 @@ def _run_generation(schedule_id, classin_link, generator_path, uid, name, lead_i
         _gen_progress[schedule_id] = {
             "progress": 0, "step": f"❌ {e}", "status": "error", "error": str(e),
         }
+
+
+def _save_feedback(schedule_id, classin_link, feedback, lead_id, uid, name):
+    """保存反馈到数据库"""
+    existing = query_one("SELECT id FROM lesson_feedback WHERE schedule_id=?", (schedule_id,))
+
+    if existing:
+        execute(
+            """UPDATE lesson_feedback SET
+               classin_link=?, content_covered=?, student_performance=?,
+               difficulties=?, homework_completion=?, teacher_notes=?,
+               next_focus=?, ai_generated=1, updated_at=datetime('now','localtime')
+               WHERE schedule_id=?""",
+            (classin_link,
+             feedback.get("content_covered", ""),
+             feedback.get("student_performance", ""),
+             feedback.get("difficulties", ""),
+             feedback.get("homework_completion", ""),
+             feedback.get("teacher_notes", ""),
+             feedback.get("next_focus", ""),
+             schedule_id),
+        )
+    else:
+        execute_lastrowid(
+            """INSERT INTO lesson_feedback
+               (schedule_id, lead_id, classin_link, content_covered, student_performance,
+                difficulties, homework_completion, teacher_notes, next_focus, ai_generated, created_by)
+               VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
+            (schedule_id, lead_id, classin_link,
+             feedback.get("content_covered", ""),
+             feedback.get("student_performance", ""),
+             feedback.get("difficulties", ""),
+             feedback.get("homework_completion", ""),
+             feedback.get("teacher_notes", ""),
+             feedback.get("next_focus", ""),
+             uid),
+        )
+
+    add_oplog(uid, name,
+              "ai_generate", "lesson_feedback", schedule_id,
+              f"AI 生成课后反馈: schedule#{schedule_id}")
 
 
 @post("/api/schedules/{schedule_id}/feedback/generate")
@@ -281,14 +392,8 @@ def generate_feedback(handler, token_payload, qs, body, schedule_id=None):
 
     # ── 已经在生成中？ ──
     existing_task = _gen_progress.get(int(schedule_id), {})
-    if existing_task.get("status") in ("pipeline", "downloading", "transcribing", "llm", "generating", "saving"):
+    if existing_task.get("status") in ("extracting", "transcribing", "generating", "saving"):
         error_response(handler, "该排课已有生成任务在进行中", 409)
-        return
-
-    # ── 启动后台生成 ──
-    generator_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "feedback_generator.py")
-    if not os.path.exists(generator_path):
-        error_response(handler, "feedback_generator.py 未找到", 500)
         return
 
     uid = token_payload["sub"]
@@ -301,7 +406,7 @@ def generate_feedback(handler, token_payload, qs, body, schedule_id=None):
 
     t = threading.Thread(
         target=_run_generation,
-        args=(int(schedule_id), classin_link, generator_path, uid, name, lead_id),
+        args=(int(schedule_id), classin_link, uid, name, lead_id),
         daemon=True,
     )
     t.start()

@@ -40,6 +40,11 @@ class TMSHandler(BaseHTTPRequestHandler):
             token = auth_hdr[7:]
         else:
             token = self.headers.get("X-Session-Token", "")
+        if not token:
+            # 支持 URL query 参数传 token（用于文件下载等需直接导航的场景）
+            from urllib.parse import parse_qs, urlparse
+            qs = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            token = (qs.get("token") or [None])[0]
         return decode_token(token) if token else None
 
     def _handle_request(self, method: str):

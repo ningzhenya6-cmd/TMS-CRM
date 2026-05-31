@@ -488,6 +488,7 @@ app.component('include-lead-detail', {
         prerequisite_courses: '',
         additional_info: lead.remark || '',
         report_type: type || 'risk',
+        target_level: '',
         program_url: '',
         program_courses: '',
       };
@@ -518,6 +519,7 @@ app.component('include-lead-detail', {
         prerequisite_courses: f.prerequisite_courses,
         additional_info: f.additional_info,
         report_type: f.report_type || 'risk',
+        target_level: f.target_level,
       };
       const res = await API.post('/leads/' + this.lead.id + '/consulting', payload);
       this.consultingSaving = false;
@@ -615,21 +617,16 @@ app.component('include-lead-detail', {
       if (!this.lead || !this.lead.consulting_reports) return [];
       return this.lead.consulting_reports.filter(r => r.report_type === type);
     },
-    async downloadConsultingReport(reportId, format) {
-      const res = await API.getRaw('/leads/' + this.lead.id + '/consulting/' + reportId + '/download?format=' + format);
-      if (!res) { toast('下载失败', 'error'); return; }
-      const ext = format === 'docx' ? 'docx' : 'pdf';
-      const mime = format === 'docx'
-        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        : 'application/pdf';
-      const blob = new Blob([res], { type: mime });
+    downloadConsultingReport(reportId, format) {
+      // 直接导航到 API URL，浏览器原生处理下载（兼容移动端）
+      const token = localStorage.getItem('tms_token') || '';
+      const url = '/api/leads/' + this.lead.id + '/consulting/' + reportId + '/download?format=' + format + '&token=' + encodeURIComponent(token);
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = (this.lead?.name || 'report') + '_' + (format === 'docx' ? '准备规划' : '准备规划') + '.' + ext;
+      link.href = url;
+      link.download = (this.lead?.name || 'report') + '.' + (format === 'docx' ? 'docx' : 'pdf');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
     },
   },
   created() { this.load(); },
@@ -739,6 +736,10 @@ app.component('include-schedules', {
       showFeedbackModal: false,
       feedbackScheduleId: null,
       feedbackStudentName: '',
+      feedbackSubject: '',
+      feedbackTeacher: '',
+      feedbackDate: '',
+      feedbackDuration: '',
       feedbackForm: { classin_link: '', content_covered: '', student_performance: '', difficulties: '', homework_completion: '', teacher_notes: '', next_focus: '' },
       feedbackSaving: false,
       genStatus: { progress: 0, step: '' },
@@ -889,6 +890,10 @@ app.component('include-schedules', {
     openFeedback(s) {
       this.feedbackScheduleId = s.id;
       this.feedbackStudentName = s.lead_name || '';
+      this.feedbackSubject = s.subject || '';
+      this.feedbackTeacher = s.teacher_name || '';
+      this.feedbackDate = (s.start_time || '').slice(0, 10);
+      this.feedbackDuration = s.actual_duration_minutes || s.duration_minutes || '';
       this.feedbackForm = { classin_link: s.classin_link || '', content_covered: '', student_performance: '', difficulties: '', homework_completion: '', teacher_notes: '', next_focus: '' };
       this.genStatus = { progress: 0, step: '' };
       // 加载已有反馈
@@ -957,6 +962,54 @@ app.component('include-schedules', {
         }
       };
       poll();
+    },
+    // ── 一键复制反馈 ──
+    copyFeedback(includeInternal) {
+      const student = this.feedbackStudentName || '';
+      const subject = this.feedbackSubject || '';
+      const teacher = this.feedbackTeacher || '';
+      const date = this.feedbackDate || '';
+      const duration = this.feedbackDuration ? `(${this.feedbackDuration}min)` : '';
+      const fb = this.feedbackForm;
+
+      let text = '━━━ 课后反馈 ━━━\n';
+      text += `👤 学生: ${student}  📚 ${subject}  👨‍🏫 ${teacher}\n`;
+      text += `📅 ${date} ${duration}\n\n`;
+
+      text += '📖 授课内容\n';
+      text += `▸ ${fb.content_covered || '未填写'}\n\n`;
+
+      text += '🙋 课堂表现\n';
+      text += `▸ ${fb.student_performance || '未填写'}\n\n`;
+
+      text += '⚠️ 薄弱环节\n';
+      text += `▸ ${fb.difficulties || '未填写'}\n\n`;
+
+      text += '📝 作业情况\n';
+      text += `▸ ${fb.homework_completion || '未填写'}\n`;
+
+      if (includeInternal) {
+        if (fb.teacher_notes) {
+          text += `\n📌 教师观察\n▸ ${fb.teacher_notes}\n`;
+        }
+        if (fb.next_focus) {
+          text += `\n💡 后续建议\n▸ ${fb.next_focus}\n`;
+        }
+      }
+
+      text += '\n━━━ 来自 TMS 教务系统 ━━━';
+
+      navigator.clipboard.writeText(text).then(() => {
+        toast(includeInternal ? '✅ 完整版已复制到剪贴板' : '✅ 家长版已复制到剪贴板', 'success');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast(includeInternal ? '✅ 完整版已复制到剪贴板' : '✅ 家长版已复制到剪贴板', 'success');
+      });
     },
   },
   created() { this.loadTeachers(); this.loadLeads(); this.load(); },
@@ -1933,6 +1986,58 @@ app.component('include-growth', {
       };
       poll();
     },
+    // ── 一键复制反馈 ──
+    copyFeedback(includeInternal) {
+      // 获取排课信息
+      const sched = this.growth?.schedules?.find(s => s.id === this.feedbackScheduleId) || {};
+      const student = this.growth?.lead?.name || '';
+      const subject = sched.subject || '';
+      const teacher = sched.teacher_name || '';
+      const date = (sched.start_time || '').slice(0, 10);
+      const dur = sched.actual_duration_minutes || sched.duration_minutes || '';
+      const duration = dur ? `(${dur}min)` : '';
+      const fb = this.feedbackForm;
+
+      let text = '━━━ 课后反馈 ━━━\n';
+      text += `👤 学生: ${student}  📚 ${subject}  👨‍🏫 ${teacher}\n`;
+      text += `📅 ${date} ${duration}\n\n`;
+
+      text += '📖 授课内容\n';
+      text += `▸ ${fb.content_covered || '未填写'}\n\n`;
+
+      text += '🙋 课堂表现\n';
+      text += `▸ ${fb.student_performance || '未填写'}\n\n`;
+
+      text += '⚠️ 薄弱环节\n';
+      text += `▸ ${fb.difficulties || '未填写'}\n\n`;
+
+      text += '📝 作业情况\n';
+      text += `▸ ${fb.homework_completion || '未填写'}\n`;
+
+      if (includeInternal) {
+        if (fb.teacher_notes) {
+          text += `\n📌 教师观察\n▸ ${fb.teacher_notes}\n`;
+        }
+        if (fb.next_focus) {
+          text += `\n💡 后续建议\n▸ ${fb.next_focus}\n`;
+        }
+      }
+
+      text += '\n━━━ 来自 TMS 教务系统 ━━━';
+
+      navigator.clipboard.writeText(text).then(() => {
+        toast(includeInternal ? '✅ 完整版已复制到剪贴板' : '✅ 家长版已复制到剪贴板', 'success');
+      }).catch(() => {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast(includeInternal ? '✅ 完整版已复制到剪贴板' : '✅ 家长版已复制到剪贴板', 'success');
+      });
+    },
     // ── 考试成绩 ──
     openExam() {
       const d = new Date();
@@ -2056,20 +2161,15 @@ app.component('include-consulting', {
       this.showViewModal = true;
     },
     async downloadConsultingReport(report, format) {
-      const res = await API.getRaw('/leads/' + report.lead_id + '/consulting/' + report.id + '/download?format=' + format);
-      if (!res) { toast('下载失败', 'error'); return; }
-      const ext = format === 'docx' ? 'docx' : 'pdf';
-      const mime = format === 'docx'
-        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        : 'application/pdf';
-      const blob = new Blob([res], { type: mime });
+      // 直接导航到 API URL，浏览器原生处理下载（兼容移动端）
+      const token = localStorage.getItem('tms_token') || '';
+      const url = '/api/leads/' + report.lead_id + '/consulting/' + report.id + '/download?format=' + format + '&token=' + encodeURIComponent(token);
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = (report.lead_name || report.target_school || 'report') + '.' + ext;
+      link.href = url;
+      link.download = (report.lead_name || report.target_school || 'report') + '.' + (format === 'docx' ? 'docx' : 'pdf');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
     },
     switchReportTypeFilter(filter) {
       this.reportTypeFilter = filter;

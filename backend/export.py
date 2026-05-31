@@ -381,23 +381,49 @@ def generate_docx(report, lead, report_type="risk") -> bytes:
 # ══════════════════════════════════════════════════════════════
 
 
+def _find_chinese_font():
+    """自动检测可用中文字体路径，支持 macOS / Linux"""
+    candidates = [
+        # macOS
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        # Linux — WenQuanYi
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        # Linux — Noto
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        # Linux — 其他常见路径
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
 class _ReportPDF(FPDF):
-    """自定义 PDF，使用 STHeiti 字体（支持中文），页脚加页码"""
+    """自定义 PDF，自动检测中文字体，页脚加页码"""
 
     def __init__(self):
         super().__init__()
         self._chinese_ok = False
-        try:
-            self.add_font("STHeiti", "", "/System/Library/Fonts/STHeiti Light.ttc")
-            self.add_font("STHeiti", "B", "/System/Library/Fonts/STHeiti Medium.ttc")
-            self._chinese_ok = True
-        except Exception:
-            pass
+        self._cn_font = "Helvetica"
+        font_path = _find_chinese_font()
+        if font_path:
+            try:
+                self.add_font("CJK", "", font_path)
+                # 粗体复用同一字体（fpdf2 支持）
+                self.add_font("CJK", "B", font_path)
+                self._chinese_ok = True
+                self._cn_font = "CJK"
+            except Exception:
+                pass
 
     def footer(self):
         self.set_y(-15)
         if self._chinese_ok:
-            self.set_font("STHeiti", "", 8)
+            self.set_font(self._cn_font, "", 8)
         else:
             self.set_font("Helvetica", "I", 8)
         self.cell(0, 10, f"Page {self.page_no()}/{{nb}}", align="C")
@@ -406,7 +432,7 @@ class _ReportPDF(FPDF):
 def _pdf_set_cn(pdf):
     """切换到中文字体"""
     if pdf._chinese_ok:
-        return "STHeiti"
+        return pdf._cn_font
     return "Helvetica"
 
 
