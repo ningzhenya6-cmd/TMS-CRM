@@ -66,9 +66,9 @@ def call_llm(messages, temperature=0.3, max_tokens=2000):
 
 
 def run_pipeline(classin_link, timeout=600):
-    """调用 pipeline.py，从 JSON 输出中解析 (info, transcript, error)"""
+    """调用 pipeline.py，从 JSON 输出中解析 (info, transcript, error, feedback_text)"""
     if not os.path.exists(PIPELINE_PATH):
-        return None, "", f"pipeline.py 不存在: {PIPELINE_PATH}"
+        return None, "", f"pipeline.py 不存在: {PIPELINE_PATH}", ""
 
     try:
         result = subprocess.run(
@@ -76,25 +76,25 @@ def run_pipeline(classin_link, timeout=600):
             capture_output=True, text=True, timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        return None, "", "pipeline 执行超时（超过10分钟）"
+        return None, "", "pipeline 执行超时（超过10分钟）", ""
     except FileNotFoundError:
-        return None, "", "python3 未找到"
+        return None, "", "python3 未找到", ""
 
     if result.returncode != 0:
-        return None, "", f"pipeline 失败: {result.stderr[:300]}"
+        return None, "", f"pipeline 失败: {result.stderr[:300]}", ""
 
     # 从 stdout 中提取 __JSON_RESULT__ 后的 JSON 行
     output = result.stdout
     marker = "__JSON_RESULT__"
     idx = output.find(marker)
     if idx < 0:
-        return None, "", "pipeline 输出中未找到 JSON 结果标记"
+        return None, "", "pipeline 输出中未找到 JSON 结果标记", ""
 
     json_line = output[idx + len(marker):].strip().split("\n")[0]
     try:
         data = json.loads(json_line)
     except json.JSONDecodeError:
-        return None, "", f"pipeline JSON 解析失败: {json_line[:200]}"
+        return None, "", f"pipeline JSON 解析失败: {json_line[:200]}", ""
 
     info = data.get("info", {})
     transcript = data.get("transcript", "")
