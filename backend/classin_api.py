@@ -48,7 +48,18 @@ def _fetch_fileid_via_playwright(lesson_key, timeout=30):
 
     url = f"https://live.eeo.cn/pc.html?lessonKey={lesson_key}"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        # 先尝试 Playwright 默认浏览器，若失败则用系统安装的 chromium
+        launch_kwargs = {"headless": True}
+        try:
+            browser = p.chromium.launch(**launch_kwargs)
+        except Exception:
+            # 尝试系统路径
+            for path in ("/usr/bin/chromium-browser", "/usr/bin/chromium", "/snap/bin/chromium"):
+                import os as _os
+                if _os.path.exists(path):
+                    launch_kwargs["executable_path"] = path
+                    break
+            browser = p.chromium.launch(**launch_kwargs)
         try:
             context = browser.new_context(locale="zh-CN")
             page = context.new_page()
