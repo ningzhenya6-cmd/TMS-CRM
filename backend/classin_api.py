@@ -5,6 +5,10 @@ ClassIn API 直调 — 获取课堂回放字幕，无需浏览器
     from classin_api import fetch_transcript
     text = fetch_transcript("https://live.eeo.cn/webcast.php?courseKey=xxx&lessonid=yyy")
     text = fetch_transcript("https://live.eeo.cn/pc.html?lessonKey=xxx")
+
+策略：
+- 旧格式 URL（含 lessonid=19位数字）→ 直接用 fileId 调 richVideoSummary API
+- 新格式 URL（仅 lessonKey）→ 用 Playwright 加载页面提取视频 src 中的 fileId
 """
 import json
 import os
@@ -15,6 +19,64 @@ import urllib.error
 # ── API 配置 ──
 _RICH_SUMMARY_URL = "https://dynamic.eeo.cn/course-ai-assistant/app/share/richVideoSummary"
 _LESSON_INFO_URL = "https://dynamic.eeo.cn/saasajax/webcast.ajax.php?action=getLessonClassInfo"
+
+
+# ── 视频路径 → fileId 提取 ──
+_VIDEO_FILEID_RE = re.compile(r'/([a-f0-9]{8})(\d{19})/')
+
+
+def _extract_fileid_from_src(video_src):
+    """从 ClassIn 视频播放 URL 中提取 19 位 fileId
+
+    ClassIn 视频 URL 格式:
+    https://playback.eeo.cn/{bucket}/{hex_prefix_8chars}{19_digit_fileid}/f0.mp4
+    """
+    m = _VIDEO_FILEID_RE.search(video_src)
+    if m:
+        return m.group(2)
+    return None
+
+
+def _fetch_fileid_via_playwright(lesson_key, timeout=30):
+    """用 Playwright 加载 ClassIn 页面，从视频元素中提取 fileId
+
+    新格式 URL (pc.html?lessonKey=xxx) 不含 fileId 参数。
+    但页面的 video 元素的 src URL 中编码了 19 位 fileId。
+    Playwright 加载页面后，video.src 自动填充，无需登录。
+    """
+    from playwright.sync_api import sync_playwright
+
+    url = f"https://live.eeo.cn/pc.html?lessonKey={lesson_key}"
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
+            context = browser.new_context(locale="zh-CN")
+            page = context.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=timeout * 1000)
+
+            # 等待 video 元素出现并获取 src
+            import time as _time
+            deadline = _time.time() + timeout
+            file_id = None
+            while _time.time() < deadline:
+                video_src = page.evaluate("""() => {
+                    const v = document.querySelector('video');
+                    return v ? (v.src || v.currentSrc || '') : '';
+                }""")
+                if video_src:
+                    file_id = _extract_fileid_from_src(video_src)
+                    if file_id:
+                        break
+                _time.sleep(1)
+
+            if not file_id:
+                raise RuntimeError(
+                    f"无法从页面中提取视频 fileId（lessonKey={lesson_key}）。"
+                    f"请确认该课程有回放录制，或使用旧格式链接。"
+                )
+            return file_id
+        finally:
+            browser.close()
 
 
 def _resolve_lesson_key(lesson_key, timeout=10):
@@ -96,38 +158,10 @@ def parse_classin_url(url):
     return ck, lid, is_new_format
 
 
-def fetch_transcript(classin_url, timeout=15):
-    """调 ClassIn API 获取字幕文本，返回完整转录字符串"""
-    ck_or_lk, lid, is_new = parse_classin_url(classin_url)
-
-    # ── 解析最终的 courseKey 和 fileId ──
-    if lid:
-        # ✅ 旧格式：URL 中包含录制视频的 fileId（19位数字），直接使用
-        course_key = ck_or_lk
-        file_id = lid
-    else:
-        # ❌ 新格式：pc.html?lessonKey=xxx 不含录制视频 fileId
-        # lessonKey 解析出的 lessonId（10位）≠ fileId（19位录制文件ID）
-        # fileId 只能通过需要 ClassIn 登录权限的 getLessonWebcastData API 获取
-        resolved = _resolve_lesson_key(ck_or_lk, timeout=timeout)
-        if resolved["lessonStatus"] != 1:
-            status_names = {1: "已结束（有回放）", 2: "未开始/无回放", 10: "等待中", 11: "直播中"}
-            hint = status_names.get(resolved["lessonStatus"], f"status={resolved['lessonStatus']}")
-            raise RuntimeError(
-                f"该课程暂无回放（状态: {hint}），"
-                f"无法获取 AI 字幕。如需手动填写反馈，请关闭 AI 生成后直接编辑。"
-            )
-        # 课程有回放但新格式链接缺少录制视频的 fileId
-        raise RuntimeError(
-            f"当前链接是 ClassIn 新格式（pc.html），不含录制视频的 fileId 参数。\n"
-            f"请使用旧格式链接：在浏览器打开该回放后，\n"
-            f"从地址栏复制包含 courseKey 和 lessonid 的完整链接（webcast.php 格式），\n"
-            f"或联系技术确认如何获取录制视频 ID。"
-        )
-
-    # ── 调用字幕 API ──
+def _call_rich_summary_api(class_key, file_id, timeout=15):
+    """调用 ClassIn richVideoSummary API 获取字幕数据"""
     payload = json.dumps({
-        "classKey": course_key,
+        "classKey": class_key,
         "fileId": file_id,
         "subtitle": 1,
     }).encode()
@@ -150,35 +184,36 @@ def fetch_transcript(classin_url, timeout=15):
     except json.JSONDecodeError:
         raise RuntimeError("ClassIn API 返回非 JSON 格式")
 
-    # 检查错误
     errno = data.get("error_info", {}).get("errno", 0)
     if errno != 1:
         err_msg = data.get("error_info", {}).get("error", f"errno={errno}")
         details = data.get("error_info", {}).get("details", {})
-        # 解析 API 返回的详细信息中是否包含内部 fileId 格式
         detail_msg = details.get("msg", "")
-        # 视频总结生成失败 — 可能原因：AI 功能未开启 / 录制过期 / 文件ID不匹配
+
         friendly_msg = err_msg
         if "视频总结生成失败" in err_msg:
-            # 检查内部错误中是否有 compound fileId 格式，说明 fileId 格式对但内容不匹配
             if "lmsActivity" in detail_msg:
                 friendly_msg = (
                     "ClassIn AI 字幕提取失败：该链接中的录制文件 ID 可能不匹配或已过期。\n"
                     "建议：1) 确认在浏览器中能正常播放该回放并看到字幕\n"
-                    "      2) 重新从 ClassIn 复制课程回放链接（确保链接中包含 lessonid= 参数）\n"
-                    "      3) 如仍有问题，可关闭 AI 生成后手动填写反馈"
+                    "      2) 重新从 ClassIn 复制课程回放链接\n"
+                    "      3) 或关闭 AI 生成后手动填写反馈"
                 )
             else:
                 friendly_msg = (
                     "该回放暂无 AI 字幕（视频总结生成失败）。\n"
-                    "可能原因：1) AI 教师功能未对该课程开放 2) 录制时间过久已不支持 AI 处理\n"
-                    "建议：关闭 AI 生成后手动填写反馈，或联系 ClassIn 确认 AI 字幕功能已开启。"
+                    "可能原因：AI 教师功能未对该课程开放，或录制时间过久已不支持 AI 处理。\n"
+                    "建议：关闭 AI 生成后手动填写反馈。"
                 )
         elif detail_msg and "fileId" in detail_msg:
             friendly_msg = f"链接解析异常，请确认链接格式是否正确。{detail_msg}"
         raise RuntimeError(f"ClassIn API 返回错误: {friendly_msg}")
 
-    # 提取字幕
+    return data
+
+
+def _parse_subtitles(data):
+    """从 API 返回数据中提取字幕文本"""
     children = data.get("data", {}).get("content", {}).get("children", [])
     if not children:
         raise RuntimeError("ClassIn API 返回空字幕")
@@ -192,3 +227,31 @@ def fetch_transcript(classin_url, timeout=15):
             lines.append(f"{time_str} {desc}")
 
     return "\n".join(lines)
+
+
+def fetch_transcript(classin_url, timeout=15):
+    """调 ClassIn API 获取字幕文本，返回完整转录字符串"""
+    ck_or_lk, lid, is_new = parse_classin_url(classin_url)
+
+    # ── 解析最终的 courseKey 和 fileId ──
+    if lid:
+        # 旧格式：URL 中直接包含 19 位录制 fileId
+        class_key = ck_or_lk
+        file_id = lid
+    else:
+        # 先解析 lessonKey 验证课程是否存在及状态
+        resolved = _resolve_lesson_key(ck_or_lk, timeout=timeout)
+        if resolved["lessonStatus"] != 1:
+            status_names = {1: "已结束（有回放）", 2: "未开始/无回放", 10: "等待中", 11: "直播中"}
+            hint = status_names.get(resolved["lessonStatus"], f"status={resolved['lessonStatus']}")
+            raise RuntimeError(
+                f"该课程暂无回放（状态: {hint}），"
+                f"无法获取 AI 字幕。如需手动填写反馈，请关闭 AI 生成后直接编辑。"
+            )
+        # 新格式：用 Playwright 加载页面，从 video.src 中提取 fileId
+        class_key = ck_or_lk
+        file_id = _fetch_fileid_via_playwright(ck_or_lk, timeout=timeout)
+
+    # ── 调用字幕 API ──
+    data = _call_rich_summary_api(class_key, file_id, timeout=timeout)
+    return _parse_subtitles(data)
