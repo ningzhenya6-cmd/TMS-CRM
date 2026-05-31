@@ -102,11 +102,13 @@ def fetch_transcript(classin_url, timeout=15):
 
     # ── 解析最终的 courseKey 和 fileId ──
     if lid:
-        # 旧格式：URL 中已有 numeric lessonId，直接使用
+        # ✅ 旧格式：URL 中包含录制视频的 fileId（19位数字），直接使用
         course_key = ck_or_lk
         file_id = lid
     else:
-        # 新格式：只有 lessonKey，需要调用内部 API 解析出 courseKey + lessonId
+        # ❌ 新格式：pc.html?lessonKey=xxx 不含录制视频 fileId
+        # lessonKey 解析出的 lessonId（10位）≠ fileId（19位录制文件ID）
+        # fileId 只能通过需要 ClassIn 登录权限的 getLessonWebcastData API 获取
         resolved = _resolve_lesson_key(ck_or_lk, timeout=timeout)
         if resolved["lessonStatus"] != 1:
             status_names = {1: "已结束（有回放）", 2: "未开始/无回放", 10: "等待中", 11: "直播中"}
@@ -115,8 +117,13 @@ def fetch_transcript(classin_url, timeout=15):
                 f"该课程暂无回放（状态: {hint}），"
                 f"无法获取 AI 字幕。如需手动填写反馈，请关闭 AI 生成后直接编辑。"
             )
-        course_key = resolved["courseKey"]
-        file_id = resolved["lessonId"]
+        # 课程有回放但新格式链接缺少录制视频的 fileId
+        raise RuntimeError(
+            f"当前链接是 ClassIn 新格式（pc.html），不含录制视频的 fileId 参数。\n"
+            f"请使用旧格式链接：在浏览器打开该回放后，\n"
+            f"从地址栏复制包含 courseKey 和 lessonid 的完整链接（webcast.php 格式），\n"
+            f"或联系技术确认如何获取录制视频 ID。"
+        )
 
     # ── 调用字幕 API ──
     payload = json.dumps({
@@ -148,12 +155,27 @@ def fetch_transcript(classin_url, timeout=15):
     if errno != 1:
         err_msg = data.get("error_info", {}).get("error", f"errno={errno}")
         details = data.get("error_info", {}).get("details", {})
-        # 针对常见错误给出更友好的提示
+        # 解析 API 返回的详细信息中是否包含内部 fileId 格式
+        detail_msg = details.get("msg", "")
+        # 视频总结生成失败 — 可能原因：AI 功能未开启 / 录制过期 / 文件ID不匹配
         friendly_msg = err_msg
         if "视频总结生成失败" in err_msg:
-            friendly_msg = "该回放暂无 AI 字幕（视频总结生成失败），请确认该课程有回放录制。如需手动填写反馈，请关闭 AI 生成后直接编辑。"
-        elif details.get("msg") and "fileId" in str(details.get("msg", "")):
-            friendly_msg = f"链接解析异常，请确认链接格式是否正确。{details.get('msg', '')}"
+            # 检查内部错误中是否有 compound fileId 格式，说明 fileId 格式对但内容不匹配
+            if "lmsActivity" in detail_msg:
+                friendly_msg = (
+                    "ClassIn AI 字幕提取失败：该链接中的录制文件 ID 可能不匹配或已过期。\n"
+                    "建议：1) 确认在浏览器中能正常播放该回放并看到字幕\n"
+                    "      2) 重新从 ClassIn 复制课程回放链接（确保链接中包含 lessonid= 参数）\n"
+                    "      3) 如仍有问题，可关闭 AI 生成后手动填写反馈"
+                )
+            else:
+                friendly_msg = (
+                    "该回放暂无 AI 字幕（视频总结生成失败）。\n"
+                    "可能原因：1) AI 教师功能未对该课程开放 2) 录制时间过久已不支持 AI 处理\n"
+                    "建议：关闭 AI 生成后手动填写反馈，或联系 ClassIn 确认 AI 字幕功能已开启。"
+                )
+        elif detail_msg and "fileId" in detail_msg:
+            friendly_msg = f"链接解析异常，请确认链接格式是否正确。{detail_msg}"
         raise RuntimeError(f"ClassIn API 返回错误: {friendly_msg}")
 
     # 提取字幕
