@@ -523,9 +523,9 @@ app.component('include-lead-detail', {
       const report = res.data;
       toast('报告已创建，正在生成分析...', 'success');
       // 2. 触发 AI 生成
-      await this.startConsultingGen(report.id, isPrep);
+      await this.startConsultingGen(report.id);
     },
-    async startConsultingGen(reportId, isPrep) {
+    async startConsultingGen(reportId) {
       this.consultingGenActive = true;
       this.consultingGenReportId = reportId;
       this.consultingGenStatus = '';
@@ -537,7 +537,7 @@ app.component('include-lead-detail', {
         // researching 状态不算错误
         if (genRes.data && genRes.data.status === 'researching') {
           this.consultingGenStatus = 'researching';
-          this.consultingGenStep = genRes.data.step || (isPrep ? '正在联网获取课程信息...' : '正在联网搜索院校录取要求...');
+          this.consultingGenStep = genRes.data.step || '正在联网搜索院校录取要求...';
           this.consultingGenProgress = genRes.data.progress || 5;
         } else {
           this.consultingGenActive = false;
@@ -546,9 +546,9 @@ app.component('include-lead-detail', {
         }
       }
       // 3. 轮询进度
-      this.pollConsultingProgress(reportId, isPrep);
+      this.pollConsultingProgress(reportId);
     },
-    async pollConsultingProgress(reportId, isPrep) {
+    async pollConsultingProgress(reportId) {
       this.consultingGenPollTimer = setTimeout(async () => {
         const pr = await API.get('/leads/' + this.lead.id + '/consulting/' + reportId + '/progress');
         if (pr.error) { this.consultingGenActive = false; toast(pr.error, 'error'); return; }
@@ -558,7 +558,7 @@ app.component('include-lead-detail', {
         this.consultingGenStatus = st.status || '';
         if (st.status === 'done') {
           this.consultingGenActive = false;
-          toast('✅ ' + (isPrep ? '行前准备规划已生成！' : '学业分析报告已生成！'), 'success');
+          toast('✅ 学业分析报告已生成！', 'success');
           this.showConsultingCreate = false;
           this.load();
         } else if (st.status === 'error') {
@@ -570,29 +570,29 @@ app.component('include-lead-detail', {
           const elapsed = (Date.now() - this.consultingGenPollStart) / 1000;
           if (elapsed > 30) {
             this.consultingGenStep = '联网超时，正在跳过联网直接生成...';
-            await this.skipResearch(reportId, isPrep);
+            await this.skipResearch(reportId);
           } else {
-            this.pollConsultingProgress(reportId, isPrep);
+            this.pollConsultingProgress(reportId);
           }
         } else if (st.status && st.status !== 'idle') {
-          this.pollConsultingProgress(reportId, isPrep);
+          this.pollConsultingProgress(reportId);
         } else {
           this.consultingGenActive = false;
         }
       }, 2000);
     },
-    async skipResearch(reportId, isPrep) {
+    async skipResearch(reportId) {
       if (this.consultingGenPollTimer) {
         clearTimeout(this.consultingGenPollTimer);
         this.consultingGenPollTimer = null;
       }
       this.consultingGenStatus = 'generating';
-      this.consultingGenStep = isPrep ? '正在生成规划...' : '正在生成分析...';
+      this.consultingGenStep = '正在生成分析...';
       this.consultingGenProgress = 10;
       const genRes = await API.post('/leads/' + this.lead.id + '/consulting/' + reportId + '/generate?force=1');
       if (genRes.error) { this.consultingGenActive = false; toast(genRes.error, 'error'); return; }
       this.consultingGenPollStart = Date.now();
-      this.pollConsultingProgress(reportId, isPrep);
+      this.pollConsultingProgress(reportId);
     },
     async viewConsultingReport(reportId) {
       this.consultingReport = null;
