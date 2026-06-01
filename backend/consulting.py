@@ -95,18 +95,18 @@ def _run_generation(report_id, lead_id, skip_research=False):
             _set_progress(report_id, 0, "学生不存在", "error")
             return
 
-        # 1b. 联网搜索目标院校录取要求（risk 类型，非 skip 时执行）
+        # 1b. 联网搜索目标院校录取要求（统一报告，非 skip 时执行）
         search_content = ""
-        if not skip_research and report.get('report_type') == 'risk':
-            _set_progress(report_id, 5, "正在联网搜索院校录取要求...", "researching")
+        if not skip_research:
+            _set_progress(report_id, 5, "正在联网搜索院校信息...", "researching")
             school = report.get('target_school', '')
             major = report.get('target_major', '')
             if school and major:
                 search_prompt = (
-                    f"请搜索 {school} 的 {major} 专业的官方录取要求，"
+                    f"请搜索 {school} 的 {major} 专业的官方信息，"
                     f"包括：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
                     f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
-                    f" 5) 该专业课程特色。请用中文回答，提供具体的数据和信息。"
+                    f" 5) 该专业课程特色、学制、学分。请用中文回答，提供具体的数据和信息。"
                 )
                 search_result = _call_deepseek(
                     [{"role": "user", "content": search_prompt}],
@@ -114,7 +114,7 @@ def _run_generation(report_id, lead_id, skip_research=False):
                 )
                 if "error" not in search_result:
                     search_content = search_result["content"]
-                    _set_progress(report_id, 20, "院校录取信息已获取，正在分析学生背景...")
+                    _set_progress(report_id, 20, "院校信息已获取，正在分析学生情况...")
                 else:
                     _set_progress(report_id, 5, "联网获取信息失败，将基于 AI 知识库直接分析")
             else:
@@ -122,110 +122,85 @@ def _run_generation(report_id, lead_id, skip_research=False):
 
         _set_progress(report_id, 10, "正在分析学生背景...")
 
-        # 2. 构造 prompt
-        system_prompt = """你是一位资深的留学规划顾问，擅长分析学生背景与目标院校专业的匹配度，并给出具体的提分和执行建议。
+        # 2. 构造 prompt — 统一学业风险与规划报告
+        system_prompt = """你是一位资深的留学学业规划顾问。请根据学生情况描述，生成一份「学业风险与规划报告」。
 
-请根据学生当前情况和目标信息，生成一份专业的学业风险分析报告。
+报告面向学生和家长，语言专业但易懂。
 
-**关键要求：**
-- 差距分析的维度不是固定的模板，而是根据学生具体情况**动态判断**哪些维度最关键（如GPA、语言成绩、前置科目知识、作品集、面试能力、竞赛背景、实习经历等），只分析真正相关的维度
-- 分析要客观，有数据就基于数据，没数据就明确指出信息缺口
-- 建议方案要**具体到可执行层面**，不只说"提高GPA"，要给出具体的学习方法、资源、时间安排
+**差距分析必须是多维度的，不只看前置知识。** 影响学业成功的因素包括但不限于：
+- 前置知识基础（学科知识跨度）
+- 学习习惯与方法（高中 vs 大学/国内 vs 国外的学习方式差异）
+- 语言能力转型（应试英语→学术英语、专业术语、法律/商业/学术写作）
+- 心理压力与心态（学术压力、陌生环境、孤独感、想家）
+- 教育体系适应（教学方式、考核形式、自主学习要求）
+- 文化与环境适应（海外生活、天气、饮食、社交）
+- 时间管理与自我驱动力
+
+根据学生具体情况，只分析真正相关的维度，不套固定模板。
 
 输出必须为 JSON 格式，包含以下字段：
 {
-  "profile_overview": "学生当前背景概述（2-3句话，概括核心优势和风险）",
-  "program_requirements": {
-    "gpa_requirement": "目标专业的 GPA 要求说明",
-    "language_requirement": "语言成绩要求说明",
-    "prerequisites": ["前置修读科目要求列表"],
-    "assessment_format": "考核形式说明",
-    "curriculum_highlights": "课程特色说明"
+  "report_title": "报告标题（如：211英专→悉尼大学商法硕士的规划和风险）",
+  "student_profile": {
+    "background": "学生基础画像（一段话概括当前院校、专业、年级、成绩等）",
+    "target": "目标描述（一段话）",
+    "key_info": { "当前院校": "", "目标院校": "", "目标专业": "", "当前成绩": "", "语言成绩": "", "申请阶段": "" }
   },
+  "program_overview": "目标院校专业概览（学制、学分、特色等），没有足够信息写'待补充'",
+  "core_courses": ["推荐的核心课程方向（如有）"],
   "gap_analysis": [
     {
-      "dimension": "分析维度（如GPA/语言/某某科目/作品集等，根据学生情况动态确定）",
+      "dimension": "分析维度（如前置知识、学习习惯、语言转型、心理适应等）",
       "current": "学生当前水平",
       "required": "目标要求",
       "gap": "差距分析",
       "risk": "low/medium/high",
-      "detail": "详细说明该维度的具体情况",
-      "improvement_strategy": "具体的提分/改进策略说明"
+      "improvement_strategy": "具体改进策略"
     }
   ],
-  "overall_risk": "low/medium/high",
-  "recommendations": [
+  "preparation_plan": [
     {
-      "priority": "high/medium/low",
-      "action": "具体建议行动（要可执行，如'每周完成2篇雅思写作+精批'而非'提高语言成绩'）",
-      "timeline": "建议时间线（基于当前日期给出具体月份安排，如'2026年6-8月/每周10小时'，不要写笼统的'未来3个月'）",
-      "expected_impact": "预期效果（量化更好，如'预计提升0.5分'）",
-      "learning_resources": ["推荐的具体学习资源名称"]
+      "phase": "阶段名称（如：签证等待期/开学前/第一学期/长期）",
+      "tasks": ["具体任务"],
+      "timeline": "时间线",
+      "goal": "目标"
     }
   ],
-  "consultant_tips": "给顾问的沟通建议，帮助顾问与家长/学生沟通时提供专业话术支撑，包括如何说服学生重视某些问题"
+  "overall_assessment": "综合评估（包含学术、心理、适应等多维度判断）",
+  "risk_level": "low/medium/high",
+  "recommendations": ["具体建议列表（3-5条，可执行）"],
+  "consultant_tips": "给顾问的沟通建议（内部参考，包括如何与家长/学生沟通关键问题）"
 }
 
 请确保：
-- gap_analysis 的维度根据学生实际情况动态确定，不要硬套固定维度
-- 如果某个维度数据缺失，明确指出并在 detail 中说明需要补充什么信息
-- recommendations 中的 action 要具体到可执行层面（学习计划/练习量/资源推荐）
-- 每一条 recommendation 都要有 learning_resources 给出具体资源名称（书/网站/课程/练习材料）
-- overall_risk 要综合评估，给出明确判断"""
+- gap_analysis 维度根据学生实际情况动态确定，不限于学术，涵盖学习习惯、心理、适应等
+- recommendations 要具体到可执行层面
+- 时间线根据当前日期给出具体月份安排
+- consultant_tips 仍要输出，供内部参考"""
 
-
-        target_level = report.get('target_level', '') or ''
-        level_hint = ""
-        if target_level:
-            level_map = {
-                "high_to_bachelor": "当前为高中阶段，目标为申请本科",
-                "bachelor_to_master": "当前为本科阶段，目标为申请硕士",
-                "master_to_phd": "当前为硕士阶段，目标为申请博士",
-                "bachelor_to_phd": "当前为本科阶段，目标为直博",
-            }
-            level_hint = "\n申请阶段：" + level_map.get(target_level, target_level)
-            if target_level in ("high_to_bachelor",):
-                level_hint += "\n提示：该阶段应重点关注高中成绩、语言考试、背景提升活动等"
-            elif target_level in ("bachelor_to_master",):
-                level_hint += "\n提示：该阶段应重点关注GPA、科研/实习经历、语言成绩、GRE/GMAT等"
-            elif target_level in ("master_to_phd", "bachelor_to_phd"):
-                level_hint += "\n提示：该阶段应重点关注科研经历、论文发表、推荐信、研究方向匹配等"
 
         current_date = datetime.datetime.now().strftime("%Y年%m月%d日")
         user_prompt = f"""当前日期：{current_date}
 
-学生信息：
-姓名：{lead.get('name', '未知')}
-当前年级：{lead.get('grade', '未知')}
-意向国家：{lead.get('country', '未知')}
-备注：{lead.get('remark', '无')}
+学生姓名：{lead.get('name', '未知')}
 
-目标信息：
+【学生情况描述】
+{report.get('additional_info', '未提供详细情况')}
+
+【辅助信息】
 目标国家：{report.get('target_country', '')}
 目标院校：{report.get('target_school', '')}
 目标专业：{report.get('target_major', '')}
-{level_hint}
-
-学生当前情况：
-当前院校：{report.get('current_school', '未提供')}
-当前年级：{report.get('current_grade', '未提供')}
-GPA：{report.get('gpa', '未提供')}
-语言成绩：{report.get('language_scores', '未提供')}
-前置修读科目及成绩：{report.get('prerequisite_courses', '未提供')}
-
-顾问补充备注：{report.get('additional_info', '无')}
-
-请基于以上信息，生成学业风险分析报告（JSON 格式）。
-注意：差距分析维度请根据学生实际情况动态判断，不要套固定模板。
-建议方案要具体到可执行的学习计划层面。"""
+当前院校：{report.get('current_school', '')}
+当前成绩：{report.get('gpa', '')}
+语言成绩：{report.get('language_scores', '')}
+"""
 
         # 如果有联网搜索到的院校信息，追加到 prompt 中
         if search_content:
             user_prompt += f"""
 
-【目标院校录取要求（联网搜索获取）】
-以下是从目标院校官方网站搜索到的录取要求信息，请基于此进行分析：
-
+【联网搜索获取的院校信息】
 {search_content[:2500]}"""
 
         _set_progress(report_id, 30, "正在调用 AI 分析引擎...")
@@ -233,7 +208,7 @@ GPA：{report.get('gpa', '未提供')}
         result = _call_deepseek([
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
-        ], temperature=0.3, max_tokens=3000)
+        ], temperature=0.3, max_tokens=4000)
 
         if "error" in result:
             err_msg = result["error"]
@@ -251,17 +226,25 @@ GPA：{report.get('gpa', '未提供')}
         content = re.sub(r"\s*```$", "", content)
 
         parsed = json.loads(content)
-        risk_level = parsed.get("overall_risk", "medium")
-        summary = parsed.get("profile_overview", "")[:200]
+        
+        # 分离公开内容和内部参考
+        tips = parsed.pop("consultant_tips", "")
+        report_json = json.dumps(parsed, ensure_ascii=False)
+        full_json = json.dumps({**parsed, "consultant_tips": tips}, ensure_ascii=False)
+        
+        risk_level = parsed.get("risk_level", "medium")
+        summary = parsed.get("overall_assessment", "")[:200] or parsed.get("student_profile", {}).get("background", "")[:200]
+        report_title = parsed.get("report_title", "")
 
         _set_progress(report_id, 90, "正在保存报告...")
 
         execute(
             """UPDATE consulting_reports
                SET report_json=?, risk_level=?, summary=?,
+                   program_url=?, program_courses=?,
                    status='completed', progress=100, updated_at=datetime('now','localtime')
                WHERE id=?""",
-            (json.dumps(parsed, ensure_ascii=False), risk_level, summary, report_id),
+            (report_json, risk_level, summary, report_title, full_json, report_id),
         )
 
         _gen_progress[report_id] = {
@@ -559,7 +542,7 @@ def create_report(handler, token_payload, qs, body, lead_id=None):
     report_type = (body.get("report_type") or "risk").strip()
     target_level = (body.get("target_level") or "").strip()
 
-    if report_type not in ("risk", "preparation"):
+    if report_type not in ("risk", "preparation", "unified"):
         error_response(handler, "报告类型无效（risk / preparation）")
         return
 
@@ -659,7 +642,7 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
                 return
 
     # ── 学业风险分析：联网搜索院校录取要求 ──
-    if report_type == "risk" and force != "1":
+    if report_type in ("risk", "unified") and force != "1":
         _gen_progress[rid] = {"progress": 5, "step": "正在联网搜索院校录取要求...", "status": "researching"}
         execute(
             "UPDATE consulting_reports SET status='researching', progress=5, updated_at=datetime('now','localtime') WHERE id=?",
@@ -681,18 +664,14 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
         (rid,),
     )
 
-    step_label = "准备规划引擎..." if report_type == "preparation" else "启动分析引擎..."
+    step_label = "启动分析引擎..."
     _gen_progress[rid] = {"progress": 0, "step": step_label, "status": "generating"}
 
-    if report_type == "preparation":
-        t = threading.Thread(target=_run_generation_preparation, args=(rid, int(lead_id)), daemon=True)
-        msg = "AI 规划已启动"
-    else:
-        # force=1 时跳过联网搜索（用户点了"跳过联网"）
-        skip_research = (force == "1")
-        t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)),
-                             kwargs={"skip_research": skip_research}, daemon=True)
-        msg = "AI 分析已启动"
+    # force=1 时跳过联网搜索
+    skip_research = (force == "1")
+    t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)),
+                         kwargs={"skip_research": skip_research}, daemon=True)
+    msg = "AI 分析已启动"
     t.start()
 
     ok_response(handler, {"status": "processing", "progress": 0, "step": step_label, "message": msg})
@@ -731,6 +710,17 @@ def get_generate_progress(handler, token_payload, qs, body, lead_id=None, report
     if report["status"] == "completed" and report["report_json"]:
         try:
             parsed = json.loads(report["report_json"])
+            # 内部查看时，从 program_courses 合并 consultant_tips
+            role = token_payload["role"]
+            if role in ("admin", "supervisor", "consultant", "cs", "academic"):
+                full_raw = report.get("program_courses") or ""
+                if full_raw:
+                    try:
+                        full = json.loads(full_raw)
+                        if "consultant_tips" in full:
+                            parsed["consultant_tips"] = full["consultant_tips"]
+                    except json.JSONDecodeError:
+                        pass
         except json.JSONDecodeError:
             parsed = None
         ok_response(handler, {

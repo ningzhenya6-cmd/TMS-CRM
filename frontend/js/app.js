@@ -742,6 +742,7 @@ app.component('include-schedules', {
       feedbackDuration: '',
       feedbackForm: { classin_link: '', content_covered: '', student_performance: '', difficulties: '', homework_completion: '', teacher_notes: '', next_focus: '' },
       feedbackSaving: false,
+      feedbackPackageInfo: {},
       genStatus: { progress: 0, step: '' },
     };
   },
@@ -906,16 +907,20 @@ app.component('include-schedules', {
     },
     async loadFeedback() {
       const res = await API.get('/schedules/' + this.feedbackScheduleId + '/feedback');
-      if (!res.error && res.data && res.data.id) {
-        this.feedbackForm = {
-          classin_link: res.data.classin_link || '',
-          content_covered: res.data.content_covered || '',
-          student_performance: res.data.student_performance || '',
-          difficulties: res.data.difficulties || '',
-          homework_completion: res.data.homework_completion || '',
-          teacher_notes: res.data.teacher_notes || '',
-          next_focus: res.data.next_focus || '',
-        };
+      if (!res.error && res.data) {
+        const fb = res.data.feedback || res.data;
+        if (fb.id) {
+          this.feedbackForm = {
+            classin_link: fb.classin_link || '',
+            content_covered: fb.content_covered || '',
+            student_performance: fb.student_performance || '',
+            difficulties: fb.difficulties || '',
+            homework_completion: fb.homework_completion || '',
+            teacher_notes: fb.teacher_notes || '',
+            next_focus: fb.next_focus || '',
+          };
+        }
+        this.feedbackPackageInfo = res.data.package_info || {};
       }
     },
     async submitFeedback() {
@@ -1841,6 +1846,7 @@ app.component('include-growth', {
         next_focus: '',
       },
       feedbackSaving: false,
+      feedbackPackageInfo: {},
       aiGenerating: false,
       genStatus: { progress: 0, step: '' },
       genPollTimer: null,
@@ -1909,6 +1915,7 @@ app.component('include-growth', {
       this.aiGenerating = false;
       this.genStatus = { progress: 0, step: '' };
       this.feedbackScheduleId = scheduleId;
+      this.feedbackPackageInfo = (this.growth && this.growth.package_info) || {};
       if (existing) {
         this.feedbackForm = {
           classin_link: existing.classin_link || '',

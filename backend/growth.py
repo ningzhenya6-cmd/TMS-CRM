@@ -10,6 +10,8 @@ import urllib.error
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
+
+# 统一用 query() 返回列表
 from permissions import can, scope_where
 from classin_api import fetch_transcript
 
@@ -20,7 +22,7 @@ from classin_api import fetch_transcript
 
 @get("/api/schedules/{schedule_id}/feedback")
 def get_feedback(handler, token_payload, qs, body, schedule_id=None):
-    """查某节课的课后反馈"""
+    """查某节课的课后反馈（含课时包进度）"""
     row = query_one(
         """SELECT lf.*, u.display_name as creator_name
            FROM lesson_feedback lf
@@ -28,7 +30,14 @@ def get_feedback(handler, token_payload, qs, body, schedule_id=None):
            WHERE lf.schedule_id=?""",
         (int(schedule_id),),
     )
-    ok_response(handler, row or {})
+    result = {"feedback": row or {}}
+    # 附加课时包进度
+    sched = query_one("SELECT lead_id FROM schedules WHERE id=?", (int(schedule_id),))
+    if sched:
+        pkg_info = {"total_hours": 0, "used_hours": 0, "remaining_hours": 0}
+        _add_package_info(sched["lead_id"], pkg_info)
+        result["package_info"] = pkg_info
+    ok_response(handler, result)
 
 
 @post("/api/schedules/{schedule_id}/feedback")
@@ -89,6 +98,22 @@ def save_feedback(handler, token_payload, qs, body, schedule_id=None):
 # AI 生成进度跟踪（内存）
 # ═══════════════════════════════════════════
 _gen_progress = {}  # schedule_id → {progress, step, status, result, error}
+
+
+def _add_package_info(lead_id, info):
+    """查询学生课时包进度，填入 info 字典"""
+    packages = query(
+        """SELECT p.* FROM packages p
+           JOIN contracts c ON p.contract_id = c.id
+           WHERE c.lead_id=? AND c.status='active' AND p.status='active'""",
+        (int(lead_id),),
+    )
+    total = sum(p.get("total_hours", 0) or 0 for p in packages)
+    used = sum(p.get("used_hours", 0) or 0 for p in packages)
+    remaining = round(total - used, 1) if total else 0
+    info["total_hours"] = total
+    info["used_hours"] = used
+    info["remaining_hours"] = remaining
 
 _GEN_STEPS = {
     "starting":       (0,  "🐣 小书僮准备开工..."),
@@ -194,6 +219,7 @@ def _generate_structured_feedback(transcript, info):
 日期：{info.get('date', '未知')}
 时长：{info.get('duration', '未知')}
 教师：{info.get('teacher', '未知')}
+课时进度：已报名 {info.get('total_hours', 0)}h，已完成 {info.get('used_hours', 0)}h，剩余 {info.get('remaining_hours', 0)}h
 
 课堂录音转录：
 {truncated}
@@ -253,8 +279,9 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
         transcript_len = len(transcript)
         _set_progress(schedule_id, "transcribing", extra_step=f"{transcript_len}字")
 
-        # Step 2: 从链接中提取展示信息
-        info = {"student": "", "teacher": "", "course": "", "date": "", "duration": ""}
+        # Step 2: 从链接中提取展示信息 + 课时包进度
+        info = {"student": "", "teacher": "", "course": "", "date": "", "duration": "",
+                "total_hours": "", "used_hours": "", "remaining_hours": ""}
         # 排课信息
         sched = query_one(
             """SELECT s.*, t.name as teacher_name, l.name as student_name
@@ -272,6 +299,8 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
             dur = sched.get("actual_duration_minutes") or sched.get("duration_minutes") or 0
             if dur:
                 info["duration"] = f"{int(dur)}min"
+            # 课时包进度
+            _add_package_info(lead_id, info)
 
         # Step 3: DeepSeek 生成结构化反馈
         _set_progress(schedule_id, "generating")
@@ -498,6 +527,10 @@ def get_growth_timeline(handler, token_payload, qs, body, lead_id=None):
         (int(lead_id),),
     )
 
+    # 课时包进度
+    pkg_info = {"total_hours": 0, "used_hours": 0, "remaining_hours": 0}
+    _add_package_info(int(lead_id), pkg_info)
+
     ok_response(handler, {
         "lead": lead,
         "contracts": contracts,
@@ -508,6 +541,7 @@ def get_growth_timeline(handler, token_payload, qs, body, lead_id=None):
         "total_feedbacks": len(feedbacks),
         "total_schedules": len(schedules),
         "total_exams": len(exams),
+        "package_info": pkg_info,
     })
 
 
