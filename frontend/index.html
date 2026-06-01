@@ -1061,73 +1061,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             <i class="bi bi-clipboard-data text-indigo-500 mr-1"></i>学业分析
           </h6>
         </div>
-        <!-- Tab 切换 -->
-        <div class="flex gap-1">
-          <button class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors" :class="consultingTab === 'risk' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'" @click="consultingTab='risk'">
-            <i class="bi bi-shield-check mr-1"></i>学业风险分析
-          </button>
-          <button class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors" :class="consultingTab === 'preparation' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'" @click="consultingTab='preparation'">
-            <i class="bi bi-mortarboard mr-1"></i>行前准备规划
-          </button>
-        </div>
       </div>
-      <!-- 风险分析列表 -->
-      <div v-if="consultingTab === 'risk'">
+      <!-- 统一报告列表 -->
+      <div>
         <div class="px-3 py-2 border-b border-gray-50 flex justify-end">
-          <button class="text-xs px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openConsultingCreate('risk')">
-            <i class="bi bi-plus-lg"></i> 生成分析报告
+          <button class="text-xs px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openConsultingCreate('unified')">
+            <i class="bi bi-plus-lg"></i> 学业风险与规划报告
           </button>
         </div>
-        <div v-if="!filteredConsultingReports('risk').length" class="px-5 py-6 text-center text-sm text-gray-400">
-          <i class="bi bi-inbox text-2xl block mb-1"></i>暂无风险分析报告
+        <div v-if="!filteredConsultingReports('unified').length && !filteredConsultingReports('risk').length && !filteredConsultingReports('preparation').length" class="px-5 py-6 text-center text-sm text-gray-400">
+          <i class="bi bi-inbox text-2xl block mb-1"></i>暂无学业报告
         </div>
         <div v-else class="divide-y divide-gray-100">
-          <div v-for="r in filteredConsultingReports('risk')" :key="r.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+          <div v-for="r in filteredConsultingReports('unified').concat(filteredConsultingReports('risk'), filteredConsultingReports('preparation'))" :key="r.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-900 truncate">{{ r.target_school }}</span>
-                <span class="text-xs text-gray-500">· {{ r.target_major }}</span>
+                <span class="text-sm font-medium text-gray-900 truncate">{{ r.target_school || '学业报告' }}</span>
+                <span class="text-xs text-gray-500">· {{ r.target_major || r.report_type }}</span>
                 <span v-if="r.risk_level === 'low'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-green-100 text-green-700">低风险</span>
                 <span v-else-if="r.risk_level === 'high'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-red-100 text-red-700">高风险</span>
-                <span v-else class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-amber-100 text-amber-700">中风险</span>
-              </div>
-              <div class="text-xs text-gray-400 mt-0.5">
-                <span v-if="r.status === 'completed'">已生成 · {{ (r.created_at || '').slice(0,10) }}</span>
-                <span v-else-if="r.status === 'generating'" class="text-indigo-500">生成中...</span>
-                <span v-else-if="r.status === 'error'" class="text-red-500">生成失败</span>
-                <span v-else class="text-gray-400">草稿</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 ml-3">
-              <button v-if="r.status === 'completed'" class="text-xs px-2.5 py-1 text-indigo-600 border border-indigo-200 rounded-md hover:bg-indigo-50" @click="viewConsultingReport(r.id)">
-                <i class="bi bi-eye"></i> 查看
-              </button>
-              <button class="text-xs px-2.5 py-1 text-red-500 border border-red-200 rounded-md hover:bg-red-50" @click="deleteConsultingReport(r.id)">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- 准备规划列表 -->
-      <div v-if="consultingTab === 'preparation'">
-        <div class="px-3 py-2 border-b border-gray-50 flex justify-end">
-          <button class="text-xs px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700" @click="openConsultingCreate('preparation')">
-            <i class="bi bi-plus-lg"></i> 生成准备规划
-          </button>
-        </div>
-        <div v-if="!filteredConsultingReports('preparation').length" class="px-5 py-6 text-center text-sm text-gray-400">
-          <i class="bi bi-inbox text-2xl block mb-1"></i>暂无准备规划报告
-        </div>
-        <div v-else class="divide-y divide-gray-100">
-          <div v-for="r in filteredConsultingReports('preparation')" :key="r.id" class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-900 truncate">{{ r.target_school }}</span>
-                <span class="text-xs text-gray-500">· {{ r.target_major }}</span>
-                <span v-if="r.status === 'completed'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-emerald-100 text-emerald-700">已就绪</span>
-                <span v-else-if="r.status === 'generating'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-indigo-100 text-indigo-700">生成中</span>
-                <span v-else class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-gray-100 text-gray-500">草稿</span>
+                <span v-else-if="r.risk_level" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-amber-100 text-amber-700">中风险</span>
+                <span v-else-if="r.status === 'completed'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-emerald-100 text-emerald-700">已生成</span>
               </div>
               <div class="text-xs text-gray-400 mt-0.5">
                 <span v-if="r.status === 'completed'">已生成 · {{ (r.created_at || '').slice(0,10) }}</span>
@@ -1141,7 +1095,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                 <i class="bi bi-eye"></i> 查看
               </button>
               <template v-if="r.status === 'completed'">
-                <button class="text-xs px-2 py-1 text-emerald-600 border border-emerald-200 rounded-md hover:bg-emerald-50" @click="downloadConsultingReport(r.id, 'docx')" title="下载 Word">
+                <button class="text-xs px-2 py-1 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50" @click="downloadConsultingReport(r.id, 'docx')" title="下载 Word">
                   <i class="bi bi-file-earmark-word"></i>
                 </button>
                 <button class="text-xs px-2 py-1 text-red-600 border border-red-200 rounded-md hover:bg-red-50" @click="downloadConsultingReport(r.id, 'pdf')" title="下载 PDF">
@@ -1161,44 +1115,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <div v-if="showConsultingCreate" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeConsultingCreate">
       <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <h5 class="font-semibold text-gray-900 mb-4">
-          <i :class="consultingForm.report_type === 'preparation' ? 'bi-mortarboard text-emerald-500 mr-2' : 'bi-clipboard-data text-indigo-500 mr-2'"></i>
-          {{ consultingForm.report_type === 'preparation' ? '生成行前准备规划' : '生成学业分析报告' }}
+          <i class="bi bi-clipboard-data text-indigo-500 mr-2"></i>学业风险与规划报告
         </h5>
         <div class="space-y-3">
-          <div class="grid grid-cols-4 gap-3">
-            <div><label class="block text-xs text-gray-500 mb-1">目标国家 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_country" placeholder="如: 英国"></div>
-            <div><label class="block text-xs text-gray-500 mb-1">目标院校 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_school" placeholder="如: UCL"></div>
-            <div><label class="block text-xs text-gray-500 mb-1">目标专业 *</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_major" placeholder="如: CS"></div>
-            <div><label class="block text-xs text-gray-500 mb-1">申请阶段 *</label>
-              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" v-model="consultingForm.target_level">
-                <option value="">请选择...</option>
-                <option value="high_to_bachelor">高中 → 本科</option>
-                <option value="bachelor_to_master">本科 → 硕士</option>
-                <option value="master_to_phd">硕士 → 博士</option>
-                <option value="bachelor_to_phd">本科直博</option>
-              </select>
-            </div>
+          <!-- 核心：学生情况描述 -->
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">描述学生情况 *</label>
+            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" rows="5" v-model="consultingForm.additional_info" placeholder="请详细描述学生的当前情况，例如：
+- 当前就读学校、专业、年级、成绩
+- 目标院校、目标专业、申请阶段
+- 已取得的语言成绩
+- 学习上的困难、心理压力、适应问题
+- 已拿到的 Offer（如有）
+- 其他顾问认为重要的信息"></textarea>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="block text-xs text-gray-500 mb-1">当前院校</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.current_school" placeholder="在读学校"></div>
-            <div><label class="block text-xs text-gray-500 mb-1">当前年级</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.current_grade" placeholder="如: A-Level 第二年"></div>
+          <!-- 辅助搜索字段 -->
+          <div class="grid grid-cols-3 gap-3">
+            <div><label class="block text-xs text-gray-500 mb-1">目标国家</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_country" placeholder="用于联网搜索"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">目标院校</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_school" placeholder="用于联网搜索"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">目标专业</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_major" placeholder="用于联网搜索"></div>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="block text-xs text-gray-500 mb-1">GPA / 平均分</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.gpa" placeholder="如: 3.5/4.0 或 85%"></div>
-            <div><label class="block text-xs text-gray-500 mb-1">语言成绩</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.language_scores" placeholder="如: 雅思6.0 托福85"></div>
-          </div>
-          <div><label class="block text-xs text-gray-500 mb-1">前置修读科目及成绩</label><textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" rows="2" v-model="consultingForm.prerequisite_courses" placeholder="如: 高数A 物理B 化学C"></textarea></div>
-          <!-- preparation 特有字段 -->
-          <div v-if="consultingForm.report_type === 'preparation'" class="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-            <div class="flex items-start gap-2 text-sm text-emerald-700">
+          <div class="p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+            <div class="flex items-start gap-2 text-sm text-indigo-700">
               <i class="bi bi-globe2 mt-0.5"></i>
               <div>
-                <p class="font-medium">联网获取课程信息</p>
-                <p class="text-xs text-emerald-600 mt-0.5">系统会自动搜索学校官网获取实际课程设置，无需手动填写 URL。若联网超时，将基于 AI 知识库直接生成。</p>
+                <p class="font-medium">联网搜索院校信息</p>
+                <p class="text-xs text-indigo-600 mt-0.5">系统会根据目标院校和专业自动联网搜索官方信息。若联网超时，将基于 AI 知识库直接生成。</p>
               </div>
             </div>
           </div>
-          <div><label class="block text-xs text-gray-500 mb-1">顾问补充备注</label><textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" rows="2" v-model="consultingForm.additional_info" placeholder="其他需要说明的情况..."></textarea></div>
           <div v-if="consultingGenActive" class="mt-3 p-4 rounded-lg" :class="consultingForm.report_type === 'preparation' ? 'bg-emerald-50' : 'bg-indigo-50'">
             <div class="flex items-center gap-3">
               <div v-if="consultingGenStatus !== 'done'" class="w-8 h-8 border-2 rounded-full animate-spin" :class="consultingForm.report_type === 'preparation' ? 'border-emerald-600 border-t-transparent' : 'border-indigo-600 border-t-transparent'"></div>
@@ -1261,110 +1206,94 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             </div>
           </div>
           <div v-if="consultingReport.report_data" class="space-y-5">
-            <!-- ═════ 风险分析报告展示 ═════ -->
-            <template v-if="consultingReport.report_type !== 'preparation'">
+            <!-- ═════ 统一学业风险与规划报告展示 ═════ -->
+            <template>
+              <!-- 报告标题 -->
               <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-5">
-                <h6 class="text-sm font-semibold text-indigo-800 mb-2"><i class="bi bi-person-circle mr-1"></i>学生概况</h6>
-                <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.profile_overview }}</p>
+                <h4 class="text-base font-bold text-indigo-900">{{ consultingReport.report_data.report_title || (consultingReport.target_school + ' · ' + consultingReport.target_major) }}</h4>
+                <p class="text-xs text-indigo-600 mt-0.5">学业风险与规划报告 · {{ consultingReport.created_at ? (consultingReport.created_at).slice(0,10) : '' }}</p>
               </div>
+              <!-- 学生基础画像 -->
               <div class="bg-white rounded-xl border border-gray-200 p-5">
-                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-building mr-1"></i>目标院校要求</h6>
-                <div class="grid grid-cols-2 gap-4 text-sm" v-if="consultingReport.report_data.program_requirements">
-                  <div><span class="text-xs text-gray-500 block">GPA 要求</span><span class="font-medium text-gray-800">{{ consultingReport.report_data.program_requirements.gpa_requirement || '-' }}</span></div>
-                  <div><span class="text-xs text-gray-500 block">语言要求</span><span class="font-medium text-gray-800">{{ consultingReport.report_data.program_requirements.language_requirement || '-' }}</span></div>
-                </div>
-              </div>
-              <div class="bg-white rounded-xl border border-gray-200 p-5">
-                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-exclamation-triangle mr-1"></i>差距分析</h6>
-                <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-gray-100 text-gray-500 text-xs"><th class="text-left py-2 pr-3">维度</th><th class="text-left py-2 pr-3">当前</th><th class="text-left py-2 pr-3">要求</th><th class="text-left py-2 pr-3">差距</th><th class="text-left py-2 pr-3">风险</th><th class="text-left py-2">提分策略</th></tr></thead><tbody>
-                  <tr v-for="(gap, i) in consultingReport.report_data.gap_analysis" :key="i" class="border-b border-gray-50"><td class="py-2.5 pr-3 font-medium text-gray-800">{{ gap.dimension }}</td><td class="py-2.5 pr-3 text-gray-600">{{ gap.current }}</td><td class="py-2.5 pr-3 text-gray-600">{{ gap.required }}</td><td class="py-2.5 pr-3 text-gray-600">{{ gap.gap }}</td><td class="py-2.5 pr-3"><span v-if="gap.risk === 'low'" class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">低</span><span v-else-if="gap.risk === 'high'" class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">高</span><span v-else class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">中</span></td><td class="py-2.5 text-xs text-gray-600 max-w-xs">{{ gap.improvement_strategy || gap.detail || '-' }}</td></tr>
-                </tbody></table></div>
-              </div>
-              <div class="bg-white rounded-xl border border-gray-200 p-5">
-                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-lightbulb mr-1"></i>建议方案</h6>
-                <div class="space-y-3">
-                  <div v-for="(rec, i) in consultingReport.report_data.recommendations" :key="i" class="flex gap-3 p-3 rounded-lg" :class="rec.priority === 'high' ? 'bg-red-50' : rec.priority === 'medium' ? 'bg-amber-50' : 'bg-blue-50'">
-                    <div class="flex-shrink-0 mt-0.5"><span v-if="rec.priority === 'high'" class="inline-block w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">!</span><span v-else-if="rec.priority === 'medium'" class="inline-block w-5 h-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center">!</span><span v-else class="inline-block w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">i</span></div>
-                    <div class="flex-1"><div class="text-sm font-medium text-gray-800">{{ rec.action }}</div><div class="text-xs text-gray-500 mt-1" v-if="rec.timeline">&gt; {{ rec.timeline }}</div><div class="text-xs text-green-600 mt-0.5" v-if="rec.expected_impact">预期效果：{{ rec.expected_impact }}</div><div v-if="rec.learning_resources && rec.learning_resources.length" class="mt-2 flex flex-wrap gap-1"><span class="text-xs text-indigo-500 mr-1">推荐资源：</span><span v-for="(lr, li) in rec.learning_resources" :key="li" class="inline-block text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded">{{ lr }}</span></div></div>
+                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-person-circle mr-1"></i>学生基础画像</h6>
+                <div v-if="consultingReport.report_data.student_profile">
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.student_profile.background }}</p>
+                  <p class="text-sm text-gray-700 mt-2"><span class="font-medium">目标：</span>{{ consultingReport.report_data.student_profile.target }}</p>
+                  <div v-if="consultingReport.report_data.student_profile.key_info" class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <div v-for="(val, key) in consultingReport.report_data.student_profile.key_info" :key="key" class="bg-gray-50 rounded-lg px-3 py-2">
+                      <span class="text-gray-500 block">{{ key }}</span>
+                      <span class="font-medium text-gray-800">{{ val }}</span>
+                    </div>
                   </div>
                 </div>
+                <p v-else class="text-sm text-gray-500">{{ consultingReport.report_data.profile_overview || '暂无' }}</p>
               </div>
-              <div v-if="consultingReport.report_data.consultant_tips" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
-                <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-chat-dots mr-1"></i>顾问沟通建议</h6>
-                <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ consultingReport.report_data.consultant_tips }}</p>
-              </div>
-            </template>
-            <!-- ═════ 行前准备规划展示 ═════ -->
-            <template v-else>
-              <!-- 项目总览 -->
-              <div v-if="consultingReport.report_data.program_overview" class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5">
-                <h6 class="text-sm font-semibold text-emerald-800 mb-2"><i class="bi bi-book mr-1"></i>项目总览</h6>
+              <!-- 目标院校专业概览 -->
+              <div v-if="consultingReport.report_data.program_overview" class="bg-white rounded-xl border border-gray-200 p-5">
+                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-building mr-1"></i>目标院校专业概览</h6>
                 <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.program_overview }}</p>
-              </div>
-              <!-- 课程级准备规划 -->
-              <div v-if="consultingReport.report_data.courses && consultingReport.report_data.courses.length > 0">
-                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-journal-text mr-1"></i>课程准备规划</h6>
-                <div class="space-y-4">
-                  <div v-for="(c, i) in consultingReport.report_data.courses" :key="i" class="bg-white rounded-xl border border-gray-200 p-4">
-                    <div class="flex items-start justify-between mb-3">
-                      <div>
-                        <h6 class="text-sm font-bold text-gray-900">{{ c.course_code }} {{ c.course_name }}</h6>
-                        <p v-if="c.course_description" class="text-xs text-gray-500 mt-0.5">{{ c.course_description }}</p>
-                      </div>
-                      <span v-if="c.student_readiness === 'low'" class="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">准备度低</span>
-                      <span v-else-if="c.student_readiness === 'high'" class="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">准备度高</span>
-                      <span v-else class="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">准备度中</span>
-                    </div>
-                    <!-- 核心主题 -->
-                    <div v-if="c.core_topics && c.core_topics.length" class="mb-2">
-                      <span class="text-xs text-gray-500">核心主题：</span>
-                      <span v-for="(t, ti) in c.core_topics" :key="ti" class="inline-block text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded mr-1 mb-1">{{ t }}</span>
-                    </div>
-                    <!-- 前置要求 -->
-                    <div v-if="c.prerequisites_expected" class="mb-2">
-                      <span class="text-xs text-gray-500">前置要求：</span>
-                      <span class="text-xs text-gray-700">{{ c.prerequisites_expected }}</span>
-                    </div>
-                    <!-- 分析 -->
-                    <div v-if="c.readiness_analysis" class="text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5 mb-2">{{ c.readiness_analysis }}</div>
-                    <!-- 准备行动 -->
-                    <div v-if="c.preparation_actions && c.preparation_actions.length" class="mb-2">
-                      <span class="text-xs font-medium text-gray-700">准备行动：</span>
-                      <ul class="mt-1 space-y-1">
-                        <li v-for="(a, ai) in c.preparation_actions" :key="ai" class="flex items-start gap-1.5 text-xs text-gray-600">
-                          <i class="bi bi-arrow-right-circle text-emerald-500 flex-shrink-0 mt-0.5"></i>{{ a }}
-                        </li>
-                      </ul>
-                    </div>
-                    <!-- 考核形式 -->
-                    <div v-if="c.assessment_format" class="mb-2">
-                      <span class="text-xs text-gray-500">考核形式：</span>
-                      <span class="text-xs text-gray-700">{{ c.assessment_format }}</span>
-                    </div>
-                    <!-- 推荐资源 -->
-                    <div v-if="c.recommended_resources && c.recommended_resources.length">
-                      <span class="text-xs font-medium text-gray-700">推荐资源：</span>
-                      <div class="mt-1 flex flex-wrap gap-1">
-                        <span v-for="(res, ri) in c.recommended_resources" :key="ri" class="inline-block text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">{{ res }}</span>
-                      </div>
-                    </div>
+                <div v-if="consultingReport.report_data.core_courses && consultingReport.report_data.core_courses.length" class="mt-3">
+                  <span class="text-xs text-gray-500">推荐课程方向：</span>
+                  <div class="mt-1 flex flex-wrap gap-1">
+                    <span v-for="(c, i) in consultingReport.report_data.core_courses" :key="i" class="inline-block text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded">{{ c }}</span>
                   </div>
                 </div>
               </div>
-              <!-- 整体时间线 -->
-              <div v-if="consultingReport.report_data.overall_timeline" class="bg-white rounded-xl border border-gray-200 p-5">
-                <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-calendar-check mr-1"></i>整体准备时间线</h6>
-                <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.overall_timeline }}</p>
+              <!-- 差距分析 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-5">
+                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-exclamation-triangle mr-1"></i>多维差距分析</h6>
+                <div v-if="consultingReport.report_data.gap_analysis && consultingReport.report_data.gap_analysis.length" class="overflow-x-auto">
+                  <table class="w-full text-sm"><thead><tr class="border-b border-gray-100 text-gray-500 text-xs"><th class="text-left py-2 pr-3">维度</th><th class="text-left py-2 pr-3">当前</th><th class="text-left py-2 pr-3">要求</th><th class="text-left py-2 pr-3">差距</th><th class="text-left py-2 pr-3">风险</th><th class="text-left py-2">改进策略</th></tr></thead><tbody>
+                    <tr v-for="(gap, i) in consultingReport.report_data.gap_analysis" :key="i" class="border-b border-gray-50"><td class="py-2.5 pr-3 font-medium text-gray-800">{{ gap.dimension }}</td><td class="py-2.5 pr-3 text-gray-600">{{ gap.current }}</td><td class="py-2.5 pr-3 text-gray-600">{{ gap.required }}</td><td class="py-2.5 pr-3 text-gray-600">{{ gap.gap }}</td><td class="py-2.5 pr-3"><span v-if="gap.risk === 'low'" class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">低</span><span v-else-if="gap.risk === 'high'" class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">高</span><span v-else class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">中</span></td><td class="py-2.5 text-xs text-gray-600 max-w-xs">{{ gap.improvement_strategy || '-' }}</td></tr>
+                  </tbody></table>
+                </div>
               </div>
-              <!-- 优先关注点 -->
-              <div v-if="consultingReport.report_data.priority_focus" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
-                <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-star mr-1"></i>优先关注点</h6>
-                <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.priority_focus }}</p>
+              <!-- 准备计划 -->
+              <div v-if="consultingReport.report_data.preparation_plan && consultingReport.report_data.preparation_plan.length" class="bg-white rounded-xl border border-gray-200 p-5">
+                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-calendar-check mr-1"></i>准备计划</h6>
+                <div class="space-y-4">
+                  <div v-for="(plan, i) in consultingReport.report_data.preparation_plan" :key="i" class="border-l-4 border-indigo-400 pl-4">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-sm font-medium text-indigo-700">{{ plan.phase }}</span>
+                      <span v-if="plan.timeline" class="text-xs text-gray-500">· {{ plan.timeline }}</span>
+                    </div>
+                    <p v-if="plan.goal" class="text-xs text-gray-500 mb-1">目标：{{ plan.goal }}</p>
+                    <ul v-if="plan.tasks && plan.tasks.length" class="space-y-1">
+                      <li v-for="(task, ti) in plan.tasks" :key="ti" class="flex items-start gap-1.5 text-xs text-gray-600">
+                        <i class="bi bi-arrow-right-circle text-indigo-500 flex-shrink-0 mt-0.5"></i>{{ task }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <!-- 顾问建议 -->
-              <div v-if="consultingReport.report_data.advisor_notes" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200">
-                <h6 class="text-sm font-semibold text-blue-800 mb-2"><i class="bi bi-chat-dots mr-1"></i>顾问建议</h6>
-                <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.advisor_notes }}</p>
+              <!-- 综合评估 -->
+              <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
+                <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-shield-check mr-1"></i>综合评估</h6>
+                <p class="text-sm text-gray-700 leading-relaxed">{{ consultingReport.report_data.overall_assessment }}</p>
+                <div class="mt-3 flex items-center gap-2">
+                  <span class="text-xs text-gray-500">整体风险：</span>
+                  <span v-if="consultingReport.report_data.risk_level === 'low'" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">低风险</span>
+                  <span v-else-if="consultingReport.report_data.risk_level === 'high'" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">高风险</span>
+                  <span v-else class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">中风险</span>
+                </div>
+              </div>
+              <!-- 具体建议 -->
+              <div v-if="consultingReport.report_data.recommendations && consultingReport.report_data.recommendations.length" class="bg-white rounded-xl border border-gray-200 p-5">
+                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-lightbulb mr-1"></i>具体建议</h6>
+                <ul class="space-y-2">
+                  <li v-for="(rec, i) in consultingReport.report_data.recommendations" :key="i" class="flex items-start gap-2 text-sm text-gray-700">
+                    <span class="inline-block w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{{ i+1 }}</span>
+                    <span>{{ typeof rec === 'string' ? rec : rec.action || rec }}</span>
+                  </li>
+                </ul>
+              </div>
+              <!-- 顾问沟通建议（仅内部可见） -->
+              <div v-if="consultingReport.report_data.consultant_tips" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-xs font-semibold text-amber-800"><i class="bi bi-chat-dots mr-1"></i>顾问沟通建议</span>
+                  <span class="text-[.6rem] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 font-medium">内部参考</span>
+                </div>
+                <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ consultingReport.report_data.consultant_tips }}</p>
               </div>
             </template>
           </div>

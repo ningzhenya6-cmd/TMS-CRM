@@ -345,7 +345,7 @@ app.component('include-lead-detail', {
       showConsultingCreate: false,
       showConsultingView: false,
       consultingTab: 'risk',
-      consultingForm: { target_country: '', target_school: '', target_major: '', current_school: '', current_grade: '', gpa: '', language_scores: '', prerequisite_courses: '', additional_info: '', report_type: 'risk', program_url: '', program_courses: '' },
+      consultingForm: { target_country: '', target_school: '', target_major: '', current_school: '', current_grade: '', gpa: '', language_scores: '', additional_info: '', report_type: 'unified', program_url: '', program_courses: '' },
       consultingSaving: false,
       consultingGenActive: false,
       consultingGenStatus: '',
@@ -485,10 +485,8 @@ app.component('include-lead-detail', {
         current_grade: lead.grade || '',
         gpa: '',
         language_scores: '',
-        prerequisite_courses: '',
         additional_info: lead.remark || '',
-        report_type: type || 'risk',
-        target_level: '',
+        report_type: 'unified',
         program_url: '',
         program_courses: '',
       };
@@ -504,8 +502,8 @@ app.component('include-lead-detail', {
     },
     async submitConsultingCreate() {
       const f = this.consultingForm;
-      if (!f.target_country.trim() || !f.target_school.trim() || !f.target_major.trim()) {
-        toast('请填写目标国家、院校和专业', 'error'); return;
+      if (!f.additional_info.trim()) {
+        toast('请描述学生情况', 'error'); return;
       }
       this.consultingSaving = true;
       const payload = {
@@ -516,17 +514,14 @@ app.component('include-lead-detail', {
         current_grade: f.current_grade,
         gpa: f.gpa,
         language_scores: f.language_scores,
-        prerequisite_courses: f.prerequisite_courses,
         additional_info: f.additional_info,
-        report_type: f.report_type || 'risk',
-        target_level: f.target_level,
+        report_type: 'unified',
       };
       const res = await API.post('/leads/' + this.lead.id + '/consulting', payload);
       this.consultingSaving = false;
       if (res.error) { toast(res.error, 'error'); return; }
       const report = res.data;
-      const isPrep = f.report_type === 'preparation';
-      toast(isPrep ? '草稿已创建，正在生成准备规划...' : '报告已创建，正在生成分析...', 'success');
+      toast('报告已创建，正在生成分析...', 'success');
       // 2. 触发 AI 生成
       await this.startConsultingGen(report.id, isPrep);
     },
@@ -534,7 +529,7 @@ app.component('include-lead-detail', {
       this.consultingGenActive = true;
       this.consultingGenReportId = reportId;
       this.consultingGenStatus = '';
-      this.consultingGenStep = isPrep ? '启动规划引擎...' : '启动分析引擎...';
+      this.consultingGenStep = '启动分析引擎...';
       this.consultingGenProgress = 0;
       this.consultingGenPollStart = Date.now();
       const genRes = await API.post('/leads/' + this.lead.id + '/consulting/' + reportId + '/generate');
@@ -615,6 +610,9 @@ app.component('include-lead-detail', {
     },
     filteredConsultingReports(type) {
       if (!this.lead || !this.lead.consulting_reports) return [];
+      if (type === 'unified') {
+        return this.lead.consulting_reports.filter(r => r.report_type === 'unified' || r.report_type === 'risk' || r.report_type === 'preparation');
+      }
       return this.lead.consulting_reports.filter(r => r.report_type === type);
     },
     downloadConsultingReport(reportId, format) {
