@@ -36,6 +36,7 @@ const roleLabel = (r) => ({
   consultant: '高级顾问', coordinator: '教班主任', academic: '学管师', tutor: '老师',
 }[r] || r);
 
+const _stripTS = (s) => (s || '').replace(/\[\d{1,2}:\d{2}(?::\d{2})?\]/g, '').replace(/\s{2,}/g, ' ').trim();
 const toast = (msg, type) => {
   const c = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -486,6 +487,7 @@ app.component('include-lead-detail', {
         gpa: '',
         language_scores: '',
         additional_info: lead.remark || '',
+        target_level: '',
         report_type: 'unified',
         program_url: '',
         program_courses: '',
@@ -515,6 +517,7 @@ app.component('include-lead-detail', {
         gpa: f.gpa,
         language_scores: f.language_scores,
         additional_info: f.additional_info,
+        target_level: f.target_level,
         report_type: 'unified',
       };
       const res = await API.post('/leads/' + this.lead.id + '/consulting', payload);
@@ -928,7 +931,19 @@ app.component('include-schedules', {
       if (res.error) { toast(res.error, 'error'); return; }
       toast('反馈已保存', 'success');
       this.closeFeedback();
-      this.load(); // 刷新列表更新 feedback_id
+      this.load();
+    },
+    async deleteFeedback() {
+      toast('删除中...', 'success');
+      try {
+        const res = await API.del('/schedules/' + this.feedbackScheduleId + '/feedback');
+        if (res.error) { toast('删除失败: ' + res.error, 'error'); return; }
+        toast('✅ 反馈已删除', 'success');
+        this.closeFeedback();
+        this.load();
+      } catch(e) {
+        toast('删除异常: ' + e.message, 'error');
+      }
     },
     async generateFeedback() {
       const link = this.feedbackForm.classin_link;
@@ -945,6 +960,8 @@ app.component('include-schedules', {
           this.genStatus = { progress: st.progress || 0, step: st.step || '', status: st.status || 'idle' };
           if (st.status === 'done' && st.result) {
             const fb = st.result.feedback || {};
+            const tr = st.result.time_range || '';
+            const lc = st.result.line_count || 0;
             this.feedbackForm = {
               classin_link: link,
               content_covered: fb.content_covered || '',
@@ -954,7 +971,7 @@ app.component('include-schedules', {
               teacher_notes: fb.teacher_notes || '',
               next_focus: fb.next_focus || '',
             };
-            toast('AI 反馈生成完成！请审核后保存', 'success');
+            toast('✅ 完成' + (lc ? '（' + lc + '段' + (tr ? ' ' + tr : '') + '）' : ''), 'success');
             break;
           }
           if (st.status === 'error') {
@@ -980,23 +997,23 @@ app.component('include-schedules', {
       text += `📅 ${date} ${duration}\n\n`;
 
       text += '📖 授课内容\n';
-      text += `▸ ${fb.content_covered || '未填写'}\n\n`;
+      text += `▸ ${_stripTS(fb.content_covered) || '未填写'}\n\n`;
 
       text += '🙋 课堂表现\n';
-      text += `▸ ${fb.student_performance || '未填写'}\n\n`;
+      text += `▸ ${_stripTS(fb.student_performance) || '未填写'}\n\n`;
 
       text += '⚠️ 薄弱环节\n';
-      text += `▸ ${fb.difficulties || '未填写'}\n\n`;
+      text += `▸ ${_stripTS(fb.difficulties) || '未填写'}\n\n`;
 
       text += '📝 作业情况\n';
-      text += `▸ ${fb.homework_completion || '未填写'}\n`;
+      text += `▸ ${_stripTS(fb.homework_completion) || '未填写'}\n`;
 
       if (includeInternal) {
         if (fb.teacher_notes) {
-          text += `\n📌 教师观察\n▸ ${fb.teacher_notes}\n`;
+          text += `\n📌 教师观察\n▸ ${_stripTS(fb.teacher_notes)}\n`;
         }
         if (fb.next_focus) {
-          text += `\n💡 后续建议\n▸ ${fb.next_focus}\n`;
+          text += `\n💡 后续建议\n▸ ${_stripTS(fb.next_focus)}\n`;
         }
       }
 
@@ -1944,6 +1961,14 @@ app.component('include-growth', {
       this.showFeedbackModal = false;
       this.selectStudent(this.selectedLeadId);
     },
+    async deleteFeedback() {
+      toast('删除中...', 'success');
+      const res = await API.del('/schedules/' + this.feedbackScheduleId + '/feedback');
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('反馈已删除', 'success');
+      this.showFeedbackModal = false;
+      this.selectStudent(this.selectedLeadId);
+    },
     async generateFeedback() {
       const link = this.feedbackForm.classin_link;
       if (!link || !link.trim()) { toast('请先输入 ClassIn 链接', 'error'); return; }
@@ -1968,6 +1993,8 @@ app.component('include-growth', {
             // 完成！
             this.aiGenerating = false;
             const fb = st.result.feedback || {};
+            const tr = st.result.time_range || '';
+            const lc = st.result.line_count || 0;
             this.feedbackForm = {
               classin_link: link,
               content_covered: fb.content_covered || '',
@@ -2008,23 +2035,23 @@ app.component('include-growth', {
       text += `📅 ${date} ${duration}\n\n`;
 
       text += '📖 授课内容\n';
-      text += `▸ ${fb.content_covered || '未填写'}\n\n`;
+      text += `▸ ${_stripTS(fb.content_covered) || '未填写'}\n\n`;
 
       text += '🙋 课堂表现\n';
-      text += `▸ ${fb.student_performance || '未填写'}\n\n`;
+      text += `▸ ${_stripTS(fb.student_performance) || '未填写'}\n\n`;
 
       text += '⚠️ 薄弱环节\n';
-      text += `▸ ${fb.difficulties || '未填写'}\n\n`;
+      text += `▸ ${_stripTS(fb.difficulties) || '未填写'}\n\n`;
 
       text += '📝 作业情况\n';
-      text += `▸ ${fb.homework_completion || '未填写'}\n`;
+      text += `▸ ${_stripTS(fb.homework_completion) || '未填写'}\n`;
 
       if (includeInternal) {
         if (fb.teacher_notes) {
-          text += `\n📌 教师观察\n▸ ${fb.teacher_notes}\n`;
+          text += `\n📌 教师观察\n▸ ${_stripTS(fb.teacher_notes)}\n`;
         }
         if (fb.next_focus) {
-          text += `\n💡 后续建议\n▸ ${fb.next_focus}\n`;
+          text += `\n💡 后续建议\n▸ ${_stripTS(fb.next_focus)}\n`;
         }
       }
 

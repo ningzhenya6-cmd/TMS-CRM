@@ -3,6 +3,7 @@
 """
 import json
 import os
+import re
 import threading
 import time
 import urllib.request
@@ -38,6 +39,17 @@ def get_feedback(handler, token_payload, qs, body, schedule_id=None):
         _add_package_info(sched["lead_id"], pkg_info)
         result["package_info"] = pkg_info
     ok_response(handler, result)
+
+
+@delete("/api/schedules/{schedule_id}/feedback")
+def delete_feedback(handler, token_payload, qs, body, schedule_id=None):
+    """删除课后反馈（用于重新生成）"""
+    role = token_payload["role"]
+    if not can(role, "growth:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    execute("DELETE FROM lesson_feedback WHERE schedule_id=?", (int(schedule_id),))
+    ok_response(handler, {"message": "反馈已删除"})
 
 
 @post("/api/schedules/{schedule_id}/feedback")
@@ -268,7 +280,9 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
 
         # Step 1: 从 ClassIn API 获取字幕（秒级）
         try:
-            transcript = fetch_transcript(classin_link)
+            result = fetch_transcript(classin_link)
+            transcript = result["text"] if isinstance(result, dict) else result
+            modules = result.get("modules", []) if isinstance(result, dict) else []
         except Exception as e:
             _gen_progress[schedule_id] = {
                 "progress": 0, "step": f"❌ 获取字幕失败: {e}",
@@ -277,12 +291,9 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
             return
 
         transcript_len = len(transcript)
-        _set_progress(schedule_id, "transcribing", extra_step=f"{transcript_len}字")
+        lines = transcript.strip().split("\n")
 
-        # Step 2: 从链接中提取展示信息 + 课时包进度
-        info = {"student": "", "teacher": "", "course": "", "date": "", "duration": "",
-                "total_hours": "", "used_hours": "", "remaining_hours": ""}
-        # 排课信息
+        # 提前查询排课信息（供覆盖率检测使用）
         sched = query_one(
             """SELECT s.*, t.name as teacher_name, l.name as student_name
                FROM schedules s
@@ -291,6 +302,8 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
                WHERE s.id=?""",
             (schedule_id,),
         )
+        info = {"student": "", "teacher": "", "course": "", "date": "", "duration": "",
+                "total_hours": "", "used_hours": "", "remaining_hours": ""}
         if sched:
             info["student"] = sched.get("student_name", "") or ""
             info["teacher"] = sched.get("teacher_name", "") or ""
@@ -299,11 +312,47 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
             dur = sched.get("actual_duration_minutes") or sched.get("duration_minutes") or 0
             if dur:
                 info["duration"] = f"{int(dur)}min"
-            # 课时包进度
+
+        # 提取时间范围: 扫描所有字幕取最小和最大时间戳（按秒数，解决多模块合并顺序问题）
+        def _ts_sec(t):
+            p = t.split(":")
+            return int(p[0])*3600 + int(p[1])*60 + (int(p[2]) if len(p)>2 else 0)
+        first_ts = last_ts = None
+        first_sec = last_sec = None
+        for line in lines:
+            m = re.search(r"\[(\d{1,2}:\d{2}(?::\d{2})?)\]", line)
+            if m:
+                sec = _ts_sec(m.group(1))
+                if first_sec is None or sec < first_sec:
+                    first_sec = sec; first_ts = m.group(1)
+                if last_sec is None or sec > last_sec:
+                    last_sec = sec; last_ts = m.group(1)
+        time_range = f"{first_ts}~{last_ts}" if first_ts and last_ts else ""
+        time_hint = f" {time_range}" if time_range else ""
+
+        # 字幕太短时拦截（少于3行/50字无法生成任何内容）
+        if transcript_len < 50 or len(lines) < 3:
+            _gen_progress[schedule_id] = {
+                "progress": 0, "step": f"❌ 字幕数据过短（{transcript_len}字/{len(lines)}行），"
+                                       f"无法生成。请手动填写。",
+                "status": "error",
+                "error": "字幕数据不足",
+            }
+            return
+
+        # Step 2: 课时包进度
+        if sched:
             _add_package_info(lead_id, info)
 
-        # Step 3: DeepSeek 生成结构化反馈
-        _set_progress(schedule_id, "generating")
+        # Step 3: DeepSeek 生成结构化反馈（显示每个模块的字幕信息）
+        mod_parts = []
+        for m in modules:
+            r = m.get("range", "")
+            mod_parts.append(f"模块{m['fid'][-4:]}={m['lines']}行" + (f"[{r}]" if r else ""))
+        mod_str = " | ".join(mod_parts) if mod_parts else ""
+        total_info = f"共{len(lines)}段" + (f"，时间 {time_range}" if time_range else "")
+        sub_info = f"{total_info}" + (f" ({mod_str})" if mod_str else "")
+        _set_progress(schedule_id, "generating", extra_step=sub_info)
         try:
             feedback = _generate_structured_feedback(transcript, info)
         except Exception as e:
@@ -326,13 +375,16 @@ def _run_generation(schedule_id, classin_link, uid, name, lead_id):
             (schedule_id,),
         )
 
+        done_step = f"✅ 完成（{len(lines)}段{time_hint}）" + (f" ({mod_str})" if mod_str else "")
         _gen_progress[schedule_id] = {
             "progress": 100,
-            "step": "✅ AI 反馈生成完成！",
+            "step": done_step,
             "status": "done",
             "result": {
                 "feedback": fb,
                 "transcript_length": transcript_len,
+                "time_range": time_range,
+                "line_count": len(lines),
             },
         }
 

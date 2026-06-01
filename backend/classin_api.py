@@ -37,23 +37,21 @@ def _extract_fileid_from_src(video_src):
     return None
 
 
-def _fetch_fileid_via_playwright(lesson_key, timeout=30):
-    """用 Playwright 加载 ClassIn 页面，从视频元素中提取 fileId
+def _fetch_fileids_via_playwright(lesson_key, timeout=30):
+    """用 Playwright 加载 ClassIn 页面，获取所有回放模块的 fileId 列表
 
-    新格式 URL (pc.html?lessonKey=xxx) 不含 fileId 参数。
-    但页面的 video 元素的 src URL 中编码了 19 位 fileId。
-    Playwright 加载页面后，video.src 自动填充，无需登录。
+    一节课可能有多个回放模块（多个录制文件），每个模块有自己的 fileId。
+    从 Vue store 的 videoSource.lessonData.fileList 中提取所有 fileId。
     """
     from playwright.sync_api import sync_playwright
+    import time as _time
 
     url = f"https://live.eeo.cn/pc.html?lessonKey={lesson_key}"
     with sync_playwright() as p:
-        # 先尝试 Playwright 默认浏览器，若失败则用系统安装的 chromium
         launch_kwargs = {"headless": True}
         try:
             browser = p.chromium.launch(**launch_kwargs)
         except Exception:
-            # 尝试系统路径
             for path in ("/usr/bin/chromium-browser", "/usr/bin/chromium", "/snap/bin/chromium"):
                 import os as _os
                 if _os.path.exists(path):
@@ -65,27 +63,28 @@ def _fetch_fileid_via_playwright(lesson_key, timeout=30):
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=timeout * 1000)
 
-            # 等待 video 元素出现并获取 src
-            import time as _time
+            # 等待 Vue store 加载，提取所有 fileId
             deadline = _time.time() + timeout
-            file_id = None
+            file_ids = []
             while _time.time() < deadline:
-                video_src = page.evaluate("""() => {
-                    const v = document.querySelector('video');
-                    return v ? (v.src || v.currentSrc || '') : '';
+                file_ids = page.evaluate("""() => {
+                    try {
+                        const s = window.LIVE.$store.state;
+                        const fl = s.videoSource && s.videoSource.lessonData && s.videoSource.lessonData.fileList;
+                        if (!fl || !fl.length) return [];
+                        return fl.map(f => f.FileId).filter(Boolean);
+                    } catch(e) { return []; }
                 }""")
-                if video_src:
-                    file_id = _extract_fileid_from_src(video_src)
-                    if file_id:
-                        break
+                if file_ids:
+                    break
                 _time.sleep(1)
 
-            if not file_id:
+            if not file_ids:
                 raise RuntimeError(
-                    f"无法从页面中提取视频 fileId（lessonKey={lesson_key}）。"
-                    f"请确认该课程有回放录制，或使用旧格式链接。"
+                    f"无法从页面中提取回放 fileId（lessonKey={lesson_key}）。"
+                    f"请确认该课程有回放录制。"
                 )
-            return file_id
+            return file_ids
         finally:
             browser.close()
 
@@ -135,6 +134,8 @@ def _resolve_lesson_key(lesson_key, timeout=10):
         "courseKey": course_key,
         "lessonId": str(lesson_id),
         "lessonStatus": lesson_status,
+        "lessonStarttime": info.get("lessonStarttime"),
+        "lessonEndtime": info.get("lessonEndtime"),
     }
 
 
@@ -223,10 +224,12 @@ def _call_rich_summary_api(class_key, file_id, timeout=15):
     return data
 
 
-def _parse_subtitles(data):
+def _parse_subtitles(data, raw_lines=False):
     """从 API 返回数据中提取字幕文本"""
     children = data.get("data", {}).get("content", {}).get("children", [])
     if not children:
+        if raw_lines:
+            return []
         raise RuntimeError("ClassIn API 返回空字幕")
 
     lines = []
@@ -237,18 +240,22 @@ def _parse_subtitles(data):
             time_str = f"[{times[0]}]" if times else ""
             lines.append(f"{time_str} {desc}")
 
-    return "\n".join(lines)
+    return lines if raw_lines else "\n".join(lines)
 
 
 def fetch_transcript(classin_url, timeout=15):
-    """调 ClassIn API 获取字幕文本，返回完整转录字符串"""
+    """调 ClassIn API 获取字幕文本
+
+    Returns:
+        dict: {"text": str, "modules": [{"fid": str, "lines": int, "range": str}]}
+    """
     ck_or_lk, lid, is_new = parse_classin_url(classin_url)
 
-    # ── 解析最终的 courseKey 和 fileId ──
+    # ── 解析最终的 classKey 和 fileIds ──
     if lid:
-        # 旧格式：URL 中直接包含 19 位录制 fileId
+        # 旧格式：URL 中直接包含 19 位录制 fileId，只有一个
         class_key = ck_or_lk
-        file_id = lid
+        file_ids = [lid]
     else:
         # 先解析 lessonKey 验证课程是否存在及状态
         resolved = _resolve_lesson_key(ck_or_lk, timeout=timeout)
@@ -259,10 +266,48 @@ def fetch_transcript(classin_url, timeout=15):
                 f"该课程暂无回放（状态: {hint}），"
                 f"无法获取 AI 字幕。如需手动填写反馈，请关闭 AI 生成后直接编辑。"
             )
-        # 新格式：用 Playwright 加载页面，从 video.src 中提取 fileId
+        # 新格式：用 Playwright 加载页面，获取所有回放模块的 fileId
         class_key = ck_or_lk
-        file_id = _fetch_fileid_via_playwright(ck_or_lk, timeout=timeout)
+        file_ids = _fetch_fileids_via_playwright(ck_or_lk, timeout=timeout)
 
-    # ── 调用字幕 API ──
-    data = _call_rich_summary_api(class_key, file_id, timeout=timeout)
-    return _parse_subtitles(data)
+    # ── 遍历所有回放模块，合并字幕（去重） ──
+    all_lines = []
+    seen = set()
+    module_infos = []
+    for fid in file_ids:
+        try:
+            data = _call_rich_summary_api(class_key, fid, timeout=timeout)
+            lines = _parse_subtitles(data, raw_lines=True)
+            # 提取该模块的时间范围
+            mod_first = mod_last = ""
+            for line in lines:
+                m = re.search(r"\[(\d{1,2}:\d{2}(?::\d{2})?)\]", line)
+                if m:
+                    if not mod_first: mod_first = m.group(1)
+                    mod_last = m.group(1)
+            mod_range = f"{mod_first}~{mod_last}" if mod_first and mod_last else ""
+            module_infos.append({"fid": str(fid)[-6:], "lines": len(lines), "range": mod_range})
+            for line in lines:
+                if line not in seen:
+                    all_lines.append(line)
+                    seen.add(line)
+        except Exception:
+            module_infos.append({"fid": str(fid)[-6:], "lines": 0, "range": ""})
+            continue
+
+    # 日志输出每个模块的详情
+    if len(file_ids) > 1:
+        import sys as _sys
+        details = " ".join([f"{m['fid']}={m['lines']}行" + (f"[{m['range']}]" if m['range'] else "") for m in module_infos])
+        print(f"[classin_api] {class_key}: {len(file_ids)}个模块 {details} => {len(all_lines)}行合计", file=_sys.stderr)
+
+    if not all_lines:
+        raise RuntimeError(
+            f"该课程所有回放模块均未返回字幕数据。"
+            f"请确认该课程有回放录制，或关闭 AI 生成后手动填写。"
+        )
+
+    return {
+        "text": "\n".join(all_lines),
+        "modules": module_infos,
+    }

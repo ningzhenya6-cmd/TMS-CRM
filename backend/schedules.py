@@ -490,6 +490,7 @@ def delete_schedule(handler, token_payload, qs, body, schedule_id=None):
     if not s:
         error_response(handler, "排课不存在", 404)
         return
+    execute("DELETE FROM lesson_feedback WHERE schedule_id=?", (sid,))
     execute("DELETE FROM schedules WHERE id=?", (sid,))
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
               "delete", "schedule", sid, "删除排课")

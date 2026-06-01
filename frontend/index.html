@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TMS — 辅导管理系统</title>
@@ -143,7 +144,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           {{ loading ? '登录中...' : '登 录' }}
         </button>
       </form>
-      <p class="mt-4 text-center text-xs text-gray-400">演示: admin/admin123 · coor01/123456</p>
     </div>
   </div>
 
@@ -381,9 +381,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                 <span v-else class="text-gray-400 text-xs">待填写</span>
               </td>
               <td class="py-2.5" v-if="canManage">
-                <button class="text-xs px-3 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100" @click="openFeedback(s.id, growth.feedbacks.find(f => f.schedule_id === s.id))">
+                <button v-if="s.status === 'completed'" class="text-xs px-3 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100" @click="openFeedback(s.id, growth.feedbacks.find(f => f.schedule_id === s.id))">
                   {{ s.feedback_id ? '编辑反馈' : '填写反馈' }}
                 </button>
+                <span v-else class="text-xs text-gray-400">—</span>
               </td>
             </tr>
           </tbody>
@@ -507,7 +508,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                   </div>
                 </div>
                 <div class="flex justify-between mt-1">
-                  <span class="text-xs text-gray-400 truncate mr-2">{{ genStatus.step }}</span>
+                  <span class="text-xs text-gray-400 mr-2 break-all">{{ genStatus.step }}</span>
                   <span class="text-xs font-bold whitespace-nowrap"
                         :class="genStatus.progress >= 100 ? 'text-green-500' : 'text-indigo-500'">
                     {{ genStatus.progress }}%
@@ -563,6 +564,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </button>
         <button class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="copyFeedback(true)">
           <i class="bi bi-clipboard-data mr-1"></i>复制完整版
+        </button>
+        <button class="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50" @click="deleteFeedback" v-if="feedbackScheduleId && growth?.feedbacks?.find(f => f.schedule_id === feedbackScheduleId)">
+          <i class="bi bi-trash mr-1"></i>删除
         </button>
         <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showFeedbackModal=false">取消</button>
         <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitFeedback" :disabled="feedbackSaving">
@@ -1130,10 +1134,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 - 其他顾问认为重要的信息"></textarea>
           </div>
           <!-- 辅助搜索字段 -->
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-4 gap-3">
             <div><label class="block text-xs text-gray-500 mb-1">目标国家</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_country" placeholder="用于联网搜索"></div>
             <div><label class="block text-xs text-gray-500 mb-1">目标院校</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_school" placeholder="用于联网搜索"></div>
             <div><label class="block text-xs text-gray-500 mb-1">目标专业</label><input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" v-model="consultingForm.target_major" placeholder="用于联网搜索"></div>
+            <div><label class="block text-xs text-gray-500 mb-1">升学路径</label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" v-model="consultingForm.target_level">
+                <option value="">由AI判断</option>
+                <option value="bachelor_to_master">国内本科→国外硕士</option>
+                <option value="bachelor_to_bachelor">国内本科→国外本科（预科/转学）</option>
+                <option value="high_to_bachelor">高中→国外本科</option>
+                <option value="offer_ready">已拿Offer行前准备</option>
+                <option value="gpa_boost">GPA提升/学术支持</option>
+              </select>
+            </div>
           </div>
           <div class="p-3 rounded-lg bg-indigo-50 border border-indigo-200">
             <div class="flex items-start gap-2 text-sm text-indigo-700">
@@ -1180,12 +1194,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <div class="flex items-start justify-between mb-6">
             <div><h4 class="text-lg font-bold text-gray-900">{{ consultingReport.target_school }}</h4>
               <p class="text-sm text-gray-500">{{ consultingReport.target_country }} · {{ consultingReport.target_major }}
-                <template v-if="consultingReport.target_level">
+                <template v-if="consultingReport.report_type === 'unified'">
                   <span class="mx-1">·</span>
-                  <span v-if="consultingReport.target_level === 'high_to_bachelor'" class="text-indigo-600">高中→本科</span>
-                  <span v-else-if="consultingReport.target_level === 'bachelor_to_master'" class="text-indigo-600">本科→硕士</span>
-                  <span v-else-if="consultingReport.target_level === 'master_to_phd'" class="text-indigo-600">硕士→博士</span>
-                  <span v-else-if="consultingReport.target_level === 'bachelor_to_phd'" class="text-indigo-600">本科直博</span>
+                  <span class="text-indigo-600">学业风险与规划</span>
                 </template>
               </p>
             </div>
@@ -1739,7 +1750,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
         <!-- Actions -->
         <div class="shrink-0">
-          <button v-if="canSchedule && t.status === 'pending'" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="openEdit(t)">编辑</button>
+          <button v-if="canSchedule" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="openEdit(t)">编辑</button>
         </div>
       </div>
     </div>
@@ -1881,28 +1892,31 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               剩 {{ s.remaining_hours }}h
             </span>
           </div>
-          <!-- 反馈状态 -->
+          <!-- 反馈状态（已结束/已完成课程可填写） -->
           <div @click.stop class="min-w-[56px] text-center">
-            <button v-if="s.feedback_id"
-              class="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-md hover:bg-green-100 whitespace-nowrap"
-              @click="openFeedback(s)">
-              <i class="bi bi-check-circle-fill mr-0.5"></i>已填
-            </button>
-            <button v-else
-              class="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100 whitespace-nowrap"
-              @click="openFeedback(s)">
-              <i class="bi bi-journal-text mr-0.5"></i>反馈
-            </button>
+            <template v-if="s.status === 'completed' || (s.status === 'pending' && new Date(s.end_time) <= new Date())">
+              <button v-if="s.feedback_id"
+                class="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-md hover:bg-green-100 whitespace-nowrap"
+                @click="openFeedback(s)">
+                <i class="bi bi-check-circle-fill mr-0.5"></i>已填
+              </button>
+              <button v-else
+                class="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100 whitespace-nowrap"
+                @click="openFeedback(s)">
+                <i class="bi bi-journal-text mr-0.5"></i>反馈
+              </button>
+            </template>
+            <span v-else class="text-xs text-gray-300">—</span>
           </div>
-          <!-- 状态 -->
+          <!-- 状态（自动识别已结束） -->
           <div>
             <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
               :class="{
-                'bg-yellow-100 text-yellow-800': s.status === 'pending',
-                'bg-green-100 text-green-800': s.status === 'completed',
+                'bg-yellow-100 text-yellow-800': s.status === 'pending' && new Date(s.end_time) > new Date(),
+                'bg-green-100 text-green-800': s.status === 'completed' || (s.status === 'pending' && new Date(s.end_time) <= new Date()),
                 'bg-red-100 text-red-800': s.status === 'cancelled',
                 'bg-blue-100 text-blue-800': s.status === 'in_progress'
-              }">{{ statusMap[s.status] || s.status }}</span>
+              }">{{ s.status === 'pending' && new Date(s.end_time) <= new Date() ? '已完成' : statusMap[s.status] || s.status }}</span>
           </div>
         </div>
       </div>
@@ -2069,7 +2083,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                   </div>
                 </div>
                 <div class="flex justify-between mt-1">
-                  <span class="text-xs text-gray-400 truncate mr-2">{{ genStatus.step }}</span>
+                  <span class="text-xs text-gray-400 mr-2 break-all">{{ genStatus.step }}</span>
                   <span class="text-xs font-bold whitespace-nowrap"
                         :class="genStatus.progress >= 100 ? 'text-green-500' : 'text-indigo-500'">{{ genStatus.progress }}%</span>
                 </div>
@@ -2122,6 +2136,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </button>
         <button class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="copyFeedback(true)">
           <i class="bi bi-clipboard-data mr-1"></i>复制完整版
+        </button>
+        <button class="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50" @click="deleteFeedback($event)" v-if="feedbackScheduleId">
+          <i class="bi bi-trash mr-1"></i>删除
         </button>
         <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeFeedback">取消</button>
         <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitFeedback" :disabled="feedbackSaving">

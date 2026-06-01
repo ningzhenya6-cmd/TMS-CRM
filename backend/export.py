@@ -357,6 +357,91 @@ def _docx_bytes(doc) -> bytes:
     return buf.read()
 
 
+def _build_unified_docx(report, report_data, lead):
+    """生成统一学业风险与规划报告 Word 文档"""
+    doc = Document()
+    li = _get_lead_info(lead)
+
+    title = doc.add_heading("学业风险与规划报告", level=0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph(f"报告日期：{report.get('created_at', '')[:10] or '未知'}").alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    if not report_data:
+        doc.add_paragraph("报告数据为空")
+        return _docx_bytes(doc)
+
+    # 学生基础画像
+    sp = report_data.get("student_profile", {})
+    if sp:
+        doc.add_heading("学生基础画像", level=1)
+        doc.add_paragraph(sp.get("background", ""))
+        p = doc.add_paragraph()
+        run = p.add_run("目标：")
+        run.bold = True
+        p.add_run(sp.get("target", ""))
+        ki = sp.get("key_info", {})
+        if ki:
+            doc.add_paragraph()
+            for k, v in ki.items():
+                doc.add_paragraph(f"{k}：{v}", style="List Bullet")
+
+    # 目标院校概览
+    po = report_data.get("program_overview", "")
+    if po:
+        doc.add_heading("目标院校专业概览", level=1)
+        doc.add_paragraph(po)
+
+    # 差距分析
+    gaps = report_data.get("gap_analysis", [])
+    if gaps:
+        doc.add_heading("多维差距分析", level=1)
+        for g in gaps:
+            p = doc.add_paragraph()
+            run = p.add_run(f"{g.get('dimension', '')}（{g.get('risk', 'medium')}）")
+            run.bold = True
+            doc.add_paragraph(f"当前：{g.get('current', '')}")
+            doc.add_paragraph(f"要求：{g.get('required', '')}")
+            doc.add_paragraph(f"差距：{g.get('gap', '')}")
+            if g.get("improvement_strategy"):
+                doc.add_paragraph(f"改进策略：{g['improvement_strategy']}")
+            doc.add_paragraph()
+
+    # 准备计划
+    plans = report_data.get("preparation_plan", [])
+    if plans:
+        doc.add_heading("准备计划", level=1)
+        for plan in plans:
+            p = doc.add_paragraph()
+            run = p.add_run(f"{plan.get('phase', '')}")
+            run.bold = True
+            if plan.get("timeline"):
+                p.add_run(f" · {plan['timeline']}")
+            if plan.get("goal"):
+                doc.add_paragraph(f"目标：{plan['goal']}")
+            for task in plan.get("tasks", []):
+                doc.add_paragraph(task, style="List Bullet")
+
+    # 综合评估
+    oa = report_data.get("overall_assessment", "")
+    if oa:
+        doc.add_heading("综合评估", level=1)
+        doc.add_paragraph(oa)
+        rl = report_data.get("risk_level", "medium")
+        p = doc.add_paragraph()
+        run = p.add_run(f"整体风险：{rl}")
+        run.bold = True
+
+    # 建议
+    recs = report_data.get("recommendations", [])
+    if recs:
+        doc.add_heading("具体建议", level=1)
+        for i, rec in enumerate(recs, 1):
+            text = rec if isinstance(rec, str) else rec.get("action", str(rec))
+            doc.add_paragraph(f"{i}. {text}")
+
+    return _docx_bytes(doc)
+
+
 def generate_docx(report, lead, report_type="risk") -> bytes:
     """
     生成 Word 文档
@@ -364,7 +449,7 @@ def generate_docx(report, lead, report_type="risk") -> bytes:
     Args:
         report: consulting_reports 行 dict（含 report_json）
         lead: leads 行 dict
-        report_type: 'risk' | 'preparation'
+        report_type: 'risk' | 'preparation' | 'unified'
 
     Returns:
         .docx 文件 bytes
@@ -373,6 +458,8 @@ def generate_docx(report, lead, report_type="risk") -> bytes:
 
     if report_type == "preparation":
         return _build_preparation_docx(report, report_data, lead)
+    if report_type == "unified":
+        return _build_unified_docx(report, report_data, lead)
     return _build_risk_docx(report, report_data, lead)
 
 
@@ -714,6 +801,97 @@ def _pdf_bytes(pdf) -> bytes:
     return buf.read()
 
 
+def _build_unified_pdf(report, report_data, lead):
+    """生成统一学业风险与规划报告 PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm, cm
+    from reportlab.lib import colors
+
+    pdf = BaseDocTemplate(_pdf_buffer(), pagesize=A4,
+                          leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    story = []
+
+    def add_heading(text, level=1):
+        story.append(Paragraph(text, styles[f"Heading{level}"]))
+
+    def add_body(text):
+        story.append(Paragraph(text, styles["Normal"]))
+
+    def add_bullet(text):
+        story.append(Paragraph(f"&bull; {text}", styles["Normal"]))
+
+    if not report_data:
+        story.append(Paragraph("报告数据为空", styles["Normal"]))
+        pdf.build(story)
+        return _pdf_value(pdf)
+
+    # Title
+    add_heading("学业风险与规划报告", 0)
+    add_body(f"报告日期：{str(report.get('created_at', ''))[:10]}")
+
+    # 学生基础画像
+    sp = report_data.get("student_profile", {})
+    if sp:
+        add_heading("学生基础画像", 1)
+        add_body(sp.get("background", ""))
+        add_body(f"<b>目标：</b>{sp.get('target', '')}")
+        ki = sp.get("key_info", {})
+        for k, v in ki.items():
+            add_body(f"<b>{k}：</b>{v}")
+
+    # 目标院校概览
+    po = report_data.get("program_overview", "")
+    if po:
+        add_heading("目标院校专业概览", 1)
+        add_body(po)
+
+    # 差距分析
+    gaps = report_data.get("gap_analysis", [])
+    if gaps:
+        add_heading("多维差距分析", 1)
+        for g in gaps:
+            add_body(f"<b>{g.get('dimension', '')}（{g.get('risk', 'medium')}）</b>")
+            add_body(f"当前：{g.get('current', '')}")
+            add_body(f"要求：{g.get('required', '')}")
+            add_body(f"差距：{g.get('gap', '')}")
+            if g.get("improvement_strategy"):
+                add_body(f"改进策略：{g['improvement_strategy']}")
+
+    # 准备计划
+    plans = report_data.get("preparation_plan", [])
+    if plans:
+        add_heading("准备计划", 1)
+        for plan in plans:
+            title = plan.get("phase", "")
+            tl = plan.get("timeline", "")
+            add_body(f"<b>{title}</b>" + (f" · {tl}" if tl else ""))
+            if plan.get("goal"):
+                add_body(f"目标：{plan['goal']}")
+            for task in plan.get("tasks", []):
+                add_bullet(task)
+
+    # 综合评估
+    oa = report_data.get("overall_assessment", "")
+    if oa:
+        add_heading("综合评估", 1)
+        add_body(oa)
+        add_body(f"<b>整体风险：{report_data.get('risk_level', 'medium')}</b>")
+
+    # 建议
+    recs = report_data.get("recommendations", [])
+    if recs:
+        add_heading("具体建议", 1)
+        for i, rec in enumerate(recs, 1):
+            text = rec if isinstance(rec, str) else rec.get("action", str(rec))
+            add_body(f"{i}. {text}")
+
+    pdf.build(story)
+    return _pdf_value(pdf)
+
+
 def generate_pdf(report, lead, report_type="risk") -> bytes:
     """
     生成 PDF 文档
@@ -721,7 +899,7 @@ def generate_pdf(report, lead, report_type="risk") -> bytes:
     Args:
         report: consulting_reports 行 dict（含 report_json）
         lead: leads 行 dict
-        report_type: 'risk' | 'preparation'
+        report_type: 'risk' | 'preparation' | 'unified'
 
     Returns:
         PDF 文件 bytes
@@ -730,4 +908,6 @@ def generate_pdf(report, lead, report_type="risk") -> bytes:
 
     if report_type == "preparation":
         return _build_preparation_pdf(report, report_data, lead)
+    if report_type == "unified":
+        return _build_unified_pdf(report, report_data, lead)
     return _build_risk_pdf(report, report_data, lead)
