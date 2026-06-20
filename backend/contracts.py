@@ -126,7 +126,7 @@ def update_contract(handler, token_payload, qs, body, contract_id=None):
     if not existing:
         error_response(handler, "合同不存在", 404)
         return
-    allowed = ["contract_no", "total_amount", "status", "signed_at", "remark", "lead_id"]
+    allowed = ["contract_no", "total_amount", "status", "signed_at", "remark", "lead_id", "sign_type"]
     updates = []
     params = []
     for field in allowed:

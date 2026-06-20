@@ -44,6 +44,7 @@ def list_all_payments(handler, token_payload, qs, body):
         f"""SELECT pr.id as payment_id, pr.payment_date, pr.amount, pr.method,
                    pr.contract_id, c.lead_id, c.sign_type, c.signed_at,
                    l.name as lead_name,
+                   (SELECT p.id FROM packages p WHERE p.contract_id = pr.contract_id LIMIT 1) as pkg_id,
                    COALESCE((SELECT SUM(p.total_hours) FROM packages p WHERE p.contract_id = pr.contract_id), 0) as total_hours
             FROM payment_records pr
             {join_clause}

@@ -3009,12 +3009,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                 <span class="font-medium text-gray-900 text-xs">{{ p.lead_name || '-' }}</span>
               </td>
               <td class="px-3 py-2.5">
-                <span v-if="p.sign_type === 'renewal'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] bg-amber-100 text-amber-700">续费</span>
-                <span v-else class="inline-block px-1.5 py-0.5 rounded text-[.6rem] bg-green-100 text-green-700">新签</span>
+                <select v-if="canManage" :value="p.sign_type" @change="toggleSignType(p, $event.target.value)" class="text-[.6rem] px-1 py-0.5 rounded border-0 outline-none cursor-pointer" :class="p.sign_type === 'renewal' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'">
+                  <option value="new">新签</option>
+                  <option value="renewal">续费</option>
+                </select>
+                <span v-else :class="p.sign_type === 'renewal' ? 'inline-block px-1.5 py-0.5 rounded text-[.6rem] bg-amber-100 text-amber-700' : 'inline-block px-1.5 py-0.5 rounded text-[.6rem] bg-green-100 text-green-700'">{{ p.sign_type === 'renewal' ? '续费' : '新签' }}</span>
               </td>
-              <td class="px-3 py-2.5 text-xs text-gray-700">{{ p.total_hours || 0 }}h</td>
+              <td class="px-3 py-2.5 text-xs text-gray-700">
+                <input v-if="canManage && p.pkg_id" type="number" :value="p.total_hours" @change="updatePkgHrs(p, $event.target.value)" class="text-xs w-14 px-1 border border-gray-200 rounded text-center outline-none text-gray-700" step="0.5" min="0">
+                <span v-else>{{ p.total_hours || 0 }}h</span>
+              </td>
               <td class="px-3 py-2.5 text-right">
-                <span class="text-xs text-green-600 font-bold">¥{{ (p.amount || 0).toLocaleString() }}</span>
+                <input v-if="canManage" type="number" :value="p.amount" @change="updatePayAmt(p, $event.target.value)" class="text-xs w-20 px-1 py-0.5 border border-gray-200 rounded outline-none text-right text-green-600 font-bold" min="0" step="0.01">
+                <span v-else class="text-xs text-green-600 font-bold">¥{{ (p.amount || 0).toLocaleString() }}</span>
               </td>
               <td class="px-3 py-2.5 text-xs text-gray-400">{{ p.method || '-' }}</td>
               <td class="px-3 py-2.5">
@@ -3641,7 +3648,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=75"></script>
+<script src="js/app.js?v=76"></script>
 
   </body>
 </html>

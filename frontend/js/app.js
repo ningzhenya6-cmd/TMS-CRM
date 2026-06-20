@@ -1480,6 +1480,32 @@ app.component('include-signing', {
       this.showSigningModal = false;
       this.loadPayments();
     },
+    // ── Inline Edit ──
+    async updatePkgHrs(paymentRow, newVal) {
+      const v = parseFloat(newVal);
+      if (isNaN(v) || v < 0) return;
+      const pid = paymentRow.pkg_id;
+      if (!pid) return;
+      const res = await API.put('/packages/' + pid, { total_hours: v });
+      if (res.error) { toast(res.error, 'error'); return; }
+      paymentRow.total_hours = v;
+      toast('课时已更新', 'success');
+    },
+    async updatePayAmt(paymentRow, newVal) {
+      const v = parseFloat(newVal);
+      if (isNaN(v) || v < 0) return;
+      const res = await API.put('/contracts/' + paymentRow.contract_id + '/payments/' + paymentRow.payment_id + '/amount', { amount: v });
+      if (res.error) { toast(res.error, 'error'); return; }
+      paymentRow.amount = v;
+      toast('金额已更新', 'success');
+      this.loadPayments();
+    },
+    async toggleSignType(paymentRow, newType) {
+      const res = await API.put('/contracts/' + paymentRow.contract_id, { sign_type: newType });
+      if (res.error) { toast(res.error, 'error'); return; }
+      paymentRow.sign_type = newType;
+      toast(newType === 'renewal' ? '已改为续费' : '已改为新签', 'success');
+    },
     // ── Add Payment ──
     openAddPayment(s) {
       const c = s.contract;
