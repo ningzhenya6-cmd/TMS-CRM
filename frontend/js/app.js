@@ -36,7 +36,7 @@ const roleLabel = (r) => ({
   consultant: '高级顾问', coordinator: '教班主任', academic: '学管师', tutor: '老师',
 }[r] || r);
 
-const _stripTS = (s) => (s || '').replace(/\[\d{1,2}:\d{2}(?::\d{2})?\]/g, '').replace(/\s{2,}/g, ' ').trim();
+const _stripTS = (s) => (s || '').replace(/\[\d{1,2}:\d{2}(?::\d{2})?(?:-\d{1,2}:\d{2}(?::\d{2})?)?\]/g, '').replace(/\s{2,}/g, ' ').trim();
 const toast = (msg, type) => {
   const c = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -86,9 +86,7 @@ const ROLE_MENU = [
   { id: 'coordinator', label: '教班主任台', icon: 'bi-speedometer2', roles: ['coordinator', 'admin', 'supervisor'], view: 'coordinator' },
   { id: 'assignment', label: '分配工作台', icon: 'bi-diagram-3-fill', roles: ['admin', 'supervisor', 'cs', 'consultant'], view: 'assignment' },
   { id: 'schedules', label: '排课管理', icon: 'bi-calendar-week', roles: ['coordinator', 'admin', 'supervisor'], view: 'schedules' },
-  { id: 'packages', label: '课时包管理', icon: 'bi-box-seam', roles: ['coordinator', 'academic', 'admin', 'supervisor'], view: 'packages' },
-  { id: 'students', label: '签约学生', icon: 'bi-mortarboard-fill', roles: ['cs', 'consultant', 'academic', 'admin', 'supervisor'], view: 'students' },
-  { id: 'growth', label: '成长档案', icon: 'bi-graph-up', roles: ['cs', 'consultant', 'academic', 'admin', 'supervisor', 'coordinator'], view: 'growth' },
+  { id: 'signing', label: '签约管理', icon: 'bi-journal-check', roles: ['coordinator', 'cs', 'consultant', 'academic', 'admin', 'supervisor'], view: 'signing' },
   { id: 'consulting', label: '学业分析', icon: 'bi-clipboard-data', roles: ['cs', 'consultant', 'academic', 'admin', 'supervisor'], view: 'consulting' },
   { id: 'teachers', label: '师资管理', icon: 'bi-person-video3', roles: ['coordinator', 'admin', 'supervisor'], view: 'teachers' },
   { id: 'divider2', divider: true },
@@ -184,13 +182,13 @@ app.component('include-dashboard', {
         return [
           { label: '我的资源', value: s.my_total ?? 0, sub: '点击管理线索', icon: 'bi-people', view: 'leads' },
           { label: '跟进中', value: s.my_following ?? 0, sub: '正在跟进', icon: 'bi-chat-dots', view: 'leads' },
-          { label: '已签约', value: s.my_enrolled ?? 0, sub: '查看签约学生', icon: 'bi-mortarboard-fill', view: 'students' },
+          { label: '已签约', value: s.my_enrolled ?? 0, sub: '查看签约学生', icon: 'bi-mortarboard-fill', view: 'signing' },
           { label: '逾期跟进', value: s.overdue ?? 0, sub: '需要尽快处理', icon: 'bi-exclamation-triangle', view: 'followup-plan' },
         ];
       } else if (role === 'academic') {
         return [
-          { label: '我的学生', value: s.my_enrolled ?? 0, sub: '查看签约学生', icon: 'bi-mortarboard-fill', view: 'students' },
-          { label: '待续费', value: s.need_renewal ?? 0, sub: '课时即将用完', icon: 'bi-exclamation-triangle', view: 'students' },
+          { label: '我的学生', value: s.my_enrolled ?? 0, sub: '查看签约学生', icon: 'bi-mortarboard-fill', view: 'signing' },
+          { label: '待续费', value: s.need_renewal ?? 0, sub: '课时即将用完', icon: 'bi-exclamation-triangle', view: 'signing' },
           { label: '跟进中', value: s.my_following ?? 0, sub: '正在跟进', icon: 'bi-chat-dots', view: 'leads' },
           { label: '逾期跟进', value: s.overdue ?? 0, sub: '需要尽快处理', icon: 'bi-exclamation-triangle', view: 'followup-plan' },
         ];
@@ -202,8 +200,9 @@ app.component('include-dashboard', {
     async load() {
       const res = await API.get('/dashboard');
       if (res.error) return;
-      this.stats = res.data;
-      this.overdueCount = res.data.overdue || 0;
+      this.stats = res.data || {};
+      this.overdueCount = res.data?.overdue || 0;
+      this.pendingContact = res.data?.pending_contact || 0;
       const lr = await API.get('/leads?page=1&page_size=5');
       if (!lr.error) this.recentLeads = lr.data?.items || [];
     },
@@ -247,6 +246,7 @@ app.component('include-leads', {
   },
   methods: {
     async load() {
+      if (TMSStore.leadsPage && TMSStore.leadsPage > 1) { this.page = TMSStore.leadsPage; TMSStore.leadsPage = 1; }
       let p = `?page=${this.page}&page_size=${this.pageSize}&status=${this.filters.status}&source=${this.filters.source}`;
       if (this.filters.dateFrom) p += `&date_from=${this.filters.dateFrom}`;
       if (this.filters.dateTo) p += `&date_to=${this.filters.dateTo}`;
@@ -263,7 +263,7 @@ app.component('include-leads', {
     onDateChange() { this.page = 1; this.load(); },
     goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
     toggleAll(e) { this.selectedIds = e.target.checked ? this.list.map(l => l.id) : []; },
-    openLead(id, ev) { if (ev?.target?.type === 'checkbox') return; TMSStore.leadId = id; TMSStore.fromView = this.currentView; this.switchView('lead-detail'); },
+    openLead(id, ev) { if (ev?.target?.type === 'checkbox') return; TMSStore.leadId = id; TMSStore.fromView = this.currentView; TMSStore.leadsPage = this.page; TMSStore.leadsList = this.list.map(l => l.id); this.switchView('lead-detail'); },
     openCreate() { this.createForm = { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' }; this.showCreate = true; },
     downloadCSV() {
       const params = new URLSearchParams();
@@ -304,6 +304,20 @@ app.component('include-leads', {
       toast('已回公海', 'success');
       this.selectedIds = []; this.load();
     },
+    openEditLead(l) {
+      this.leadEditForm = { id: l.id, name: l.name, phone: l.phone || '', wechat: l.wechat || '', source: l.source || '', country: l.country || '', grade: l.grade || '', remark: l.remark || '', created_at: (l.created_at || '').slice(0,10), lead_rank: l.lead_rank || '' };
+      this.leadEditSaving = false;
+      this.showLeadEdit = true;
+    },
+    async submitLeadEdit() {
+      this.leadEditSaving = true;
+      const res = await API.put('/leads/' + this.leadEditForm.id, this.leadEditForm);
+      this.leadEditSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('线索已更新', 'success');
+      this.showLeadEdit = false;
+      this.load();
+    },
     confirmDeleteLead(l) {
       this.deleteConfirm = {
         show: true, loading: false,
@@ -341,6 +355,8 @@ app.component('include-lead-detail', {
       lead: null, followContent: '', followupType: '', nextAction: '', nextDate: '',
       showLostModal: false, lostReason: '',
       followupTypeOptions: ['电话沟通', '微信沟通', '到访面谈', '试听反馈', '续费沟通', '其他'],
+      followupRank: '',
+      contactStatus: '',
       lostReasonOptions: ['价格因素', '已选择其他机构', '时间安排冲突', '需求变更', '联系不上', '其他'],
       // 学业分析
       showConsultingCreate: false,
@@ -358,6 +374,24 @@ app.component('include-lead-detail', {
       consultingReport: null,
       // 删除确认
       deleteConfirm: { show: false, title: '', message: '', type: '', id: null, loading: false },
+      // 编辑线索
+      showEditModal: false,
+      editForm: {},
+      editSaving: false,
+      // 整体学情报告
+      overallReport: null,
+      overallReportStatus: '',
+      overallReportProgress: 0,
+      overallReportStep: '',
+      overallReportPollTimer: null,
+      showOverallReportModal: false,
+      reportEditData: {},
+      reportSaving: false,
+      homeworkList: [],
+      uploadProgress: 0,
+      uploading: false,
+      uploadStep: '',
+      dragOver: false,
     };
   },
   computed: {
@@ -373,6 +407,9 @@ app.component('include-lead-detail', {
       return diff > 0 ? diff : 0;
     },
     canDelete() { return this.user && ['admin', 'supervisor'].includes(this.user.role); },
+    curLeadIndex() { return TMSStore.leadsList.indexOf(this.lead?.id); },
+    hasPrevLead() { return this.curLeadIndex > 0; },
+    hasNextLead() { return this.curLeadIndex >= 0 && this.curLeadIndex < TMSStore.leadsList.length - 1; },
     canManageContract() { return this.user && ['coordinator', 'academic', 'admin', 'supervisor'].includes(this.user.role); },
   },
   methods: {
@@ -382,6 +419,16 @@ app.component('include-lead-detail', {
       const res = await API.get('/leads/' + id);
       if (res.error) { toast(res.error, 'error'); return; }
       this.lead = res.data;
+      this.loadHomework();
+      this.loadOverallReport();
+    },
+    async loadOverallReport() {
+      if (!this.lead || !this.lead.id) return;
+      const res = await API.get('/growth/' + this.lead.id + '/overall-report');
+      if (!res.error && res.data && res.data.report_title) {
+        this.overallReport = res.data;
+        this.overallReportStatus = 'done';
+      }
     },
     async submitFollow() {
       if (!this.followContent.trim()) return;
@@ -394,7 +441,7 @@ app.component('include-lead-detail', {
       });
       if (res.error) { toast(res.error, 'error'); return; }
       toast('跟进记录已保存', 'success');
-      this.followContent = ''; this.followupType = ''; this.nextAction = ''; this.nextDate = '';
+      this.followContent = ''; this.followupType = ''; this.followupRank = ''; this.nextAction = ''; this.nextDate = '';
       this.load();
     },
     // ── 删除操作 ──
@@ -471,7 +518,229 @@ app.component('include-lead-detail', {
       toast('已恢复跟进', 'success');
       this.load();
     },
-    goBack() { this.switchView(TMSStore.fromView || 'leads'); },
+    goBack() { const v = TMSStore.fromView || 'leads'; this.switchView(v); },
+    goPrevLead() {
+      const idx = this.curLeadIndex;
+      if (idx > 0) {
+        this.lead = null;
+        TMSStore.leadId = TMSStore.leadsList[idx - 1];
+        this.load();
+        this.loadHomework();
+      }
+    },
+    updateContactStatus() {
+      if (!this.lead || !this.lead.id) return;
+      const val = this.lead.contact_status || '';
+      API.put('/leads/' + this.lead.id, { contact_status: val });
+    },
+    goNextLead() {
+      const idx = this.curLeadIndex;
+      if (idx >= 0 && idx < TMSStore.leadsList.length - 1) {
+        this.lead = null;
+        TMSStore.leadId = TMSStore.leadsList[idx + 1];
+        this.load();
+        this.loadHomework();
+      }
+    },
+
+    // ── 整体学情报告 ──
+    async generateOverallReport() {
+      if (!this.lead || !this.lead.id) return;
+      if (this.overallReportPollTimer) clearTimeout(this.overallReportPollTimer);
+      this.overallReport = null;
+      this.overallReportStatus = 'generating';
+      this.overallReportProgress = 0;
+      this.overallReportStep = '正在发起生成...';
+      const res = await API.post('/growth/' + this.lead.id + '/overall-report');
+      if (res.error) { toast(res.error, 'error'); this.overallReportStatus = ''; return; }
+      this.pollOverallReport();
+    },
+    pollOverallReport() {
+      if (!this.lead || !this.lead.id) return;
+      this.overallReportPollTimer = setTimeout(async () => {
+        const pr = await API.get('/growth/' + this.lead.id + '/overall-report/progress');
+        if (pr.error) { this.overallReportStatus = ''; return; }
+        const st = pr.data || {};
+        this.overallReportProgress = st.progress || 0;
+        this.overallReportStep = st.step || '';
+        if (st.status === 'done' && st.result) {
+          this.overallReport = st.result;
+          this.overallReportStatus = 'done';
+          toast('✅ 学情报告已生成', 'success');
+        } else if (st.status === 'error') {
+          this.overallReportStatus = 'error';
+        } else if (st.status === 'generating') {
+          this.pollOverallReport();
+        } else {
+          this.overallReportStatus = '';
+        }
+      }, 2000);
+    },
+    viewOverallReport() {
+      this.showOverallReportModal = true;
+      this.reportEditData = JSON.parse(JSON.stringify(this.overallReport || {}));
+    },
+    onEdit(event, field, idx) {
+      const val = event.target.innerText.trim();
+      if (idx !== undefined) {
+        if (!this.reportEditData[field]) this.reportEditData[field] = [];
+        this.reportEditData[field][idx] = val;
+      } else {
+        this.reportEditData[field] = val;
+      }
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    onEditStudentInfo(event, key) {
+      const val = event.target.innerText.trim();
+      if (!this.reportEditData.student_info) this.reportEditData.student_info = {};
+      this.reportEditData.student_info[key] = val;
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    onEditArray(event, field, idx, sub) {
+      const val = event.target.innerText.trim().replace(/[：:]$/,'');
+      if (!this.reportEditData[field]) this.reportEditData[field] = [];
+      if (!this.reportEditData[field][idx]) this.reportEditData[field][idx] = {};
+      this.reportEditData[field][idx][sub] = val;
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    onEditDim(event, key, sub) {
+      const val = event.target.innerText.trim();
+      if (!this.reportEditData.dimensions) this.reportEditData.dimensions = {};
+      if (!this.reportEditData.dimensions[key]) this.reportEditData.dimensions[key] = {};
+      this.reportEditData.dimensions[key][sub] = val;
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    async saveOverallReport() {
+      if (!this.reportEditData) return;
+      this.reportSaving = true;
+      const res = await API.put('/growth/' + this.lead.id + '/overall-report', { data: this.reportEditData });
+      this.reportSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('报告已保存', 'success');
+    },
+    async downloadOverallReport(format) {
+      if (!this.lead || !this.lead.id) return;
+      const token = localStorage.getItem('tms_token') || '';
+      const a = document.createElement('a');
+      a.href = '/api/growth/' + this.lead.id + '/overall-report/download?format=' + format + '&token=' + token;
+      a.download = '';
+      a.click();
+    },
+    downloadReportTxt() {
+      const d = this.reportEditData || this.overallReport;
+      if (!d) return;
+      let txt = d.report_title + '\n\n';
+      if (d.baseline) txt += '【入学前基础概况】\n' + d.baseline + '\n\n';
+      if (d.learning_summary) txt += '【学习历程总结】\n' + d.learning_summary + '\n\n';
+      if (d.progress) txt += '【进步方面】\n' + d.progress.map(p => '· ' + p.aspect + '：' + p.detail).join('\n') + '\n\n';
+      if (d.weaknesses) txt += '【待改进方面】\n' + d.weaknesses.map(w => '· ' + w.aspect + '：' + w.detail).join('\n') + '\n\n';
+      if (d.overall_assessment) txt += '【综合评估】\n' + d.overall_assessment + '\n\n';
+      if (d.recommendations) txt += '【后续建议】\n' + d.recommendations.map((r,i) => (i+1) + '. ' + r).join('\n');
+      const blob = new Blob([txt], {type: 'text/plain;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (d.report_title || '学情报告') + '.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    },
+    async loadHomework() {
+      if (!this.lead || !this.lead.id) return;
+      const res = await API.get('/leads/' + this.lead.id + '/homework');
+      if (!res.error) this.homeworkList = res.data || [];
+    },
+    handleDrop(event) {
+      this.dragOver = false;
+      const files = event.dataTransfer?.files;
+      if (files?.length) {
+        // Upload first file
+        const dt = new DataTransfer();
+        dt.items.add(files[0]);
+        const inputEvent = { target: { files: dt.files } };
+        this.uploadHomework(inputEvent);
+      }
+    },
+    uploadHomework(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      this.uploadFileWithProgress(file);
+      event.target.value = '';
+    },
+    uploadFileWithProgress(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('tms_token') || '';
+      this.uploadProgress = 0;
+      this.uploading = true;
+      this.uploadStep = '上传中...';
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/leads/' + this.lead.id + '/homework');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 98);
+          this.uploadProgress = Math.min(pct, 98);
+        }
+      };
+      xhr.onload = () => {
+        this.uploadProgress = 100;
+        this.uploadStep = '处理中...';
+        setTimeout(() => {
+          this.uploading = false;
+          this.uploadProgress = 0;
+          this.uploadStep = '';
+          if (xhr.status >= 200 && xhr.status < 300) {
+            toast('作业已上传', 'success');
+            this.loadHomework();
+          } else {
+            let msg = '上传失败';
+            try { const d = JSON.parse(xhr.responseText); msg = d.error || msg; } catch(e) {}
+            toast(msg, 'error');
+          }
+        }, 500);
+      };
+      xhr.onerror = () => { this.uploading = false; this.uploadProgress = 0; this.uploadStep = ''; toast('网络错误', 'error'); };
+      xhr.send(formData);
+    },
+    async deleteHomework(fileId) {
+      if (!confirm('确定删除这份作业？')) return;
+      const res = await API.get('/homework/' + fileId + '/delete');
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('作业已删除', 'success');
+      this.loadHomework();
+    },
+    async downloadHomework(fileId) {
+      const token = localStorage.getItem('tms_token') || '';
+      const a = document.createElement('a');
+      a.href = '/api/homework/' + fileId + '/download?token=' + token;
+      a.target = '_blank';
+      a.click();
+    },
+
+    openLeadEdit() {
+      this.editForm = {
+        id: this.lead.id,
+        name: this.lead.name || '',
+        phone: this.lead.phone || '',
+        wechat: this.lead.wechat || '',
+        source: this.lead.source || '',
+        country: this.lead.country || '',
+        grade: this.lead.grade || '',
+        remark: this.lead.remark || '',
+        created_at: (this.lead.created_at || '').slice(0,10),
+        lead_rank: this.lead.lead_rank || '',
+      };
+      this.editSaving = false;
+      this.showEditModal = true;
+    },
+    async saveLeadEdit() {
+      this.editSaving = true;
+      const res = await API.put('/leads/' + this.editForm.id, this.editForm);
+      this.editSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('线索已更新', 'success');
+      this.showEditModal = false;
+      this.load();
+    },
     // ── 学业分析报告 ──
     canConsulting() {
       return this.user && ['cs', 'consultant', 'academic', 'admin', 'supervisor'].includes(this.user.role);
@@ -624,7 +893,8 @@ app.component('include-lead-detail', {
       const url = '/api/leads/' + this.lead.id + '/consulting/' + reportId + '/download?format=' + format + '&token=' + encodeURIComponent(token);
       const link = document.createElement('a');
       link.href = url;
-      link.download = (this.lead?.name || 'report') + '.' + (format === 'docx' ? 'docx' : 'pdf');
+      const name = (this.lead?.name || '').trim();
+      link.download = (name ? name + '-' : '') + '学业风险与规划报告.' + (format === 'docx' ? 'docx' : 'pdf');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -745,9 +1015,14 @@ app.component('include-schedules', {
       feedbackSaving: false,
       feedbackPackageInfo: {},
       genStatus: { progress: 0, step: '' },
+      selectedScheduleIds: [],
     };
   },
   computed: {
+    allSelected() {
+      const allIds = this.list.map(s => s.id);
+      return allIds.length > 0 && allIds.every(id => this.selectedScheduleIds.includes(id));
+    },
     scheduleGroups() {
       const groups = {};
       for (const s of this.list) {
@@ -844,6 +1119,16 @@ app.component('include-schedules', {
       this.saving = true;
       let res;
       const payload = { ...this.form };
+      // 处理老师选择：如果选中的是师资表老师，映射到 teacher_id
+      if (payload.tutor_id) {
+        const sel = this.tutors.find(t => t.id == payload.tutor_id && t.type === 'teacher');
+        if (sel) {
+          payload.teacher_id = payload.tutor_id;
+          delete payload.tutor_id;
+        } else if (payload.teacher_id && !payload.tutor_id) {
+          // teacher_id already set, keep it
+        }
+      }
       if (payload.actual_duration_minutes === '') {
         delete payload.actual_duration_minutes;
       } else if (payload.actual_duration_minutes) {
@@ -878,6 +1163,25 @@ app.component('include-schedules', {
     },
     closeHoursPopup() {
       this.hoursPopup = null;
+    },
+    toggleAllGroups() {
+      if (this.allSelected) {
+        this.selectedScheduleIds = [];
+      } else {
+        this.selectedScheduleIds = this.list.map(s => s.id);
+      }
+    },
+    confirmBatchDelete() {
+      if (this.selectedScheduleIds.length === 0) { toast('请选择要删除的排课', 'error'); return; }
+      if (!confirm('确定删除选中的 ' + this.selectedScheduleIds.length + ' 条排课？将同时恢复对应课时消耗。')) return;
+      this.batchDelete();
+    },
+    async batchDelete() {
+      const res = await API.post('/schedules/batch_delete', { ids: this.selectedScheduleIds });
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('已删除 ' + this.selectedScheduleIds.length + ' 条排课', 'success');
+      this.selectedScheduleIds = [];
+      this.load();
     },
     downloadCSV() {
       const params = new URLSearchParams();
@@ -994,8 +1298,12 @@ app.component('include-schedules', {
 
       let text = '━━━ 课后反馈 ━━━\n';
       text += `👤 学生: ${student}  📚 ${subject}  👨‍🏫 ${teacher}\n`;
-      text += `📅 ${date} ${duration}\n\n`;
-
+      text += `📅 ${date} ${duration}\n`;
+      if (this.feedbackPackageInfo && 'total_hours' in this.feedbackPackageInfo) {
+        const p = this.feedbackPackageInfo;
+        text += `📦 报名 ${p.total_hours}h · 已用 ${p.used_hours}h · 剩余 ${p.remaining_hours}h\n`;
+      }
+      text += '\n';
       text += '📖 授课内容\n';
       text += `▸ ${_stripTS(fb.content_covered) || '未填写'}\n\n`;
 
@@ -1036,28 +1344,69 @@ app.component('include-schedules', {
 });
 
 /* ════════════════════════════════════════
-   Students 签约学生组件
+   签约管理组件（合并 课时包管理 + 签约学生）
    ════════════════════════════════════════ */
-app.component('include-students', {
+app.component('include-signing', {
   props: ['user', 'switchView', 'roleLabel', 'statusBadge'],
-  template: '#tpl-students',
+  template: '#tpl-signing',
   data() {
     return {
-      list: [], total: 0, page: 1, pageSize: 20,
-      search: '', searchTimer: null,
-      loading: false,
-      // 分配班主任
-      assignLeadId: null,
-      assignLeadName: '',
-      assignCoordinatorId: '',
+      // Tab
+      tab: 'records',
+      tabs: [{ key: 'records', label: '收款记录' }, { key: 'students', label: '学生总览' }],
+      // Payments
+      allPayments: [], loading: false,
+      filterDateFrom: '', filterDateTo: '', filterSearch: '',
+      // Students
+      studentsList: [], studentsTotal: 0, studentPage: 1, studentPageSize: 20,
+      studentSearch: '', studentSearchTimer: null, studentsLoading: false,
+      // All leads (for signing form)
+      allLeads: [],
+      // Modals
+      showSigningModal: false, showAddPaymentModal: false,
+      showAssignModal: false, saving: false,
+      signingForm: { lead_id: '', signed_at: '', contract_no: '', package_name: '', total_hours: 0, price_per_hour: 0, payment_amount: 0, payment_method: '', payment_date: '', remark: '' },
+      addPaymentForm: { amount: '', method: '', note: '', payment_date: '' },
+      addPaymentContractId: null, addPaymentStudentName: '',
+      // Assign
+      assignLeadId: null, assignLeadName: '', assignCoordinatorId: '',
       coordinators: [],
-      showAssignModal: false,
+      // Delete
+      deleteConfirm: { show: false, title: '', message: '', paymentId: null, contractId: null, loading: false },
     };
   },
   computed: {
-    totalPages() { return Math.max(1, Math.ceil(this.total / this.pageSize)); },
-    pageNumbers() {
-      const tp = this.totalPages, p = this.page, pages = [];
+    filteredPayments() {
+      let rows = this.allPayments;
+      if (this.filterDateFrom) {
+        rows = rows.filter(p => (p.payment_date || '').slice(0,10) >= this.filterDateFrom);
+      }
+      if (this.filterDateTo) {
+        rows = rows.filter(p => (p.payment_date || '').slice(0,10) <= this.filterDateTo);
+      }
+      if (this.filterSearch) {
+        const q = this.filterSearch.toLowerCase();
+        rows = rows.filter(p => (p.lead_name || '').toLowerCase().includes(q));
+      }
+      return rows;
+    },
+    statsThisMonth() {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const monthRows = this.allPayments.filter(p => (p.payment_date || '').startsWith(ym));
+      const studentSet = new Set(monthRows.map(p => p.lead_id).filter(Boolean));
+      return {
+        total: monthRows.length,
+        students: studentSet.size,
+        hours: monthRows.reduce((s,p) => s + (p.total_hours || 0), 0),
+        amount: monthRows.reduce((s,p) => s + (p.amount || 0), 0),
+        newCount: monthRows.filter(p => p.sign_type === 'new').length,
+        renewalCount: monthRows.filter(p => p.sign_type === 'renewal').length,
+      };
+    },
+    studentTotalPages() { return Math.max(1, Math.ceil(this.studentsTotal / this.studentPageSize)); },
+    studentPageNumbers() {
+      const tp = this.studentTotalPages, p = this.studentPage, pages = [];
       if (tp <= 7) { for (let i = 1; i <= tp; i++) pages.push(i); }
       else {
         pages.push(1);
@@ -1068,37 +1417,114 @@ app.component('include-students', {
       }
       return pages;
     },
+    canManage() {
+      return ['coordinator', 'admin', 'supervisor'].includes(this.user?.role);
+    },
     canAssignCoordinator() {
       return ['admin', 'supervisor', 'consultant', 'cs'].includes(this.user?.role);
     },
   },
   methods: {
-    async load() {
+    // ── Load ──
+    async loadPayments() {
       this.loading = true;
       const params = new URLSearchParams();
-      params.set('page', this.page);
-      params.set('page_size', this.pageSize);
-      if (this.search) params.set('search', this.search);
-      const res = await API.get('/students?' + params.toString());
-      if (!res.error) { this.list = res.data?.items || []; this.total = res.data?.total || 0; }
+      if (this.filterDateFrom) params.set('date_from', this.filterDateFrom);
+      if (this.filterDateTo) params.set('date_to', this.filterDateTo);
+      if (this.filterSearch) params.set('search', this.filterSearch);
+      const res = await API.get('/payments/list?' + params.toString());
+      if (!res.error) this.allPayments = res.data || [];
       this.loading = false;
     },
-    debounceSearch() {
-      clearTimeout(this.searchTimer);
-      this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
-    },
-    goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
-    openLead(id) { TMSStore.leadId = id; TMSStore.fromView = this.currentView; this.switchView('lead-detail'); },
-    downloadCSV() {
+    async loadStudents() {
+      this.studentsLoading = true;
       const params = new URLSearchParams();
-      if (this.search) params.set('search', this.search);
-      downloadCSV('/students/export?' + params.toString(), '签约学生导出.csv');
+      params.set('page', this.studentPage);
+      params.set('page_size', this.studentPageSize);
+      if (this.studentSearch) params.set('search', this.studentSearch);
+      const res = await API.get('/students?' + params.toString());
+      if (!res.error) { this.studentsList = res.data?.items || []; this.studentsTotal = res.data?.total || 0; }
+      this.studentsLoading = false;
     },
+    async loadAllLeads() {
+      const res = await API.get('/leads?page=1&page_size=100000');
+      if (!res.error) this.allLeads = res.data?.items || [];
+    },
+    debounceStudentSearch() {
+      clearTimeout(this.studentSearchTimer);
+      this.studentSearchTimer = setTimeout(() => { this.studentPage = 1; this.loadStudents(); }, 300);
+    },
+    clearFilters() {
+      this.filterDateFrom = '';
+      this.filterDateTo = '';
+      this.filterSearch = '';
+      this.loadPayments();
+    },
+    goStudentPage(p) { if (p < 1 || p > this.studentTotalPages || p === '...') return; this.studentPage = p; this.loadStudents(); },
+    openLead(id) { TMSStore.leadId = id; TMSStore.fromView = 'signing'; this.switchView('lead-detail'); },
+    // ── New Signing ──
+    openNewSigning() {
+      this.signingForm = { lead_id: '', signed_at: new Date().toISOString().slice(0,10), contract_no: '', package_name: '标准课时包', total_hours: 0, price_per_hour: 0, payment_amount: 0, payment_method: '', payment_date: new Date().toISOString().slice(0,10), remark: '' };
+      this.showSigningModal = true;
+      if (!this.allLeads.length) this.loadAllLeads();
+    },
+    async submitSigning() {
+      if (!this.signingForm.lead_id) { toast('请选择学生', 'error'); return; }
+      if (!this.signingForm.total_hours || this.signingForm.total_hours <= 0) { toast('请输入总课时', 'error'); return; }
+      if (!this.signingForm.payment_amount || this.signingForm.payment_amount <= 0) { toast('请输入收款金额', 'error'); return; }
+      this.saving = true;
+      const res = await API.post('/signing', this.signingForm);
+      this.saving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('签约成功', 'success');
+      this.showSigningModal = false;
+      this.loadPayments();
+    },
+    // ── Add Payment ──
+    openAddPayment(s) {
+      const c = s.contract;
+      if (!c) { toast('该学生暂无合同', 'error'); return; }
+      this.addPaymentContractId = c.id;
+      this.addPaymentStudentName = s.name;
+      this.addPaymentForm = { amount: '', method: '', note: '', payment_date: new Date().toISOString().slice(0,10) };
+      this.showAddPaymentModal = true;
+    },
+    async submitAddPayment() {
+      if (!this.addPaymentForm.amount || parseFloat(this.addPaymentForm.amount) <= 0) { toast('请输入有效金额', 'error'); return; }
+      this.saving = true;
+      const res = await API.post('/contracts/' + this.addPaymentContractId + '/payments', this.addPaymentForm);
+      this.saving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('收款成功', 'success');
+      this.showAddPaymentModal = false;
+      this.loadPayments();
+      this.loadStudents();
+    },
+    // ── Delete Payment ──
+    confirmDeletePayment(contractId, paymentId, amount) {
+      this.deleteConfirm = {
+        show: true, loading: false,
+        title: '删除收款记录',
+        message: `确定删除 ¥${Math.abs(amount || 0).toFixed(2)} 的收款记录？合同已收金额将同步调整。`,
+        contractId, paymentId,
+      };
+    },
+    async executeDelete() {
+      const dc = this.deleteConfirm;
+      if (!dc.paymentId || !dc.contractId) return;
+      dc.loading = true;
+      const res = await API.del('/contracts/' + dc.contractId + '/payments/' + dc.paymentId);
+      dc.loading = false;
+      dc.show = false;
+      if (res && res.error) { toast(res.error, 'error'); return; }
+      toast('已删除', 'success');
+      this.loadPayments();
+    },
+    // ── Assign Coordinator ──
     async openAssignCoordinator(s) {
       this.assignLeadId = s.id;
       this.assignLeadName = s.name;
       this.assignCoordinatorId = s.coordinator_id || '';
-      // 加载可选的教务班主任
       const res = await API.get('/auth/users');
       if (!res.error) {
         this.coordinators = (res.data || []).filter(u =>
@@ -1109,16 +1535,30 @@ app.component('include-students', {
     },
     async submitAssignCoordinator() {
       if (!this.assignCoordinatorId) { toast('请选择教务班主任', 'error'); return; }
-      const res = await API.put('/leads/' + this.assignLeadId, {
-        coordinator_id: parseInt(this.assignCoordinatorId),
-      });
+      const res = await API.put('/leads/' + this.assignLeadId, { coordinator_id: parseInt(this.assignCoordinatorId) });
       if (res.error) { toast(res.error, 'error'); return; }
       toast('教务班主任已分配', 'success');
       this.showAssignModal = false;
-      this.load();
+      this.loadStudents();
+    },
+    downloadStudentCSV() {
+      const params = new URLSearchParams();
+      if (this.studentSearch) params.set('search', this.studentSearch);
+      downloadCSV('/students/export?' + params.toString(), '签约学生导出.csv');
     },
   },
-  created() { this.load(); },
+  watch: {
+    filterDateFrom() { this.loadPayments(); },
+    filterDateTo() { this.loadPayments(); },
+    filterSearch() { this.loadPayments(); },
+    tab(newVal) {
+      if (newVal === 'students' && !this.studentsList.length) this.loadStudents();
+    },
+  },
+  created() {
+    this.loadPayments();
+    this.loadAllLeads();
+  },
 });
 
 /* ════════════════════════════════════════
@@ -1434,12 +1874,20 @@ app.component('include-assignment', {
       // 线索分配
       unassignedLeads: [], selectedIds: [],
       assignTarget: '', assignUsers: [],
+      assignSearch: '',
       // 签约学生分配
       enrolledNoCoord: [], selectedEnrolledIds: [],
       coordTarget: '', coordinators: [],
     };
   },
   computed: {
+    filteredAssignLeads() {
+      if (!this.assignSearch) return this.unassignedLeads;
+      const q = this.assignSearch.toLowerCase();
+      return this.unassignedLeads.filter(l =>
+        (l.name || '').toLowerCase().includes(q) || (l.phone || '').toLowerCase().includes(q)
+      );
+    },
     canAssignLeads() { return ['admin', 'supervisor'].includes(this.user?.role); },
     canAssignCoordinator() { return canUser(this.user?.role, 'lead:adjust_coordinator'); },
   },
@@ -1448,7 +1896,7 @@ app.component('include-assignment', {
       // 线索分配 — 仅 admin/supervisor
       if (this.canAssignLeads) {
         const [leadsRes, usersRes] = await Promise.all([
-          API.get('/leads?page=1&page_size=200&status=pending'),
+          API.get('/leads?page=1&page_size=100000&status=pending'),
           API.get('/auth/users'),
         ]);
         if (!leadsRes.error) this.unassignedLeads = leadsRes.data?.items || [];
@@ -1457,7 +1905,7 @@ app.component('include-assignment', {
       // 签约学生分配 — cs/consultant/admin/supervisor
       if (this.canAssignCoordinator) {
         const [enrolledRes, usersRes2] = await Promise.all([
-          API.get('/students?page=1&page_size=200'),
+          API.get('/students?page=1&page_size=100000'),
           API.get('/auth/users'),
         ]);
         if (!enrolledRes.error) {
@@ -1492,186 +1940,6 @@ app.component('include-assignment', {
   created() { this.load(); },
 });
 
-/* ════════════════════════════════════════
-   Packages 课时包管理组件
-   ════════════════════════════════════════ */
-app.component('include-packages', {
-  props: ['user', 'switchView', 'roleLabel', 'statusBadge'],
-  template: '#tpl-packages',
-  data() {
-    return {
-      contracts: [], leads: [], loading: false,
-      expandedId: null,
-      useHours: {},
-      showContractModal: false, showPackageModal: false,
-      saving: false,
-      contractForm: { lead_id: '', contract_no: '', total_amount: 0, signed_at: '', remark: '' },
-      packageForm: { contract_id: null, name: '', total_hours: 0, price_per_hour: 0, remark: '' },
-      // Payment / Refund
-      payments: {},
-      showPaymentModal: false, showRefundModal: false,
-      paymentForm: { amount: '', method: '', note: '' },
-      refundForm: { amount: '', reason: '' },
-      paymentContractId: null,
-      // 删除确认
-      deleteConfirm: { show: false, title: '', message: '', type: '', id: null, contractId: null, loading: false },
-    };
-  },
-  computed: {
-    canManage() {
-      const role = this.user?.role || '';
-      return ['coordinator', 'admin', 'supervisor'].includes(role);
-    },
-  },
-  methods: {
-    async load() {
-      this.loading = true;
-      const [cRes, lRes] = await Promise.all([
-        API.get('/contracts?page_size=50'),
-        API.get('/leads?page=1&page_size=200'),
-      ]);
-      if (!cRes.error) this.contracts = cRes.data?.items || [];
-      if (!lRes.error) this.leads = lRes.data?.items || [];
-      this.loading = false;
-    },
-    async loadPackages(contractId) {
-      const res = await API.get('/packages?contract_id=' + contractId);
-      if (!res.error) {
-        const c = this.contracts.find(c => c.id === contractId);
-        if (c) c._packages = res.data || [];
-      }
-    },
-    async loadPayments(contractId) {
-      const res = await API.get('/contracts/' + contractId + '/payments');
-      if (!res.error) {
-        this.payments[contractId] = res.data || [];
-      }
-    },
-    toggleExpand(id) {
-      if (this.expandedId === id) { this.expandedId = null; return; }
-      this.expandedId = id;
-      this.loadPackages(id);
-      this.loadPayments(id);
-    },
-    openCreateContract() {
-      this.contractForm = { lead_id: '', contract_no: '', total_amount: 0, signed_at: '', remark: '' };
-      this.showContractModal = true;
-    },
-    async submitContract() {
-      if (!this.contractForm.lead_id) { toast('请选择学生', 'error'); return; }
-      this.saving = true;
-      const res = await API.post('/contracts', this.contractForm);
-      this.saving = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('合同创建成功', 'success');
-      this.showContractModal = false;
-      this.load();
-    },
-    openAddPackage(c) {
-      this.packageForm = { contract_id: c.id, name: '', total_hours: 0, price_per_hour: 0, remark: '' };
-      this.showPackageModal = true;
-    },
-    async submitPackage() {
-      if (!this.packageForm.total_hours || this.packageForm.total_hours <= 0) { toast('请输入总课时', 'error'); return; }
-      this.saving = true;
-      const res = await API.post('/packages', this.packageForm);
-      this.saving = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('课时包已添加', 'success');
-      this.showPackageModal = false;
-      this.loadPackages(this.packageForm.contract_id);
-    },
-    async usePackageHours(pkgId) {
-      const hours = this.useHours[pkgId];
-      if (!hours || hours <= 0) { toast('请输入有效课时', 'error'); return; }
-      const res = await API.post('/packages/' + pkgId + '/use', { hours });
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('课时已记录', 'success');
-      this.useHours[pkgId] = 0;
-      const c = this.contracts.find(c => c._packages?.some(p => p.id === pkgId));
-      if (c) this.loadPackages(c.id);
-    },
-    // ── Payment ──
-    openPayment(c) {
-      this.paymentContractId = c.id;
-      this.paymentForm = { amount: '', method: '', note: '' };
-      this.showPaymentModal = true;
-    },
-    async submitPayment() {
-      if (!this.paymentForm.amount || parseFloat(this.paymentForm.amount) <= 0) { toast('请输入有效金额', 'error'); return; }
-      this.saving = true;
-      const res = await API.post('/contracts/' + this.paymentContractId + '/payments', this.paymentForm);
-      this.saving = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('收款成功', 'success');
-      this.showPaymentModal = false;
-      await this.load();
-      await this.loadPayments(this.paymentContractId);
-    },
-    // ── Refund ──
-    openRefund(c) {
-      this.paymentContractId = c.id;
-      this.refundForm = { amount: '', reason: '' };
-      this.showRefundModal = true;
-    },
-    async submitRefund() {
-      if (!this.refundForm.amount || parseFloat(this.refundForm.amount) <= 0) { toast('请输入有效金额', 'error'); return; }
-      if (!this.refundForm.reason) { toast('请填写退款原因', 'error'); return; }
-      this.saving = true;
-      const res = await API.post('/contracts/' + this.paymentContractId + '/refunds', this.refundForm);
-      this.saving = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('退款成功', 'success');
-      this.showRefundModal = false;
-      await this.load();
-      await this.loadPayments(this.paymentContractId);
-    },
-    // ── 删除操作 ──
-    confirmDeleteContract(c) {
-      this.deleteConfirm = {
-        show: true, loading: false,
-        title: '删除合同',
-        message: `确定删除「${c.lead_name || ''}」的合同？将同时删除关联的课时包和付款记录。`,
-        type: 'contract', id: c.id,
-      };
-    },
-    confirmDeletePackage(p) {
-      this.deleteConfirm = {
-        show: true, loading: false,
-        title: '删除课时包',
-        message: `确定删除课时包「${p.name || '—'}」？`,
-        type: 'package', id: p.id,
-      };
-    },
-    confirmDeletePayment(cId, p) {
-      this.deleteConfirm = {
-        show: true, loading: false,
-        title: '删除付款记录',
-        message: `确定删除 ¥${Math.abs(p.amount || 0).toFixed(2)} 的付款记录？合同已收金额将同步调整。`,
-        type: 'payment', id: p.id, contractId: cId,
-      };
-    },
-    async executeDelete() {
-      const dc = this.deleteConfirm;
-      if (!dc.type || !dc.id) return;
-      dc.loading = true;
-      let res;
-      if (dc.type === 'contract') {
-        res = await API.del('/contracts/' + dc.id);
-      } else if (dc.type === 'package') {
-        res = await API.del('/packages/' + dc.id);
-      } else if (dc.type === 'payment') {
-        res = await API.del('/contracts/' + dc.contractId + '/payments/' + dc.id);
-      }
-      dc.loading = false;
-      dc.show = false;
-      if (res && res.error) { toast(res.error, 'error'); return; }
-      toast('已删除', 'success');
-      this.load();
-    },
-  },
-  created() { this.load(); },
-});
 
 /* ════════════════════════════════════════
    Finance 财务管理组件
@@ -1761,12 +2029,16 @@ app.component('include-trials', {
       this.loading = false;
     },
     async loadOptions() {
-      const [leadsRes, usersRes] = await Promise.all([
+      const [leadsRes, teachersRes] = await Promise.all([
         API.get('/leads?page=1&page_size=200'),
-        API.get('/auth/users'),
+        API.get('/teachers?page_size=500'),
       ]);
       if (!leadsRes.error) this.leads = leadsRes.data?.items || [];
-      if (!usersRes.error) this.tutors = (usersRes.data || []).filter(u => u.role === 'tutor');
+      if (!teachersRes.error) this.tutors = (teachersRes.data?.items || []).map(t => ({
+        id: t.id,
+        display_name: t.name,
+        type: 'teacher',
+      }));
     },
     debounceSearch() {
       clearTimeout(this.searchTimer);
@@ -1775,7 +2047,7 @@ app.component('include-trials', {
     switchTab(key) { this.activeTab = key; this.load(); },
     openCreate() {
       this.editId = null;
-      this.form = { lead_id: '', tutor_id: '', subject: '试听课', start_time: '', end_time: '', classin_link: '', remark: '' };
+      this.form = { lead_id: '', tutor_id: '', teacher_id: '', subject: '试听课', start_time: '', end_time: '', classin_link: '', remark: '' };
       this.showModal = true;
     },
     openEdit(t) {
@@ -1783,6 +2055,7 @@ app.component('include-trials', {
       this.form = {
         lead_id: t.lead_id || '',
         tutor_id: t.tutor_id || '',
+        teacher_id: t.teacher_id || '',
         subject: t.subject || '试听课',
         start_time: t.start_time ? t.start_time.slice(0, 16) : '',
         end_time: t.end_time ? t.end_time.slice(0, 16) : '',
@@ -1794,7 +2067,9 @@ app.component('include-trials', {
     closeModal() { this.showModal = false; this.editId = null; },
     async submitSave() {
       if (!this.form.lead_id) { toast('请选择学生', 'error'); return; }
-      if (!this.form.tutor_id) { toast('请选择老师', 'error'); return; }
+      const hasTutor = this.form.tutor_id || this.form.teacher_id || this.selectedTutorId;
+      if (!hasTutor) { toast('请选择老师', 'error'); return; }
+      if (!this.form.start_time || !this.form.end_time) { toast('请选择时间', 'error'); return; }
       if (!this.form.start_time || !this.form.end_time) { toast('请选择时间', 'error'); return; }
       this.saving = true;
       let res;
@@ -1863,6 +2138,22 @@ app.component('include-growth', {
       feedbackSaving: false,
       feedbackPackageInfo: {},
       aiGenerating: false,
+      showLeadEdit: false,
+      leadEditForm: {},
+      leadEditSaving: false,
+      overallReport: null,
+      overallReportStatus: '',
+      overallReportProgress: 0,
+      overallReportStep: '',
+      overallReportPollTimer: null,
+      showOverallReportModal: false,
+      reportEditData: {},
+      reportSaving: false,
+      homeworkList: [],
+      uploadProgress: 0,
+      uploading: false,
+      uploadStep: '',
+      dragOver: false,
       genStatus: { progress: 0, step: '' },
       genPollTimer: null,
       // 考试弹窗
@@ -1886,7 +2177,7 @@ app.component('include-growth', {
         s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q))
       );
     },
-    canManage() {
+canManage() {
       return ['cs', 'consultant', 'academic', 'coordinator', 'admin', 'supervisor'].includes(this.user?.role);
     },
     canManageAdmission() {
@@ -1918,6 +2209,7 @@ app.component('include-growth', {
     },
     async selectStudent(leadId) {
       this.selectedLeadId = leadId;
+      this.loadOverallReport();
       this.loading = true;
       const res = await API.get('/growth/' + leadId);
       this.loading = false;
@@ -2032,8 +2324,12 @@ app.component('include-growth', {
 
       let text = '━━━ 课后反馈 ━━━\n';
       text += `👤 学生: ${student}  📚 ${subject}  👨‍🏫 ${teacher}\n`;
-      text += `📅 ${date} ${duration}\n\n`;
-
+      text += `📅 ${date} ${duration}\n`;
+      if (this.feedbackPackageInfo && 'total_hours' in this.feedbackPackageInfo) {
+        const p = this.feedbackPackageInfo;
+        text += `📦 报名 ${p.total_hours}h · 已用 ${p.used_hours}h · 剩余 ${p.remaining_hours}h\n`;
+      }
+      text += '\n';
       text += '📖 授课内容\n';
       text += `▸ ${_stripTS(fb.content_covered) || '未填写'}\n\n`;
 
@@ -2069,6 +2365,196 @@ app.component('include-growth', {
         document.body.removeChild(ta);
         toast(includeInternal ? '✅ 完整版已复制到剪贴板' : '✅ 家长版已复制到剪贴板', 'success');
       });
+    },
+    // ── 编辑学生信息 ──
+    openLeadEdit() {
+      const lead = this.growth?.lead || {};
+      this.leadEditForm = {
+        name: lead.name || '',
+        phone: lead.phone || '',
+        wechat: lead.wechat || '',
+        source: lead.source || '',
+        country: lead.country || '',
+        grade: lead.grade || '',
+        remark: lead.remark || '',
+      };
+      this.showLeadEdit = true;
+    },
+    async saveLeadEdit() {
+      this.leadEditSaving = true;
+      const res = await API.put('/leads/' + this.growth.lead.id, this.leadEditForm);
+      this.leadEditSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('学生信息已更新', 'success');
+      this.showLeadEdit = false;
+      this.selectStudent(this.selectedLeadId);
+    },
+    // ── 整体学情报告 ──
+    async generateOverallReport() {
+      toast('正在生成学情报告...', 'success');
+      if (this.overallReportPollTimer) clearTimeout(this.overallReportPollTimer);
+      this.overallReport = null;
+      this.overallReportStatus = 'generating';
+      const res = await API.post('/growth/' + this.selectedLeadId + '/overall-report');
+      if (res.error) { toast(res.error, 'error'); this.overallReportStatus = ''; return; }
+      this.pollOverallReport();
+    },
+    async pollOverallReport() {
+      this.overallReportPollTimer = setTimeout(async () => {
+        const pr = await API.get('/growth/' + this.selectedLeadId + '/overall-report/progress');
+        if (pr.error) { this.overallReportStatus = ''; return; }
+        const st = pr.data || {};
+        this.overallReportProgress = st.progress || 0;
+        this.overallReportStep = st.step || '';
+        if (st.status === 'done' && st.result) {
+          this.overallReport = st.result;
+          this.overallReportStatus = 'done';
+          toast('✅ 学情报告已生成', 'success');
+        } else if (st.status === 'error') {
+          this.overallReportStatus = 'error';
+          toast('❌ ' + (st.step || '生成失败'), 'error');
+        } else if (st.status === 'generating') {
+          this.pollOverallReport();
+        } else {
+          this.overallReportStatus = '';
+        }
+      }, 2000);
+    },
+    viewOverallReport() {
+      this.showOverallReportModal = true;
+      this.reportEditData = JSON.parse(JSON.stringify(this.overallReport || {}));
+    },
+    onEdit(event, field, idx) {
+      const val = event.target.innerText.trim();
+      if (idx !== undefined) {
+        if (!this.reportEditData[field]) this.reportEditData[field] = [];
+        this.reportEditData[field][idx] = val;
+      } else {
+        this.reportEditData[field] = val;
+      }
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    onEditStudentInfo(event, key) {
+      const val = event.target.innerText.trim();
+      if (!this.reportEditData.student_info) this.reportEditData.student_info = {};
+      this.reportEditData.student_info[key] = val;
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    onEditArray(event, field, idx, sub) {
+      const val = event.target.innerText.trim().replace(/[：:]$/,'');
+      if (!this.reportEditData[field]) this.reportEditData[field] = [];
+      if (!this.reportEditData[field][idx]) this.reportEditData[field][idx] = {};
+      this.reportEditData[field][idx][sub] = val;
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    onEditDim(event, key, sub) {
+      const val = event.target.innerText.trim();
+      if (!this.reportEditData.dimensions) this.reportEditData.dimensions = {};
+      if (!this.reportEditData.dimensions[key]) this.reportEditData.dimensions[key] = {};
+      this.reportEditData.dimensions[key][sub] = val;
+      this.overallReport = JSON.parse(JSON.stringify(this.reportEditData));
+    },
+    downloadReportTxt() {
+      const d = this.reportEditData || this.overallReport;
+      if (!d) return;
+      let txt = d.report_title + '\n\n';
+      if (d.baseline) txt += '【入学前基础概况】\n' + d.baseline + '\n\n';
+      if (d.learning_summary) txt += '【学习历程总结】\n' + d.learning_summary + '\n\n';
+      if (d.progress) txt += '【进步方面】\n' + d.progress.map(p => '· ' + p.aspect + '：' + p.detail).join('\n') + '\n\n';
+      if (d.weaknesses) txt += '【待改进方面】\n' + d.weaknesses.map(w => '· ' + w.aspect + '：' + w.detail).join('\n') + '\n\n';
+      if (d.overall_assessment) txt += '【综合评估】\n' + d.overall_assessment + '\n\n';
+      if (d.recommendations) txt += '【后续建议】\n' + d.recommendations.map((r,i) => (i+1) + '. ' + r).join('\n');
+      const blob = new Blob([txt], {type: 'text/plain;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (d.report_title || '学情报告') + '.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    },
+    async loadHomework() {
+      if (!this.lead || !this.lead.id) return;
+      const res = await API.get('/leads/' + this.lead.id + '/homework');
+      if (!res.error) this.homeworkList = res.data || [];
+    },
+    handleDrop(event) {
+      this.dragOver = false;
+      const files = event.dataTransfer?.files;
+      if (files?.length) {
+        // Upload first file
+        const dt = new DataTransfer();
+        dt.items.add(files[0]);
+        const inputEvent = { target: { files: dt.files } };
+        this.uploadHomework(inputEvent);
+      }
+    },
+    uploadHomework(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      this.uploadFileWithProgress(file);
+      event.target.value = '';
+    },
+    uploadFileWithProgress(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('tms_token') || '';
+      this.uploadProgress = 0;
+      this.uploading = true;
+      this.uploadStep = '上传中...';
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/leads/' + this.lead.id + '/homework');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 98);
+          this.uploadProgress = Math.min(pct, 98);
+        }
+      };
+      xhr.onload = () => {
+        this.uploadProgress = 100;
+        this.uploadStep = '处理中...';
+        setTimeout(() => {
+          this.uploading = false;
+          this.uploadProgress = 0;
+          this.uploadStep = '';
+          if (xhr.status >= 200 && xhr.status < 300) {
+            toast('作业已上传', 'success');
+            this.loadHomework();
+          } else {
+            let msg = '上传失败';
+            try { const d = JSON.parse(xhr.responseText); msg = d.error || msg; } catch(e) {}
+            toast(msg, 'error');
+          }
+        }, 500);
+      };
+      xhr.onerror = () => { this.uploading = false; this.uploadProgress = 0; this.uploadStep = ''; toast('网络错误', 'error'); };
+      xhr.send(formData);
+    },
+    async deleteHomework(fileId) {
+      if (!confirm('确定删除这份作业？')) return;
+      const res = await API.get('/homework/' + fileId + '/delete');
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('作业已删除', 'success');
+      this.loadHomework();
+    },
+    async downloadHomework(fileId) {
+      const token = localStorage.getItem('tms_token') || '';
+      const a = document.createElement('a');
+      a.href = '/api/homework/' + fileId + '/download?token=' + token;
+      a.target = '_blank';
+      a.click();
+    },
+    clearOverallReport() {
+      this.overallReport = null;
+      this.overallReportStatus = '';
+      this.overallReportProgress = 0;
+      this.overallReportStep = '';
+    },
+    async loadOverallReport() {
+      const res = await API.get('/growth/' + this.selectedLeadId + '/overall-report');
+      if (!res.error && res.data && res.data.report_title) {
+        this.overallReport = res.data;
+        this.overallReportStatus = 'done';
+      }
     },
     // ── 考试成绩 ──
     openExam() {
@@ -2198,7 +2684,8 @@ app.component('include-consulting', {
       const url = '/api/leads/' + report.lead_id + '/consulting/' + report.id + '/download?format=' + format + '&token=' + encodeURIComponent(token);
       const link = document.createElement('a');
       link.href = url;
-      link.download = (report.lead_name || report.target_school || 'report') + '.' + (format === 'docx' ? 'docx' : 'pdf');
+      const name = (report.lead_name || '').trim();
+      link.download = (name ? name + '-' : '') + '学业风险与规划报告.' + (format === 'docx' ? 'docx' : 'pdf');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -2207,6 +2694,11 @@ app.component('include-consulting', {
       this.reportTypeFilter = filter;
       this.page = 1;
       this.load();
+    },
+    openLead(id) {
+      TMSStore.leadId = id;
+      TMSStore.fromView = this.currentView;
+      this.switchView('lead-detail');
     },
   },
   watch: {

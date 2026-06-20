@@ -15,6 +15,9 @@ def list_contracts(handler, token_payload, qs, body):
     page_size = int(qs.get("page_size", [20])[0])
     lead_id = qs.get("lead_id", [None])[0]
     status = qs.get("status", [None])[0]
+    date_from = qs.get("date_from", [None])[0]
+    date_to = qs.get("date_to", [None])[0]
+    search = qs.get("search", [None])[0]
 
     where = ["1=1"]
     params = []
@@ -106,10 +109,8 @@ def create_contract(handler, token_payload, qs, body):
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "create", "contract", cid, "创建合同")
 
     # 通过状态机将线索推进为"已签约"
-    try:
-        transition_lead(int(lead_id), "enrolled")
-    except Exception:
-        pass  # 合同已创建，不阻塞
+    # 强制更新为已签约状态（不经过状态机，因为外部导入的线索可能从pending直接签约）
+    execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
 
     c = query_one("SELECT * FROM contracts WHERE id=?", (cid,))
     ok_response(handler, c, 201)
@@ -148,7 +149,7 @@ def delete_contract(handler, token_payload, qs, body, contract_id=None):
         error_response(handler, "无权操作", 403)
         return
     cid = int(contract_id)
-    c = query_one("SELECT id, contract_no FROM contracts WHERE id=?", (cid,))
+    c = query_one("SELECT id, contract_no, lead_id FROM contracts WHERE id=?", (cid,))
     if not c:
         error_response(handler, "合同不存在", 404)
         return
@@ -169,4 +170,132 @@ def delete_contract(handler, token_payload, qs, body, contract_id=None):
         return
 
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "delete", "contract", cid, f"删除合同: {c['contract_no']}")
+
+    # 删除合同后检查该线索是否还有剩余合同，没有则回退签约状态
+    lid = c.get("lead_id")
+    if lid:
+        remaining = query_one("SELECT COUNT(*) as cnt FROM contracts WHERE lead_id=?", (lid,))
+        if not remaining or remaining["cnt"] == 0:
+            execute("UPDATE leads SET status='assigned' WHERE id=? AND status='enrolled'", (lid,))
+
     ok_response(handler, {"message": "已删除"})
+
+
+@post("/api/signing")
+def create_signing(handler, token_payload, qs, body):
+    """一键签约：创建合同 + 课时包 + 收款，一个事务"""
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+
+    lead_id = body.get("lead_id")
+    if not lead_id:
+        error_response(handler, "缺少学生信息")
+        return
+
+    total_hours = float(body.get("total_hours", 0))
+    if total_hours <= 0:
+        error_response(handler, "总课时必须大于 0")
+        return
+
+    payment_amount = float(body.get("payment_amount", 0))
+    if payment_amount <= 0:
+        error_response(handler, "收款金额必须大于 0")
+        return
+
+    # 计算新签/续费：该学生已有合同下课时包的总课时
+    prev_hours = query_one(
+        """SELECT COALESCE(SUM(p.total_hours),0) as h
+           FROM packages p
+           JOIN contracts c ON p.contract_id = c.id
+           WHERE c.lead_id=?""",
+        (int(lead_id),),
+    )["h"]
+    sign_type = "renewal" if prev_hours >= 10 else "new"
+
+    signed_at = body.get("signed_at", "")
+    if not signed_at:
+        signed_at = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+
+    payment_date = body.get("payment_date", "")
+    if not payment_date:
+        payment_date = signed_at
+
+    uid = token_payload["sub"]
+    uname = token_payload.get("name", "")
+
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
+
+        # 1. 创建合同
+        cid = execute_lastrowid(
+            """INSERT INTO contracts (lead_id, contract_no, total_amount, status, signed_at, remark, created_by, sign_type, paid_amount)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                int(lead_id),
+                body.get("contract_no", ""),
+                payment_amount,  # total_amount = 收款金额（合同金额由收款决定）
+                body.get("status", "active"),
+                signed_at,
+                body.get("remark", ""),
+                uid,
+                sign_type,
+                payment_amount,  # 首笔收款直接计入 paid_amount
+            ),
+        )
+
+        # 2. 创建课时包
+        pid = execute_lastrowid(
+            """INSERT INTO packages (contract_id, name, total_hours, used_hours, price_per_hour, status, remark)
+               VALUES (?,?,?,?,?,?,?)""",
+            (
+                cid,
+                body.get("package_name", "") or "标准课时包",
+                total_hours,
+                0,
+                float(body.get("price_per_hour", 0)),
+                "active",
+                "",
+            ),
+        )
+
+        # 3. 创建收款记录
+        pay_id = execute_lastrowid(
+            """INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date)
+               VALUES (?,?,?,?,?,?,?)""",
+            (
+                cid,
+                payment_amount,
+                "payment",
+                body.get("payment_method", ""),
+                body.get("note", ""),
+                uid,
+                payment_date,
+            ),
+        )
+
+        # 4. 更新学生状态为已签约
+        execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
+
+        conn.commit()
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        error_response(handler, f"签约失败：{e}", 500)
+        return
+
+    add_oplog(uid, uname, "signing", "contract", cid, f"一键签约 {sign_type} · {total_hours}h · ¥{payment_amount:.2f}")
+
+    # 返回完整数据
+    contract = query_one("SELECT * FROM contracts WHERE id=?", (cid,))
+    package = query_one("SELECT * FROM packages WHERE id=?", (pid,))
+    payment = query_one("SELECT * FROM payment_records WHERE id=?", (pay_id,))
+    lead = query_one("SELECT id, name, phone FROM leads WHERE id=?", (int(lead_id),))
+
+    ok_response(handler, {
+        "contract": contract,
+        "package": package,
+        "payment": payment,
+        "lead_name": lead["name"] if lead else "",
+        "sign_type": sign_type,
+    }, 201)

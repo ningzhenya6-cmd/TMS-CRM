@@ -4,6 +4,9 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>TMS — 辅导管理系统</title>
 <!-- Tailwind CSS (Play CDN) -->
 <script src="/lib/tailwind.min.js"></script>
@@ -227,12 +230,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <include-assignment v-if="currentView === 'assignment'"
             :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
         </include-assignment>
-        <include-packages v-if="currentView === 'packages'"
+        <include-signing v-if="currentView === 'signing'"
             :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
-        </include-packages>
-        <include-students v-if="currentView === 'students'"
-            :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
-        </include-students>
+        </include-signing>
         <include-finance v-if="currentView === 'finance'"
             :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
         </include-finance>
@@ -296,7 +296,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
       <div class="flex items-start justify-between">
         <div>
-          <h4 class="text-lg font-bold text-gray-900">{{ growth.lead.name }}</h4>
+          <div class="flex items-center gap-2">
+            <h4 class="text-lg font-bold text-gray-900">{{ growth.lead.name }}</h4>
+
+          </div>
           <div class="flex flex-wrap gap-2 mt-2 text-sm text-gray-600">
             <span v-if="growth.lead.grade">{{ growth.lead.grade }}</span>
             <span v-if="growth.lead.country">· {{ growth.lead.country }}</span>
@@ -392,7 +395,48 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
 
-    <!-- ── 考试成绩 ── -->
+    <!-- ── 整体学情报告 ── -->
+    <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h5 class="font-semibold text-gray-900">
+          <i class="bi bi-file-text text-indigo-500 mr-2"></i>整体学情报告
+        </h5>
+        <button v-if="!overallReport && overallReportStatus !== 'generating'" class="text-xs px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:opacity-90" @click="generateOverallReport">
+          <i class="bi bi-plus-lg"></i> 生成报告
+        </button>
+      </div>
+      <!-- 无报告 -->
+      <div v-if="!overallReport && overallReportStatus !== 'generating' && overallReportStatus !== 'error'" class="text-center py-8 text-sm text-gray-400">
+        <i class="bi bi-inbox text-3xl block mb-2"></i>暂无学情报告
+      </div>
+      <!-- 生成中 -->
+      <div v-if="overallReportStatus === 'generating'" class="space-y-3">
+        <div class="flex items-center gap-2 text-sm text-indigo-600">
+          <div class="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span>{{ overallReportStep || '生成中...' }}</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-indigo-500 h-2 rounded-full transition-all" :style="{width: (overallReportProgress || 0) + '%'}"></div>
+        </div>
+      </div>
+      <!-- 生成失败 -->
+      <div v-if="overallReportStatus === 'error'" class="text-center py-4">
+        <p class="text-sm text-red-500 mb-2">{{ overallReportStep || '生成失败' }}</p>
+        <button class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="generateOverallReport">重新生成</button>
+      </div>
+      <!-- 报告已生成 -->
+      <div v-if="overallReport && overallReportStatus === 'done'" class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-green-800 truncate">{{ overallReport.report_title || '阶段性学情综合报告' }}</p>
+          <p class="text-xs text-green-600 mt-0.5">已生成，点击查看完整报告</p>
+        </div>
+        <div class="flex gap-2 ml-3 flex-shrink-0">
+          <button class="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700" @click="viewOverallReport(); showOverallReportModal=true"><i class="bi bi-eye mr-1"></i>查看</button>
+          <button class="text-xs px-3 py-1.5 border border-green-300 text-green-700 rounded-lg hover:bg-green-50" @click="generateOverallReport"><i class="bi bi-arrow-repeat"></i></button>
+        </div>
+      </div>
+    </div>
+<!-- ── 考试成绩 ── -->
     <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
       <div class="flex items-center justify-between mb-4">
         <h5 class="font-semibold text-gray-900">
@@ -487,6 +531,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                     :disabled="aiGenerating" @click="generateFeedback">
               <i class="bi bi-robot mr-1"></i>{{ aiGenerating ? '生成中...' : 'AI 生成' }}
             </button>
+          </div>
+          <!-- 课时进度 -->
+          <div v-if="feedbackPackageInfo && feedbackPackageInfo.total_hours" class="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs mt-2">
+            <span class="text-gray-500">课时</span>
+            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full transition-all" :style="{width: (feedbackPackageInfo.total_hours > 0 ? (feedbackPackageInfo.used_hours / feedbackPackageInfo.total_hours * 100) : 0) + '%'}"></div>
+            </div>
+            <span class="text-gray-700 font-medium whitespace-nowrap">{{ feedbackPackageInfo.used_hours }}h / {{ feedbackPackageInfo.total_hours }}h</span>
+            <span class="text-gray-400">剩 {{ feedbackPackageInfo.remaining_hours }}h</span>
           </div>
           <!-- AI 生成进度 — 可爱小书僮 -->
           <div v-if="aiGenerating" class="mt-4 cute-loader">
@@ -682,6 +735,85 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
   </div>
+
+<!-- 整体学情报告查看弹窗 -->
+  <div v-if="showOverallReportModal && overallReport" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showOverallReportModal=false">
+    <div class="bg-white rounded-xl w-full max-w-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="text-lg font-bold text-gray-900"><i class="bi bi-file-text text-indigo-500 mr-2"></i>整体学情报告</h4>
+        <div class="flex items-center gap-2">
+          <button class="text-xs px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="saveOverallReport()" :disabled="reportSaving">{{ reportSaving ? '保存中...' : '保存' }}</button>
+          <button class="text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-blue-50" @click="downloadOverallReport('docx')" title="下载 Word"><i class="bi bi-file-earmark-word text-blue-600"></i></button>
+          <button class="text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-red-50" @click="downloadOverallReport('pdf')" title="下载 PDF"><i class="bi bi-file-earmark-pdf text-red-600"></i></button>
+          <button class="text-gray-400 hover:text-gray-600" @click="showOverallReportModal=false"><i class="bi bi-x-lg"></i></button>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4">
+          <h5 class="text-sm font-bold text-indigo-900">{{ overallReport.report_title }}</h5>
+        </div>
+        <div v-if="overallReport.student_info" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-person-circle mr-1"></i>学生信息</h6>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div v-for="(val, key) in overallReport.student_info" :key="key" class="bg-gray-50 rounded px-3 py-2">
+              <span class="text-gray-500 block">{{ key }}</span>
+              <span class="font-medium text-gray-800">{{ val }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="overallReport.baseline" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-clock-history mr-1"></i>入学前基础概况</h6>
+          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'baseline')">{{ reportEditData.baseline }}</p>
+        </div>
+        <div v-if="overallReport.learning_summary" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-journal-text mr-1"></i>学习历程总结</h6>
+          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'learning_summary')">{{ reportEditData.learning_summary }}</p>
+        </div>
+        <div v-if="overallReport.progress && overallReport.progress.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-green-800 mb-2"><i class="bi bi-arrow-up-circle mr-1"></i>进步方面</h6>
+          <div v-for="(item, i) in overallReport.progress" :key="i" class="flex gap-2 mb-1 text-sm">
+            <span class="text-green-600 font-medium">{{ item.aspect }}：</span><span class="text-gray-600">{{ item.detail }}</span>
+          </div>
+        </div>
+        <div v-if="overallReport.weaknesses && overallReport.weaknesses.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-exclamation-triangle mr-1"></i>待改进方面</h6>
+          <div v-for="(item, i) in overallReport.weaknesses" :key="i" class="flex gap-2 mb-1 text-sm">
+            <span class="text-amber-600 font-medium">{{ item.aspect }}：</span><span class="text-gray-600">{{ item.detail }}</span>
+          </div>
+        </div>
+        <div v-if="overallReport.exam_trend" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-graph-up mr-1"></i>考试成绩趋势</h6>
+          <p class="text-sm text-gray-700 leading-relaxed">{{ overallReport.exam_trend }}</p>
+        </div>
+        <div v-if="overallReport.dimensions" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-grid-3x3 mr-1"></i>多维度评估</h6>
+          <div class="space-y-2">
+            <div v-for="(dim, key) in overallReport.dimensions" :key="key" class="flex items-center gap-3 p-2 rounded-lg text-sm" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-50' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-50' : 'bg-red-50'">
+              <span class="w-16 text-xs font-medium text-gray-500">{{ {academic:'学术',language:'语言',psychology:'心理',adaptation:'适应',planning:'规划'}[key] || key }}</span>
+              <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" contenteditable="true" @blur="onEditDim($event,key,'score')" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-200 text-green-800' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-200 text-amber-800' : 'bg-red-200 text-red-800'">{{ reportEditData.dimensions[key].score }}</span>
+              <span class="text-gray-600 flex-1" contenteditable="true" @blur="onEditDim($event,key,'note')">{{ reportEditData.dimensions[key].note }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="overallReport.overall_assessment" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200">
+          <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-shield-check mr-1"></i>综合评估</h6>
+          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'overall_assessment')">{{ reportEditData.overall_assessment }}</p>
+        </div>
+        <div v-if="overallReport.recommendations && overallReport.recommendations.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-lightbulb mr-1"></i>后续建议</h6>
+          <ul class="space-y-1">
+            <li v-for="(rec, i) in overallReport.recommendations" :key="i" class="flex items-start gap-2 text-sm text-gray-700">
+              <span class="inline-block w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{{ i+1 }}</span>
+              <span>{{ rec }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showOverallReportModal=false">关闭</button>
+      </div>
+    </div>
+  </div>
 </div>
 </script>
 
@@ -708,6 +840,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <p class="text-xs text-indigo-600 mt-2">{{ card.sub }}</p>
     </div>
   </div>
+  <div v-if="pendingContact > 0" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+    <i class="bi bi-bell-fill text-amber-500 text-lg"></i>
+    <span class="text-sm text-amber-800">
+      你有 <strong>{{ pendingContact }}</strong> 条待联系线索（未接通/需跟进），
+      <a href="#" class="text-amber-600 font-medium underline" @click.prevent="switchView('leads')">立即处理 →</a>
+    </span>
+  </div>
   <div v-if="overdueCount > 0" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
     <i class="bi bi-exclamation-triangle-fill text-red-500 text-lg"></i>
     <span class="text-sm text-red-800">
@@ -715,6 +854,73 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <a href="#" class="text-red-600 font-medium underline" @click.prevent="switchView('followup-plan')">立即查看 →</a>
     </span>
   </div>
+  <!-- 数据看板（仅管理员可见） -->
+  <template v-if="user?.role === 'admin' || user?.role === 'supervisor'">
+    <!-- 第一行：新资源 + 意向等级（左） + 签约明细（右） -->
+    <div class="flex flex-col md:flex-row gap-3 mb-4">
+      <!-- 新资源 + ABC -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 md:w-[280px] flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-[.65rem] text-gray-500">本月新资源</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.leads_this_month ?? 0 }}<span class="text-sm font-normal text-gray-400"> 条</span></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-center"><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-700 font-bold text-xs">{{ stats.rank_a ?? 0 }}</span><p class="text-[.55rem] text-pink-600 mt-0.5">A级</p></div>
+            <div class="text-center"><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold text-xs">{{ stats.rank_b ?? 0 }}</span><p class="text-[.55rem] text-red-600 mt-0.5">B级</p></div>
+            <div class="text-center"><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs">{{ stats.rank_c ?? 0 }}</span><p class="text-[.55rem] text-blue-600 mt-0.5">C级</p></div>
+          </div>
+        </div>
+        <p class="text-[.6rem] text-gray-400 mt-2">上月 {{ stats.leads_last_month ?? 0 }} 条 · ABC: {{ stats.rank_a_last ?? 0 }}/{{ stats.rank_b_last ?? 0 }}/{{ stats.rank_c_last ?? 0 }}</p>
+      </div>
+      <!-- 签约明细（撑满剩余空间） -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 flex-1">
+        <p class="text-[.65rem] text-gray-500 mb-2">本月签约明细</p>
+        <div class="grid grid-cols-4 gap-3">
+          <div class="text-center bg-gray-50 rounded-lg py-2">
+            <p class="text-xl font-bold text-gray-900">{{ stats.contracts_this_month ?? 0 }}<span class="text-xs font-normal text-gray-400"> 单</span></p>
+            <p class="text-[.55rem] text-gray-400">上月 {{ stats.contracts_last_month ?? 0 }} 单</p>
+          </div>
+          <div class="text-center bg-gray-50 rounded-lg py-2">
+            <p class="text-xl font-bold text-gray-900">{{ stats.enrolled_this_month ?? 0 }}<span class="text-xs font-normal text-gray-400"> 人</span></p>
+            <p class="text-[.55rem] text-gray-400">签约学生</p>
+          </div>
+          <div class="text-center bg-gray-50 rounded-lg py-2">
+            <p class="text-xl font-bold text-gray-900">{{ stats.hours_this_month || 0 }}<span class="text-xs font-normal text-gray-400">h</span></p>
+            <p class="text-[.55rem] text-gray-400">签约课时</p>
+          </div>
+          <div class="text-center bg-amber-50 rounded-lg py-2">
+            <p class="text-xl font-bold text-amber-600">¥{{ (stats.paid_this_month || 0).toLocaleString() }}</p>
+            <p class="text-[.55rem] text-gray-400">本月收款</p>
+          </div>
+        </div>
+        <div class="mt-3 pt-2 border-t border-gray-100 flex items-center gap-5 text-xs">
+          <span class="text-green-600 font-medium">新签 {{ stats.new_sign_this_month ?? 0 }} 单 · ¥{{ (stats.new_sign_amt || 0).toLocaleString() }}</span>
+          <span class="text-[.55rem] text-gray-400">上月 {{ stats.new_sign_last_month ?? 0 }} 单</span>
+          <span class="w-px h-3 bg-gray-200"></span>
+          <span class="text-amber-600 font-medium">续费 {{ stats.renewal_this_month ?? 0 }} 单 · ¥{{ (stats.renewal_amt || 0).toLocaleString() }}</span>
+          <span class="text-[.55rem] text-gray-400">上月 {{ stats.renewal_last_month ?? 0 }} 单</span>
+          <span class="ml-auto text-[.6rem] text-gray-400">新签占比 {{ stats.contracts_this_month ? Math.round((stats.new_sign_this_month || 0) / (stats.contracts_this_month || 1) * 100) : 0 }}%</span>
+        </div>
+      </div>
+    </div>
+    <!-- 季度年度汇总 -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-white rounded-xl border border-gray-200 p-3">
+        <p class="text-[.6rem] text-gray-500">季度汇总</p>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="text-xs font-bold text-amber-600">¥{{ (stats.quarter_amt || 0).toLocaleString() }}</span>
+          <span class="text-[.6rem] text-gray-400">{{ stats.quarter_students ?? 0 }}人 · {{ stats.quarter_hours || 0 }}h</span>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-3">
+        <p class="text-[.6rem] text-gray-500">年度汇总</p>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="text-xs font-bold text-indigo-600">¥{{ (stats.year_amt || 0).toLocaleString() }}</span>
+          <span class="text-[.6rem] text-gray-400">{{ stats.year_students ?? 0 }}人 · {{ stats.year_hours || 0 }}h</span>
+        </div>
+      </div>
+    </div>
   <div class="bg-white rounded-xl border border-gray-200">
     <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
       <h6 class="text-sm font-semibold text-gray-800">最近线索</h6>
@@ -786,6 +992,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <thead>
           <tr class="bg-gray-50 text-left">
             <th class="px-4 py-2.5 w-8"><input type="checkbox" :checked="selectedIds.length === list.length && list.length > 0" @change="toggleAll($event)"></th>
+            <th class="px-4 py-2.5 w-10 text-gray-400 font-medium text-xs">#</th>
+            <th class="px-4 py-2.5 w-14 text-gray-600 font-medium text-xs">等级</th>
             <th class="px-4 py-2.5 text-gray-600 font-medium">姓名</th>
             <th class="px-4 py-2.5 text-gray-600 font-medium">微信/手机</th>
             <th class="px-4 py-2.5 text-gray-600 font-medium">来源</th>
@@ -797,8 +1005,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="l in list" :key="l.id" class="hover:bg-gray-50 cursor-pointer" @click="openLead(l.id, $event)">
+          <tr v-for="(l, idx) in list" :key="l.id" class="hover:opacity-80 cursor-pointer" :class="l.lead_rank === 'A' ? 'bg-pink-50 border-l-4 border-l-pink-500' : l.lead_rank === 'B' ? 'bg-red-50 border-l-4 border-l-red-500' : l.lead_rank === 'C' ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50'" @click="openLead(l.id, $event)">
             <td class="px-4 py-2.5" @click.stop><input type="checkbox" :value="l.id" v-model="selectedIds"></td>
+            <td class="px-4 py-2.5 text-gray-400 text-xs text-center">{{ total - ((page-1)*pageSize + idx) }}</td>
+            <td class="px-4 py-2.5"><span v-if="l.lead_rank" class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[.55rem] font-bold text-white leading-none" :class="l.lead_rank === 'A' ? 'bg-pink-500' : l.lead_rank === 'B' ? 'bg-red-500' : 'bg-blue-500'">{{ l.lead_rank }}</span></td>
             <td class="px-4 py-2.5 font-medium">{{ l.name }}</td>
             <td class="px-4 py-2.5 text-gray-500 text-xs">{{ l.wechat || l.phone || '-' }}</td>
             <td class="px-4 py-2.5">{{ l.source || '-' }}</td>
@@ -812,7 +1022,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               </button>
             </td>
           </tr>
-          <tr v-if="list.length === 0"><td colspan="9" class="px-4 py-10 text-center text-sm text-gray-400">暂无数据</td></tr>
+          <tr v-if="list.length === 0"><td colspan="11" class="px-4 py-10 text-center text-sm text-gray-400">暂无数据</td></tr>
         </tbody>
       </table>
     </div>
@@ -876,19 +1086,31 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
   </div>
+
+    
 </div>
 </script>
 
 <!-- Lead Detail -->
 <script type="text/x-template" id="tpl-lead-detail">
 <div>
-  <button class="text-sm text-indigo-600 mb-4 hover:underline" @click="goBack"><i class="bi bi-arrow-left"></i> 返回列表</button>
+  <div class="flex items-center justify-between mb-4">
+    <button class="text-sm text-indigo-600 hover:underline" @click="goBack"><i class="bi bi-arrow-left"></i> 返回列表</button>
+    <div class="flex items-center gap-2">
+      <button class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-30" :disabled="!hasPrevLead" @click="goPrevLead"><i class="bi bi-chevron-left"></i> 上一条</button>
+      <button class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-30" :disabled="!hasNextLead" @click="goNextLead">下一条 <i class="bi bi-chevron-right"></i></button>
+    </div>
+  </div>
   <div v-if="!lead" class="text-center py-10 text-gray-400">加载中...</div>
   <div v-else>
     <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
       <div class="flex items-start justify-between mb-4">
         <div><h3 class="text-lg font-bold text-gray-900">{{ lead.name }}</h3><p class="text-xs text-gray-500 mt-0.5">创建于 {{ lead.created_at }}</p></div>
-        <div v-html="statusBadge(lead.status)"></div>
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200" @click="openLeadEdit(); showEditModal=true"><i class="bi bi-pencil mr-1"></i>编辑</button>
+          <div v-html="statusBadge(lead.status)"></div>
+
+        </div>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div><span class="text-gray-500 text-xs">手机</span><p class="font-medium">{{ lead.phone || '-' }}</p></div>
@@ -1033,6 +1255,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             <option value="">跟进方式</option>
             <option v-for="opt in followupTypeOptions" :key="opt" :value="opt">{{ opt }}</option>
           </select>
+          <select v-model="contactStatus" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
+            <option value="">联系结果</option>
+            <option value="added_wechat" class="text-green-600">✅ 已加微信</option>
+            <option value="called" class="text-blue-600">📞 已通电话</option>
+            <option value="not_reached" class="text-red-600">❌ 未接通</option>
+            <option value="follow_up" class="text-amber-600">🔄 需跟进</option>
+          </select>
+          <select v-model="followupRank" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
+            <option value="">本次评级</option>
+            <option value="A" class="text-pink-600 font-semibold">A</option>
+            <option value="B" class="text-red-600 font-semibold">B</option>
+            <option value="C" class="text-blue-600 font-semibold">C</option>
+          </select>
           <input type="text" v-model="nextAction" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="下次行动">
           <input type="date" v-model="nextDate" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
           <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700" @click="submitFollow" :disabled="!followContent.trim()">提交</button>
@@ -1115,6 +1350,92 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
 
+    <!-- ── 整体学情报告 ── -->
+    <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+      <div class="flex items-center justify-between mb-4">
+        <h5 class="font-semibold text-gray-900">
+          <i class="bi bi-file-text text-indigo-500 mr-2"></i>整体学情报告
+        </h5>
+        <button v-if="!overallReport && overallReportStatus !== 'generating'" class="text-xs px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:opacity-90" @click="generateOverallReport(); overallReportStatus='generating'">
+          <i class="bi bi-plus-lg"></i> 生成报告
+        </button>
+      </div>
+      <div v-if="!overallReport && overallReportStatus !== 'generating' && overallReportStatus !== 'error'" class="text-center py-6 text-sm text-gray-400">
+        <i class="bi bi-inbox text-2xl block mb-1"></i>暂无学情报告
+      </div>
+      <div v-if="overallReportStatus === 'generating'" class="space-y-3">
+        <div class="flex items-center gap-2 text-sm text-indigo-600">
+          <div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span>{{ overallReportStep || '生成中...' }}</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-indigo-500 h-2 rounded-full transition-all" :style="{width: (overallReportProgress || 0) + '%'}"></div>
+        </div>
+      </div>
+      <div v-if="overallReportStatus === 'error'" class="text-center py-4">
+        <p class="text-sm text-red-500 mb-2">{{ overallReportStep || '生成失败' }}</p>
+        <button class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="generateOverallReport()">重新生成</button>
+      </div>
+      <div v-if="overallReport && overallReportStatus === 'done'" class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-green-800 truncate">{{ overallReport.report_title || '阶段性学情综合报告' }}</p>
+          <p class="text-xs text-green-600 mt-0.5">已生成，点击查看完整报告</p>
+        </div>
+        <div class="flex gap-2 ml-3 flex-shrink-0">
+          <button class="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700" @click="viewOverallReport(); showOverallReportModal=true"><i class="bi bi-eye mr-1"></i>查看</button>
+          <button class="text-xs px-3 py-1.5 border border-green-300 text-green-700 rounded-lg hover:bg-green-50" @click="generateOverallReport()"><i class="bi bi-arrow-repeat"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 课后作业 ── -->
+<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <h5 class="font-semibold text-gray-900">
+        <i class="bi bi-file-earmark-text text-indigo-500 mr-2"></i>课后作业
+      </h5>
+    </div>
+    <!-- 拖拽上传区域 -->
+    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 mb-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
+         @dragover.prevent="dragOver=true"
+         @dragleave.prevent="dragOver=false"
+         @drop.prevent="handleDrop($event)"
+         @click="$refs.hwInput.click()"
+         :class="dragOver ? 'border-indigo-500 bg-indigo-50' : ''">
+      <i class="bi bi-cloud-upload text-3xl text-gray-300 block mb-2"></i>
+      <p class="text-sm text-gray-500">拖拽文件到此处上传，或点击选择文件</p>
+      <p class="text-xs text-gray-400 mt-1">支持 PDF、Word、图片、ZIP 格式</p>
+      <input type="file" ref="hwInput" class="hidden" @change="uploadHomework($event)" accept=".pdf,.doc,.docx,.jpg,.png,.zip" multiple>
+    </div>
+    <div v-if="uploading" class="mb-4">
+      <div class="flex items-center gap-2 text-sm text-indigo-600 mb-1">
+        <div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <span>{{ uploadStep || '上传中...' }} {{ uploadProgress < 100 ? uploadProgress + '%' : ''}}</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="bg-indigo-500 h-2 rounded-full transition-all" :style="{width: uploadProgress + '%'}"></div>
+      </div>
+    </div>
+      <div v-if="!homeworkList || homeworkList.length === 0" class="text-center py-6 text-sm text-gray-400">
+        <i class="bi bi-inbox text-2xl block mb-1"></i>暂无作业记录
+      </div>
+      <div v-else class="space-y-2">
+        <div v-for="(h, i) in homeworkList" :key="h.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div class="flex items-center gap-3 min-w-0">
+            <i class="bi bi-file-earmark text-lg text-indigo-500 flex-shrink-0"></i>
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate">{{ h.file_name }}</p>
+              <p class="text-xs text-gray-400">{{ (h.created_at || '').slice(0,10) }} · {{ h.uploader_name || '未知' }} · {{ h.file_size > 1024 ? (h.file_size/1024).toFixed(1) + 'KB' : h.file_size + 'B' }}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button class="text-xs text-indigo-600 hover:underline" @click="downloadHomework(h.id)"><i class="bi bi-download"></i> 下载</button>
+            <button class="text-xs text-red-500 hover:text-red-700" @click="deleteHomework(h.id)"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 学业分析：创建报告弹窗 -->
     <div v-if="showConsultingCreate" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeConsultingCreate">
       <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -1186,9 +1507,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
 
-    <!-- 学业分析：查看报告弹窗 -->
-    <div v-if="showConsultingView" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showConsultingView=false">
-      <div class="bg-white rounded-xl w-full max-w-3xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+    <!-- 学业分析：查看报告弹窗（全屏） -->
+    <div v-if="showConsultingView" class="fixed inset-0 bg-black/40 z-50 flex flex-col items-center" @click.self="showConsultingView=false">
+      <div class="bg-white rounded-xl w-full max-w-5xl mx-auto my-4 p-6 shadow-xl overflow-y-auto flex-1" style="max-height: calc(100vh - 2rem);">
         <div v-if="!consultingReport" class="text-center py-8 text-gray-400">加载中...</div>
         <div v-else>
           <div class="flex items-start justify-between mb-6">
@@ -1217,9 +1538,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             </div>
           </div>
           <div v-if="consultingReport.report_data" class="space-y-5">
-            <!-- ═════ 统一学业风险与规划报告展示 ═════ -->
-            <template>
-              <!-- 报告标题 -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-700 mb-2">报告数据已加载，共 {{ Object.keys(consultingReport.report_data).length }} 个模块</div>
+            <!-- 报告标题 -->
               <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-5">
                 <h4 class="text-base font-bold text-indigo-900">{{ consultingReport.report_data.report_title || (consultingReport.target_school + ' · ' + consultingReport.target_major) }}</h4>
                 <p class="text-xs text-indigo-600 mt-0.5">学业风险与规划报告 · {{ consultingReport.created_at ? (consultingReport.created_at).slice(0,10) : '' }}</p>
@@ -1248,6 +1568,36 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                   <div class="mt-1 flex flex-wrap gap-1">
                     <span v-for="(c, i) in consultingReport.report_data.core_courses" :key="i" class="inline-block text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded">{{ c }}</span>
                   </div>
+                </div>
+              </div>
+              <!-- 逐课程分析 -->
+              <div v-if="consultingReport.report_data.course_analysis && consultingReport.report_data.course_analysis.length" class="bg-white rounded-xl border border-gray-200 p-5">
+                <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-book mr-1"></i>核心课程逐门分析</h6>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-100 text-gray-500 text-xs">
+                        <th class="text-left py-2 pr-2">课程</th>
+                        <th class="text-left py-2 pr-2">学分</th>
+                        <th class="text-left py-2 pr-2">考核形式</th>
+                        <th class="text-left py-2 pr-2">前置要求</th>
+                        <th class="text-left py-2 pr-2">学生掌握</th>
+                        <th class="text-left py-2 pr-2">差距分析</th>
+                        <th class="text-left py-2">建议补充</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(c, i) in consultingReport.report_data.course_analysis" :key="i" class="border-b border-gray-50">
+                        <td class="py-2.5 pr-2 font-medium text-gray-800 text-xs">{{ c.course_name }}</td>
+                        <td class="py-2.5 pr-2 text-gray-500 text-xs">{{ c.credits || '-' }}</td>
+                        <td class="py-2.5 pr-2 text-gray-600 text-xs">{{ c.assessment || '-' }}</td>
+                        <td class="py-2.5 pr-2 text-gray-600 text-xs max-w-[120px]">{{ c.prerequisites || '-' }}</td>
+                        <td class="py-2.5 pr-2 text-xs"><span class="px-1.5 py-0.5 rounded" :class="(!c.student_readiness || c.student_readiness.includes('弱') || c.student_readiness.includes('差')) ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'">{{ c.student_readiness || '-' }}</span></td>
+                        <td class="py-2.5 pr-2 text-gray-600 text-xs max-w-[150px]">{{ c.gap || '-' }}</td>
+                        <td class="py-2.5 text-indigo-600 text-xs max-w-[150px]">{{ c.supplement_action || '-' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
               <!-- 差距分析 -->
@@ -1306,7 +1656,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                 </div>
                 <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ consultingReport.report_data.consultant_tips }}</p>
               </div>
-            </template>
+            
           </div>
           <div v-else class="text-center py-8 text-gray-400"><i class="bi bi-inbox text-3xl block mb-2"></i>报告数据为空</div>
         </div>
@@ -1348,6 +1698,109 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
   </div>
+
+<!-- 整体学情报告查看弹窗 -->
+  <div v-if="showOverallReportModal && overallReport" class="fixed inset-0 bg-black/40 z-50 flex flex-col items-center" @click.self="showOverallReportModal=false">
+    <div class="bg-white rounded-xl w-full max-w-3xl mx-auto my-4 p-6 shadow-xl overflow-y-auto flex-1" style="max-height: calc(100vh - 2rem);">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="text-lg font-bold text-gray-900"><i class="bi bi-file-text text-indigo-500 mr-2"></i>整体学情报告</h4>
+        <div class="flex items-center gap-2">
+          <button class="text-xs px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="saveOverallReport()" :disabled="reportSaving">{{ reportSaving ? '保存中...' : '保存' }}</button>
+          <button class="text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-blue-50" @click="downloadOverallReport('docx')" title="下载 Word"><i class="bi bi-file-earmark-word text-blue-600"></i></button>
+          <button class="text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-red-50" @click="downloadOverallReport('pdf')" title="下载 PDF"><i class="bi bi-file-earmark-pdf text-red-600"></i></button>
+          <button class="text-gray-400 hover:text-gray-600" @click="showOverallReportModal=false"><i class="bi bi-x-lg"></i></button>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4">
+          <h5 class="text-sm font-bold text-indigo-900" contenteditable="true" @blur="onEdit($event,'report_title')">{{ reportEditData.report_title }}</h5>
+        </div>
+        <div v-if="overallReport.student_info" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-person-circle mr-1"></i>学生信息</h6>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div v-for="(val, key) in overallReport.student_info" :key="key" class="bg-gray-50 rounded px-3 py-2">
+              <span class="text-gray-500 block">{{ key }}</span>
+              <span class="font-medium text-gray-800" contenteditable="true" @blur="onEditStudentInfo($event,key)">{{ reportEditData.student_info[key] }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="overallReport.baseline" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-clock-history mr-1"></i>入学前基础概况</h6>
+          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'baseline')">{{ reportEditData.baseline }}</p>
+        </div>
+        <div v-if="overallReport.learning_summary" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-journal-text mr-1"></i>学习历程总结</h6>
+          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'learning_summary')">{{ reportEditData.learning_summary }}</p>
+        </div>
+        <div v-if="overallReport.progress && overallReport.progress.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-green-800 mb-2"><i class="bi bi-arrow-up-circle mr-1"></i>进步方面</h6>
+          <div v-for="(item, i) in overallReport.progress" :key="i" class="flex gap-2 mb-1 text-sm">
+            <span class="text-green-600 font-medium" contenteditable="true" @blur="onEditArray($event,'progress',i,'aspect')">{{ reportEditData.progress[i].aspect }}：</span>
+            <span class="text-gray-600" contenteditable="true" @blur="onEditArray($event,'progress',i,'detail')">{{ reportEditData.progress[i].detail }}</span>
+          </div>
+        </div>
+        <div v-if="overallReport.weaknesses && overallReport.weaknesses.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-exclamation-triangle mr-1"></i>待改进方面</h6>
+          <div v-for="(item, i) in overallReport.weaknesses" :key="i" class="flex gap-2 mb-1 text-sm">
+            <span class="text-amber-600 font-medium" contenteditable="true" @blur="onEditArray($event,'weaknesses',i,'aspect')">{{ reportEditData.weaknesses[i].aspect }}：</span>
+            <span class="text-gray-600" contenteditable="true" @blur="onEditArray($event,'weaknesses',i,'detail')">{{ reportEditData.weaknesses[i].detail }}</span>
+          </div>
+        </div>
+        <div v-if="overallReport.dimensions" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-grid-3x3 mr-1"></i>多维度评估</h6>
+          <div class="space-y-2">
+            <div v-for="(dim, key) in overallReport.dimensions" :key="key" class="flex items-center gap-3 p-2 rounded-lg text-sm" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-50' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-50' : 'bg-red-50'">
+              <span class="w-16 text-xs font-medium text-gray-500">{{ {academic:'学术',language:'语言',psychology:'心理',adaptation:'适应',planning:'规划'}[key] || key }}</span>
+              <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" contenteditable="true" @blur="onEditDim($event,key,'score')" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-200 text-green-800' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-200 text-amber-800' : 'bg-red-200 text-red-800'">{{ reportEditData.dimensions[key].score }}</span>
+              <span class="text-gray-600 flex-1" contenteditable="true" @blur="onEditDim($event,key,'note')">{{ reportEditData.dimensions[key].note }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="overallReport.overall_assessment" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200">
+          <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-shield-check mr-1"></i>综合评估</h6>
+          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'overall_assessment')">{{ reportEditData.overall_assessment }}</p>
+        </div>
+        <div v-if="overallReport.recommendations && overallReport.recommendations.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-lightbulb mr-1"></i>后续建议</h6>
+          <ul class="space-y-1">
+            <li v-for="(rec, i) in reportEditData.recommendations" :key="i" class="flex items-start gap-2 text-sm text-gray-700">
+              <span class="inline-block w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{{ i+1 }}</span>
+              <span contenteditable="true" @blur="onEdit($event,'recommendations',i)">{{ rec }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showOverallReportModal=false">关闭</button>
+      </div>
+    </div>
+  </div>
+
+<!-- 编辑线索弹窗 -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showEditModal=false">
+      <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+        <h5 class="font-semibold text-gray-900 mb-4"><i class="bi bi-pencil mr-1"></i>编辑线索</h5>
+        <div class="space-y-3">
+          <div><label class="block text-xs text-gray-600 mb-1">姓名 *</label><input type="text" v-model="editForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs text-gray-600 mb-1">手机</label><input type="text" v-model="editForm.phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+            <div><label class="block text-xs text-gray-600 mb-1">微信</label><input type="text" v-model="editForm.wechat" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs text-gray-600 mb-1">意向等级</label><select v-model="editForm.lead_rank" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">无</option><option value="A" class="text-pink-600 font-semibold">A</option><option value="B" class="text-red-600 font-semibold">B</option><option value="C" class="text-blue-600 font-semibold">C</option></select></div>
+          <div><label class="block text-xs text-gray-600 mb-1">来源</label><input type="text" v-model="editForm.source" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+            <div><label class="block text-xs text-gray-600 mb-1">国家</label><input type="text" v-model="editForm.country" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+          </div>
+          <div><label class="block text-xs text-gray-600 mb-1">年级</label><input type="text" v-model="editForm.grade" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+          <div><label class="block text-xs text-gray-600 mb-1">创建时间</label><input type="date" v-model="editForm.created_at" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+          <div><label class="block text-xs text-gray-600 mb-1">备注</label><textarea v-model="editForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea></div>
+        </div>
+        <div class="flex justify-end gap-2 mt-5">
+          <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showEditModal=false">取消</button>
+          <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="saveLeadEdit" :disabled="editSaving">{{ editSaving ? '保存中...' : '保存' }}</button>
+        </div>
+      </div>
+    </div>
 </div>
 </script>
 
@@ -1403,9 +1856,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="r in reports" :key="r.id" class="hover:bg-gray-50">
+            <tr v-for="r in reports" :key="r.id" class="hover:bg-gray-50 cursor-pointer" @click="openLead(r.lead_id)">
               <td class="px-4 py-2.5">
-                <div class="font-medium text-gray-900">{{ r.lead_name }}</div>
+                <div class="font-medium text-gray-900 hover:text-indigo-600">{{ r.lead_name }}</div>
                 <div class="text-xs text-gray-400">{{ r.lead_phone }}</div>
               </td>
               <td class="px-4 py-2.5 text-gray-700">{{ r.target_school }}</td>
@@ -1480,62 +1933,95 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
 
         <div v-if="viewReportData.report_data" class="space-y-5">
-          <!-- ═════ 风险分析报告展示 ═════ -->
-          <template v-if="viewReportData.report_type !== 'preparation'">
+          <!-- ═════ 统一学业风险与规划报告展示 ═════ -->
+          <template v-if="viewReportData.report_type === 'unified'">
             <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-5">
-              <h6 class="text-sm font-semibold text-indigo-800 mb-2"><i class="bi bi-person-circle mr-1"></i>学生概况</h6>
-              <p class="text-sm text-gray-700 leading-relaxed">{{ viewReportData.report_data.profile_overview }}</p>
+              <h4 class="text-base font-bold text-indigo-900">{{ viewReportData.report_data.report_title || (viewReportData.target_school || '') + ' · ' + (viewReportData.target_major || '') }}</h4>
+              <p class="text-xs text-indigo-600 mt-0.5">学业风险与规划报告 · {{ (viewReportData.created_at || '').slice(0,10) }}</p>
             </div>
             <div class="bg-white rounded-xl border border-gray-200 p-5">
-              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-building mr-1"></i>目标院校要求</h6>
-              <div class="grid grid-cols-2 gap-4 text-sm" v-if="viewReportData.report_data.program_requirements">
-                <div><span class="text-xs text-gray-500 block">GPA 要求</span><span class="font-medium text-gray-800">{{ viewReportData.report_data.program_requirements.gpa_requirement || '-' }}</span></div>
-                <div><span class="text-xs text-gray-500 block">语言要求</span><span class="font-medium text-gray-800">{{ viewReportData.report_data.program_requirements.language_requirement || '-' }}</span></div>
-                <div class="col-span-2" v-if="viewReportData.report_data.program_requirements.prerequisites">
-                  <span class="text-xs text-gray-500 block mb-1">前置修读要求</span>
-                  <div class="flex flex-wrap gap-1">
-                    <span v-for="(pr, i) in viewReportData.report_data.program_requirements.prerequisites" :key="i" class="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">{{ pr }}</span>
-                  </div>
+              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-person-circle mr-1"></i>学生基础画像</h6>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ viewReportData.report_data.student_profile?.background || viewReportData.report_data.profile_overview }}</p>
+              <p v-if="viewReportData.report_data.student_profile?.target" class="text-sm text-gray-700 mt-2"><span class="font-medium">目标：</span>{{ viewReportData.report_data.student_profile.target }}</p>
+              <div v-if="viewReportData.report_data.student_profile?.key_info" class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <div v-for="(val, key) in viewReportData.report_data.student_profile.key_info" :key="key" class="bg-gray-50 rounded-lg px-3 py-2">
+                  <span class="text-gray-500 block">{{ key }}</span><span class="font-medium text-gray-800">{{ val }}</span>
                 </div>
               </div>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
-              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-exclamation-triangle mr-1"></i>差距分析</h6>
+            <div v-if="viewReportData.report_data.program_overview" class="bg-white rounded-xl border border-gray-200 p-5">
+              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-building mr-1"></i>目标院校专业概览</h6>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ viewReportData.report_data.program_overview }}</p>
+            </div>
+            <div v-if="viewReportData.report_data.course_analysis?.length" class="bg-white rounded-xl border border-gray-200 p-5">
+              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-book mr-1"></i>核心课程逐门分析</h6>
               <div class="overflow-x-auto">
-                <table class="w-full text-sm"><thead><tr class="border-b border-gray-100 text-gray-500 text-xs">
-                  <th class="text-left py-2 pr-3">维度</th><th class="text-left py-2 pr-3">当前</th><th class="text-left py-2 pr-3">要求</th><th class="text-left py-2 pr-3">差距</th><th class="text-left py-2 pr-3">风险</th><th class="text-left py-2">提分策略</th>
-                </tr></thead><tbody>
+                <table class="w-full text-sm"><thead><tr class="border-b border-gray-100 text-gray-500 text-xs"><th class="text-left py-2 pr-2">课程</th><th class="text-left py-2 pr-2">学分</th><th class="text-left py-2 pr-2">考核形式</th><th class="text-left py-2 pr-2">前置要求</th><th class="text-left py-2 pr-2">学生掌握</th><th class="text-left py-2 pr-2">差距分析</th><th class="text-left py-2">建议补充</th></tr></thead><tbody>
+                  <tr v-for="(c, i) in viewReportData.report_data.course_analysis" :key="i" class="border-b border-gray-50">
+                    <td class="py-2.5 pr-2 font-medium text-gray-800 text-xs">{{ c.course_name }}</td>
+                    <td class="py-2.5 pr-2 text-gray-500 text-xs">{{ c.credits || '-' }}</td>
+                    <td class="py-2.5 pr-2 text-gray-600 text-xs">{{ c.assessment || '-' }}</td>
+                    <td class="py-2.5 pr-2 text-gray-600 text-xs max-w-[120px]">{{ c.prerequisites || '-' }}</td>
+                    <td class="py-2.5 pr-2 text-xs"><span class="px-1.5 py-0.5 rounded" :class="(!c.student_readiness || c.student_readiness.includes('弱') || c.student_readiness.includes('差')) ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'">{{ c.student_readiness || '-' }}</span></td>
+                    <td class="py-2.5 pr-2 text-gray-600 text-xs max-w-[150px]">{{ c.gap || '-' }}</td>
+                    <td class="py-2.5 text-indigo-600 text-xs max-w-[150px]">{{ c.supplement_action || '-' }}</td>
+                  </tr>
+                </tbody></table>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5">
+              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-exclamation-triangle mr-1"></i>多维差距分析</h6>
+              <div class="overflow-x-auto" v-if="viewReportData.report_data.gap_analysis?.length">
+                <table class="w-full text-sm"><thead><tr class="border-b border-gray-100 text-gray-500 text-xs"><th class="text-left py-2 pr-3">维度</th><th class="text-left py-2 pr-3">当前</th><th class="text-left py-2 pr-3">要求</th><th class="text-left py-2 pr-3">差距</th><th class="text-left py-2 pr-3">风险</th><th class="text-left py-2">改进策略</th></tr></thead><tbody>
                   <tr v-for="(gap, i) in viewReportData.report_data.gap_analysis" :key="i" class="border-b border-gray-50">
                     <td class="py-2.5 pr-3 font-medium text-gray-800">{{ gap.dimension }}</td>
                     <td class="py-2.5 pr-3 text-gray-600">{{ gap.current }}</td>
                     <td class="py-2.5 pr-3 text-gray-600">{{ gap.required }}</td>
                     <td class="py-2.5 pr-3 text-gray-600">{{ gap.gap }}</td>
                     <td class="py-2.5 pr-3"><span v-if="gap.risk === 'low'" class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">低</span><span v-else-if="gap.risk === 'high'" class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">高</span><span v-else class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">中</span></td>
-                    <td class="py-2.5 text-xs text-gray-600 max-w-xs">{{ gap.improvement_strategy || gap.detail || '-' }}</td>
+                    <td class="py-2.5 text-xs text-gray-600 max-w-xs">{{ gap.improvement_strategy || '-' }}</td>
                   </tr>
                 </tbody></table>
               </div>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
-              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-lightbulb mr-1"></i>建议方案</h6>
-              <div class="space-y-3">
-                <div v-for="(rec, i) in viewReportData.report_data.recommendations" :key="i" class="flex gap-3 p-3 rounded-lg" :class="rec.priority === 'high' ? 'bg-red-50' : rec.priority === 'medium' ? 'bg-amber-50' : 'bg-blue-50'">
-                  <div class="flex-shrink-0 mt-0.5"><span v-if="rec.priority === 'high'" class="inline-block w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">!</span><span v-else-if="rec.priority === 'medium'" class="inline-block w-5 h-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center">!</span><span v-else class="inline-block w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">i</span></div>
-                  <div class="flex-1">
-                    <div class="text-sm font-medium text-gray-800">{{ rec.action }}</div>
-                    <div class="text-xs text-gray-500 mt-1" v-if="rec.timeline">⏱ {{ rec.timeline }}</div>
-                    <div class="text-xs text-green-600 mt-0.5" v-if="rec.expected_impact">预期效果：{{ rec.expected_impact }}</div>
-                    <div v-if="rec.learning_resources && rec.learning_resources.length" class="mt-2 flex flex-wrap gap-1"><span class="text-xs text-indigo-500 mr-1">推荐资源：</span><span v-for="(lr, li) in rec.learning_resources" :key="li" class="inline-block text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded">{{ lr }}</span></div>
-                  </div>
+            <div v-if="viewReportData.report_data.preparation_plan?.length" class="bg-white rounded-xl border border-gray-200 p-5">
+              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-calendar-check mr-1"></i>准备计划</h6>
+              <div class="space-y-4">
+                <div v-for="(plan, i) in viewReportData.report_data.preparation_plan" :key="i" class="border-l-4 border-indigo-400 pl-4">
+                  <div class="flex items-center gap-2 mb-1"><span class="text-sm font-medium text-indigo-700">{{ plan.phase }}</span><span v-if="plan.timeline" class="text-xs text-gray-500">· {{ plan.timeline }}</span></div>
+                  <p v-if="plan.goal" class="text-xs text-gray-500 mb-1">目标：{{ plan.goal }}</p>
+                  <ul v-if="plan.tasks?.length" class="space-y-1">
+                    <li v-for="(task, ti) in plan.tasks" :key="ti" class="flex items-start gap-1.5 text-xs text-gray-600"><i class="bi bi-arrow-right-circle text-indigo-500 flex-shrink-0 mt-0.5"></i>{{ task }}</li>
+                  </ul>
                 </div>
               </div>
+            </div>
+            <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
+              <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-shield-check mr-1"></i>综合评估</h6>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ viewReportData.report_data.overall_assessment }}</p>
+              <div class="mt-3 flex items-center gap-2">
+                <span class="text-xs text-gray-500">整体风险：</span>
+                <span v-if="viewReportData.report_data.risk_level === 'low'" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">低风险</span>
+                <span v-else-if="viewReportData.report_data.risk_level === 'high'" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">高风险</span>
+                <span v-else class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">中风险</span>
+              </div>
+            </div>
+            <div v-if="viewReportData.report_data.recommendations?.length" class="bg-white rounded-xl border border-gray-200 p-5">
+              <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-lightbulb mr-1"></i>具体建议</h6>
+              <ul class="space-y-2">
+                <li v-for="(rec, i) in viewReportData.report_data.recommendations" :key="i" class="flex items-start gap-2 text-sm text-gray-700">
+                  <span class="inline-block w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{{ i+1 }}</span>
+                  <span>{{ typeof rec === 'string' ? rec : (rec.action || rec) }}</span>
+                </li>
+              </ul>
             </div>
             <div v-if="viewReportData.report_data.consultant_tips" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-5 border border-amber-200">
               <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-chat-dots mr-1"></i>顾问沟通建议</h6>
               <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ viewReportData.report_data.consultant_tips }}</p>
             </div>
           </template>
-          <!-- ═════ 行前准备规划展示 ═════ -->
+          <template v-else-if="viewReportData.report_type !== 'preparation'">
+          </template>
           <template v-else>
             <div v-if="viewReportData.report_data.program_overview" class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5">
               <h6 class="text-sm font-semibold text-emerald-800 mb-2"><i class="bi bi-book mr-1"></i>项目总览</h6>
@@ -1849,6 +2335,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <option value="cancelled">已取消</option>
       </select>
       <span class="text-xs text-gray-400 ml-auto">共 {{ total }} 条</span>
+      <button v-if="selectedScheduleIds.length > 0" class="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50" @click="confirmBatchDelete">
+        <i class="bi bi-trash mr-1"></i>删除选中({{ selectedScheduleIds.length }})
+      </button>
       <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="downloadCSV">
         <i class="bi bi-download"></i> 导出CSV
       </button>
@@ -1861,11 +2350,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
   <div v-else class="space-y-4">
     <div v-for="group in scheduleGroups" :key="group.date" class="bg-white rounded-xl border border-gray-200">
       <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h6 class="text-sm font-semibold text-gray-800">{{ group.dateLabel }}</h6>
+        <div class="flex items-center gap-3">
+          <input type="checkbox" @change="toggleAllGroups" :checked="allSelected" class="w-4 h-4 rounded border-gray-300 text-indigo-600">
+          <h6 class="text-sm font-semibold text-gray-800">{{ group.dateLabel }}</h6>
+        </div>
         <span class="text-xs text-gray-500">{{ group.items.length }} 节课</span>
       </div>
       <div class="divide-y divide-gray-100">
         <div v-for="s in group.items" :key="s.id" class="px-5 py-3 flex items-center gap-4 hover:bg-gray-50 cursor-pointer" @click="openDetail(s)">
+          <input type="checkbox" :value="s.id" v-model="selectedScheduleIds" @click.stop class="w-4 h-4 rounded border-gray-300 text-indigo-600 flex-shrink-0">
           <!-- 时间段 -->
           <div class="text-center min-w-[90px]">
             <div class="text-xs font-bold text-gray-900">{{ timeLabel(s) }}</div>
@@ -2065,6 +2558,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                     :disabled="aiGenerating" @click="generateFeedback">
               <i class="bi bi-robot mr-1"></i>{{ aiGenerating ? '生成中...' : 'AI 生成' }}
             </button>
+          </div>
+          <!-- 课时进度 -->
+          <div v-if="feedbackPackageInfo && feedbackPackageInfo.total_hours" class="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs mt-2">
+            <span class="text-gray-500">课时</span>
+            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full transition-all" :style="{width: (feedbackPackageInfo.total_hours > 0 ? (feedbackPackageInfo.used_hours / feedbackPackageInfo.total_hours * 100) : 0) + '%'}"></div>
+            </div>
+            <span class="text-gray-700 font-medium whitespace-nowrap">{{ feedbackPackageInfo.used_hours }}h / {{ feedbackPackageInfo.total_hours }}h</span>
+            <span class="text-gray-400">剩 {{ feedbackPackageInfo.remaining_hours }}h</span>
           </div>
           <!-- AI 生成进度 -->
           <div v-if="aiGenerating" class="mt-4 cute-loader">
@@ -2305,7 +2807,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
   <div class="bg-white rounded-xl border border-gray-200">
     <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
       <h6 class="text-sm font-semibold text-gray-800">我的签约学生</h6>
-      <a href="#" class="text-xs text-indigo-600" @click.prevent="switchView('students')">查看全部</a>
+      <a href="#" class="text-xs text-indigo-600" @click.prevent="switchView('signing')">查看全部</a>
     </div>
     <div v-if="myStudents.length === 0" class="p-6 text-center text-sm text-gray-400">暂无分配给你的学生</div>
     <div v-else class="divide-y divide-gray-100">
@@ -2357,11 +2859,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200">
       <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <h6 class="text-sm font-semibold text-gray-800">待分配线索</h6>
-        <span class="text-xs text-gray-500">{{ unassignedLeads.length }} 条</span>
+        <div class="flex items-center gap-2">
+          <input type="text" v-model="assignSearch" @input="filterAssignLeads" placeholder="搜索姓名或手机..." class="px-2 py-1 border border-gray-300 rounded text-xs outline-none w-36">
+          <span class="text-xs text-gray-500">{{ filteredAssignLeads.length }} 条</span>
+        </div>
       </div>
       <div v-if="unassignedLeads.length === 0" class="p-6 text-center text-sm text-gray-400">暂无待分配线索</div>
       <div v-else class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-        <div v-for="l in unassignedLeads" :key="l.id" class="px-5 py-2.5 flex items-center gap-3 hover:bg-gray-50">
+        <div v-for="l in filteredAssignLeads" :key="l.id" class="px-5 py-2.5 flex items-center gap-3 hover:bg-gray-50">
           <input type="checkbox" :value="l.id" v-model="selectedIds" class="shrink-0">
           <div class="flex-1 min-w-0">
             <span class="text-sm font-medium">{{ l.name }}</span>
@@ -2438,227 +2943,317 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 </script>
 
 <!-- Packages / 课时包管理 -->
-<script type="text/x-template" id="tpl-packages">
+<script type="text/x-template" id="tpl-signing">
 <div>
   <div class="flex items-center justify-between mb-4">
     <div>
-      <h3 class="text-xl font-bold text-gray-900">课时包管理</h3>
-      <p class="text-sm text-gray-500 mt-0.5">合同管理 · 课时包 · 课时消耗 · 收/退款</p>
+      <h3 class="text-xl font-bold text-gray-900">签约管理</h3>
+      <p class="text-sm text-gray-500 mt-0.5">收款记录 · 学生总览 · 一键签约</p>
     </div>
-    <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreateContract">
-      <i class="bi bi-plus-lg"></i> 新建合同
+    <button v-if="canManage" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openNewSigning">
+      <i class="bi bi-plus-lg"></i> 新建签约
     </button>
   </div>
 
-  <!-- Contract list -->
-  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
-  <div v-else-if="contracts.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无合同数据</div>
-  <div v-else class="space-y-4">
-    <div v-for="c in contracts" :key="c.id" class="bg-white rounded-xl border border-gray-200">
-      <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-        <div>
-          <h6 class="text-sm font-semibold text-gray-800">{{ c.lead_name || '-' }}</h6>
-          <p class="text-xs text-gray-400 mt-0.5">{{ c.contract_no || '无合同号' }} · {{ c.signed_at?.slice(0,10) || '-' }}</p>
-          <!-- Payment progress -->
-          <div class="flex items-center gap-2 mt-1">
-            <span class="text-xs font-medium" :class="(c.paid_amount || 0) >= c.total_amount ? 'text-green-600' : 'text-amber-600'">
-              已收 ¥{{ (c.paid_amount || 0).toLocaleString() }} / ¥{{ (c.total_amount || 0).toLocaleString() }}
-            </span>
-            <div class="w-24 bg-gray-200 rounded-full h-2">
-              <div class="h-2 rounded-full transition-all"
-                :class="(c.paid_amount || 0) >= c.total_amount ? 'bg-green-500' : 'bg-amber-500'"
-                :style="{ width: Math.min(100, c.total_amount > 0 ? ((c.paid_amount || 0) / c.total_amount * 100) : 0) + '%' }">
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-500">{{ c.package_count }} 个课时包</span>
-          <span class="inline-block px-2 py-0.5 rounded text-[.65rem] font-medium"
-            :class="c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'">
-            {{ c.status === 'active' ? '进行中' : c.status === 'completed' ? '已结清' : '已结束' }}
-          </span>
-          <button v-if="canManage" class="text-red-400 hover:text-red-600 text-sm" @click="confirmDeleteContract(c)" title="删除合同">
-            <i class="bi bi-trash"></i>
-          </button>
-          <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="openAddPackage(c)">+ 课时包</button>
-          <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="toggleExpand(c.id)">
-            <i :class="expandedId === c.id ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
-          </button>
-        </div>
+  <!-- Tab 切换 -->
+  <div class="flex gap-1 mb-4">
+    <button v-for="t in tabs" :key="t.key"
+            class="px-4 py-2 text-sm rounded-lg transition"
+            :class="tab === t.key ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'"
+            @click="tab = t.key">{{ t.label }}</button>
+  </div>
+
+  <!-- ═══ Tab 1: 收款记录 ═══ -->
+  <div v-if="tab === 'records'">
+    <!-- 本月统计 -->
+    <div v-if="statsThisMonth.total > 0" class="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center gap-6 text-xs">
+      <span>本月签约 <strong class="text-indigo-700">{{ statsThisMonth.students }}</strong> 人</span>
+      <span>新签 <strong class="text-green-700">{{ statsThisMonth.newCount }}</strong> · 续费 <strong class="text-amber-700">{{ statsThisMonth.renewalCount }}</strong></span>
+      <span>{{ statsThisMonth.hours }} 课时</span>
+      <span class="ml-auto font-bold text-green-700">¥{{ statsThisMonth.amount.toLocaleString() }}</span>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="bg-white rounded-xl border border-gray-200 p-3 mb-4 flex items-center gap-3 flex-wrap">
+      <input type="date" v-model="filterDateFrom" class="px-2 py-1.5 border border-gray-300 rounded text-xs outline-none">
+      <span class="text-xs text-gray-400">至</span>
+      <input type="date" v-model="filterDateTo" class="px-2 py-1.5 border border-gray-300 rounded text-xs outline-none">
+      <input type="text" v-model="filterSearch" placeholder="搜索学生姓名..." class="px-2 py-1.5 border border-gray-300 rounded text-xs outline-none w-40">
+      <button v-if="filterDateFrom || filterDateTo || filterSearch" class="text-xs text-gray-500 hover:text-red-500" @click="clearFilters">
+        <i class="bi bi-x-circle"></i> 清除
+      </button>
+      <span class="ml-auto text-xs text-gray-400">显示 {{ filteredPayments.length }} 笔</span>
+    </div>
+
+    <!-- 收款记录表 -->
+    <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+    <div v-else-if="allPayments.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无收款记录</div>
+    <div v-else>
+      <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-left">
+              <th class="px-3 py-2.5 text-gray-600 font-medium text-xs whitespace-nowrap">收款日期</th>
+              <th class="px-3 py-2.5 text-gray-600 font-medium text-xs whitespace-nowrap">学生</th>
+              <th class="px-3 py-2.5 text-gray-600 font-medium text-xs whitespace-nowrap">类型</th>
+              <th class="px-3 py-2.5 text-gray-600 font-medium text-xs whitespace-nowrap">报名课时</th>
+              <th class="px-3 py-2.5 text-gray-600 font-medium text-xs whitespace-nowrap text-right">收款金额</th>
+              <th class="px-3 py-2.5 text-gray-600 font-medium text-xs whitespace-nowrap">方式</th>
+              <th class="px-3 py-2.5 w-20"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="p in filteredPayments" :key="p.payment_id" class="hover:bg-gray-50">
+              <td class="px-3 py-2.5 text-xs text-gray-600">{{ (p.payment_date || '').slice(0,10) }}</td>
+              <td class="px-3 py-2.5">
+                <span class="font-medium text-gray-900 text-xs">{{ p.lead_name || '-' }}</span>
+              </td>
+              <td class="px-3 py-2.5">
+                <span v-if="p.sign_type === 'renewal'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] bg-amber-100 text-amber-700">续费</span>
+                <span v-else class="inline-block px-1.5 py-0.5 rounded text-[.6rem] bg-green-100 text-green-700">新签</span>
+              </td>
+              <td class="px-3 py-2.5 text-xs text-gray-700">{{ p.total_hours || 0 }}h</td>
+              <td class="px-3 py-2.5 text-right">
+                <span class="text-xs text-green-600 font-bold">¥{{ (p.amount || 0).toLocaleString() }}</span>
+              </td>
+              <td class="px-3 py-2.5 text-xs text-gray-400">{{ p.method || '-' }}</td>
+              <td class="px-3 py-2.5">
+                <button v-if="canManage" class="text-red-400 hover:text-red-600 text-xs" @click="confirmDeletePayment(p.contract_id, p.payment_id, p.amount)" title="删除"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div v-if="expandedId === c.id" class="divide-y divide-gray-50">
-        <!-- Packages -->
-        <div v-if="!c._packages || c._packages.length === 0" class="px-5 py-4 text-sm text-gray-400 text-center">暂无课时包</div>
-        <div v-for="p in c._packages" :key="p.id" class="px-5 py-3 flex items-center gap-4">
-          <div class="flex-1">
-            <span class="text-sm font-medium">{{ p.name }}</span>
-            <div class="text-xs text-gray-500 mt-0.5">
-              总课时: <strong>{{ p.total_hours }}</strong>h ·
-              已用: <strong>{{ p.used_hours }}</strong>h ·
-              剩余: <strong>{{ (p.total_hours - p.used_hours).toFixed(1) }}</strong>h
+      <!-- 合计 -->
+      <div class="mt-3 bg-indigo-50 rounded-xl border border-indigo-100 p-3 flex items-center gap-6 text-xs">
+        <span class="text-gray-600">共 <strong class="text-indigo-700">{{ filteredPayments.length }}</strong> 笔</span>
+        <span class="text-gray-600">新签 <strong>{{ filteredPayments.filter(p => p.sign_type === 'new').length }}</strong> · 续费 <strong>{{ filteredPayments.filter(p => p.sign_type === 'renewal').length }}</strong></span>
+        <span class="ml-auto font-bold text-green-700">¥{{ filteredPayments.reduce((s,p) => s + (p.amount||0), 0).toLocaleString() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Tab 2: 学生总览 ═══ -->
+  <div v-if="tab === 'students'">
+    <div class="flex items-center gap-2 mb-4">
+      <input type="text" v-model="studentSearch" @input="debounceStudentSearch" placeholder="搜索学生姓名/手机..." class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none w-56">
+      <button class="px-2 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="downloadStudentCSV">
+        <i class="bi bi-download"></i> 导出CSV
+      </button>
+    </div>
+
+    <div v-if="studentsLoading" class="text-center py-10 text-gray-400">加载中...</div>
+    <div v-else-if="studentsList.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无签约学生</div>
+    <div v-else class="space-y-3">
+      <div v-for="s in studentsList" :key="s.id"
+           class="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:shadow-md transition"
+           @click="openLead(s.id)">
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">{{ s.name[0] }}</div>
+            <div>
+              <h5 class="text-base font-semibold text-gray-900">{{ s.name }}</h5>
+              <p class="text-xs text-gray-400">{{ s.phone || '-' }} · {{ s.source || '-' }}</p>
             </div>
           </div>
-          <div class="text-xs text-gray-500">¥{{ p.price_per_hour }}/h</div>
-          <div class="flex items-center gap-1">
-            <input type="number" v-model.number="useHours[p.id]" placeholder="课时" min="0" step="0.5" class="w-16 px-2 py-1 border border-gray-300 rounded text-xs outline-none">
-            <button class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50" :disabled="!useHours[p.id] || useHours[p.id] <= 0" @click="usePackageHours(p.id)">消耗</button>
-            <button v-if="canManage" class="text-red-400 hover:text-red-600 text-xs" @click="confirmDeletePackage(p)" title="删除课时包">
-              <i class="bi bi-trash"></i>
+          <div class="text-right text-xs">
+            <span class="text-gray-500">跟进人: {{ s.assignee_name || '未分配' }}</span>
+            <br>
+            <span class="text-gray-400">班主任: {{ s.coordinator_name || '未分配' }}</span>
+          </div>
+          <div class="flex items-center gap-1 ml-2" @click.stop>
+            <button v-if="canAssignCoordinator" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-indigo-50 hover:border-indigo-300" @click="openAssignCoordinator(s)">
+              <i class="bi bi-person-plus text-xs"></i> 分配
+            </button>
+            <button v-if="canManage" class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700" @click.stop="openAddPayment(s)" title="追加收款">
+              <i class="bi bi-cash-coin"></i>
             </button>
           </div>
         </div>
 
-        <!-- Payment Records -->
-        <div class="px-5 py-3 bg-gray-50/50">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold text-gray-700">收款记录</span>
-            <div class="flex gap-1">
-              <button v-if="canManage" class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700" @click="openPayment(c)">+ 收款</button>
-              <button v-if="canManage && (c.paid_amount || 0) > 0" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600" @click="openRefund(c)">退款</button>
-            </div>
+        <!-- Key stats -->
+        <div class="grid grid-cols-4 gap-3">
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500 mb-0.5">已收金额</p>
+            <p class="text-sm font-bold" :class="(s.contract?.paid_amount || 0) > 0 ? 'text-green-600' : 'text-gray-400'">
+              ¥{{ (s.contract?.paid_amount || 0).toLocaleString() }}
+            </p>
           </div>
-          <div v-if="!payments[c.id] || payments[c.id].length === 0" class="text-xs text-gray-400 text-center py-2">暂无收款记录</div>
-          <div v-else class="space-y-1">
-            <div v-for="p in payments[c.id]" :key="p.id" class="flex items-center justify-between text-xs">
-              <span class="text-gray-500">{{ p.created_at?.slice(0,16) || '-' }}</span>
-              <span :class="p.type === 'refund' ? 'text-red-600' : 'text-green-600'" class="font-medium">
-                {{ p.type === 'refund' ? '-' : '+' }}¥{{ Math.abs(p.amount).toFixed(2) }}
-              </span>
-              <span class="text-gray-400">{{ p.method || '' }}</span>
-              <span class="text-gray-400">{{ p.operator_name || '' }}</span>
-              <button v-if="canManage" class="text-red-400 hover:text-red-600" @click="confirmDeletePayment(c.id, p)" title="删除付款记录">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500 mb-0.5">剩余课时</p>
+            <p class="text-sm font-bold" :class="s.remaining_hours <= 5 ? 'text-red-600' : 'text-gray-800'">
+              {{ s.remaining_hours || 0 }}<span class="text-xs font-normal text-gray-400">/{{ s.total_hours || 0 }}h</span>
+            </p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500 mb-0.5">最近上课</p>
+            <p class="text-sm font-bold text-gray-800">{{ s.last_class?.start_time?.slice(0,10) || '-' }}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500 mb-0.5">下次上课</p>
+            <p class="text-sm font-bold text-gray-800">{{ s.next_class?.start_time?.slice(0,10) || '-' }}</p>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="studentTotalPages > 1" class="flex items-center justify-center gap-1 mt-4">
+      <button class="pagination-btn" @click="goStudentPage(studentPage-1)" :disabled="studentPage===1">&lt;</button>
+      <button v-for="n in studentPageNumbers" :key="n"
+              class="pagination-btn" :class="{ active: n === studentPage }"
+              @click="goStudentPage(n)" :disabled="n==='...'">{{ n }}</button>
+      <button class="pagination-btn" @click="goStudentPage(studentPage+1)" :disabled="studentPage===studentTotalPages">&gt;</button>
+    </div>
+
+    <!-- Low hours alert -->
+    <div v-if="studentsList.filter(s => s.remaining_hours <= 5).length > 0" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+      <i class="bi bi-exclamation-triangle-fill text-amber-500 text-lg"></i>
+      <span class="text-sm text-amber-800">
+        <strong>{{ studentsList.filter(s => s.remaining_hours <= 5).length }}</strong> 名学生课时即将用完，请及时安排续费沟通
+      </span>
+    </div>
   </div>
 
-  <!-- Create Contract Modal -->
-  <div v-if="showContractModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showContractModal = false">
+  <!-- ═══ 新建签约弹窗 ═══ -->
+  <div v-if="showSigningModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showSigningModal = false">
     <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
-      <h5 class="font-semibold text-gray-900 mb-4">新建合同</h5>
+      <h5 class="font-semibold text-gray-900 mb-4">新建签约</h5>
       <div class="space-y-3">
         <div>
           <label class="block text-xs text-gray-600 mb-1">学生 <span class="text-red-500">*</span></label>
           <searchable-select
-            :items="leads"
+            :items="allLeads"
             label-key="name"
             sub-label-key="phone"
             placeholder="搜索学生姓名或手机号..."
-            v-model="contractForm.lead_id">
+            v-model="signingForm.lead_id">
           </searchable-select>
         </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">合同编号</label>
-          <input type="text" v-model="contractForm.contract_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: HT-2026-001">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">签约日期</label>
+            <input type="date" v-model="signingForm.signed_at" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">合同编号</label>
+            <input type="text" v-model="signingForm.contract_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="自动生成">
+          </div>
         </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">合同金额</label>
-          <input type="number" v-model.number="contractForm.total_amount" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="0">
+        <div class="border-t border-gray-100 pt-3">
+          <label class="block text-xs text-gray-500 mb-2 font-medium">课时包</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">名称</label>
+              <input type="text" v-model="signingForm.package_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="标准课时包">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">总课时 <span class="text-red-500">*</span></label>
+              <input type="number" v-model.number="signingForm.total_hours" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="60" min="0">
+            </div>
+          </div>
+          <div class="mt-2">
+            <label class="block text-xs text-gray-600 mb-1">单价 (元/小时)</label>
+            <input type="number" v-model.number="signingForm.price_per_hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="375" min="0">
+          </div>
+          <p v-if="signingForm.total_hours && signingForm.price_per_hour" class="text-xs text-indigo-600 mt-1">
+            课时金额: <strong>¥{{ (signingForm.total_hours * signingForm.price_per_hour).toLocaleString() }}</strong>
+          </p>
         </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">签约日期</label>
-          <input type="date" v-model="contractForm.signed_at" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+        <div class="border-t border-gray-100 pt-3">
+          <label class="block text-xs text-gray-500 mb-2 font-medium">收款</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">收款金额 <span class="text-red-500">*</span></label>
+              <input type="number" v-model="signingForm.payment_amount" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">收款方式</label>
+              <select v-model="signingForm.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none bg-white">
+                <option value="">请选择</option>
+                <option value="转账">转账</option>
+                <option value="微信">微信</option>
+                <option value="支付宝">支付宝</option>
+                <option value="现金">现金</option>
+                <option value="刷卡">刷卡</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-2">
+            <label class="block text-xs text-gray-600 mb-1">收款日期</label>
+            <input type="date" v-model="signingForm.payment_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
         </div>
         <div>
           <label class="block text-xs text-gray-600 mb-1">备注</label>
-          <textarea v-model="contractForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
+          <textarea v-model="signingForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-5">
-        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showContractModal = false">取消</button>
-        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitContract" :disabled="saving">{{ saving ? '创建中...' : '创建' }}</button>
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showSigningModal = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitSigning" :disabled="saving">{{ saving ? '提交中...' : '确认签约' }}</button>
       </div>
     </div>
   </div>
 
-  <!-- Add Package Modal -->
-  <div v-if="showPackageModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showPackageModal = false">
+  <!-- ═══ 追加收款弹窗 ═══ -->
+  <div v-if="showAddPaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showAddPaymentModal = false">
     <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
-      <h5 class="font-semibold text-gray-900 mb-4">添加课时包</h5>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">课时包名称</label>
-          <input type="text" v-model="packageForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 雅思基础课时包">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">总课时 <span class="text-red-500">*</span></label>
-          <input type="number" v-model.number="packageForm.total_hours" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="40">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">单价 (元/小时)</label>
-          <input type="number" v-model.number="packageForm.price_per_hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="375">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">备注</label>
-          <textarea v-model="packageForm.remark" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></textarea>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-5">
-        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showPackageModal = false">取消</button>
-        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitPackage" :disabled="saving">{{ saving ? '添加中...' : '添加' }}</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Payment Modal -->
-  <div v-if="showPaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showPaymentModal = false">
-    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
-      <h5 class="font-semibold text-gray-900 mb-4">登记收款</h5>
+      <h5 class="font-semibold text-gray-900 mb-4">追加收款 — {{ addPaymentStudentName }}</h5>
       <div class="space-y-3">
         <div>
           <label class="block text-xs text-gray-600 mb-1">收款金额 (元) <span class="text-red-500">*</span></label>
-          <input type="number" v-model="paymentForm.amount" min="0.01" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="0.00">
+          <input type="number" v-model="addPaymentForm.amount" min="0.01" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="0.00">
         </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">收款方式</label>
-          <select v-model="paymentForm.method" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none bg-white">
-            <option value="">请选择</option>
-            <option value="转账">转账</option>
-            <option value="现金">现金</option>
-            <option value="刷卡">刷卡</option>
-            <option value="微信">微信</option>
-            <option value="支付宝">支付宝</option>
-          </select>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">收款方式</label>
+            <select v-model="addPaymentForm.method" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none bg-white">
+              <option value="">请选择</option>
+              <option value="转账">转账</option>
+              <option value="微信">微信</option>
+              <option value="支付宝">支付宝</option>
+              <option value="现金">现金</option>
+              <option value="刷卡">刷卡</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">收款日期</label>
+            <input type="date" v-model="addPaymentForm.payment_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+          </div>
         </div>
         <div>
           <label class="block text-xs text-gray-600 mb-1">备注</label>
-          <input type="text" v-model="paymentForm.note" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="可选">
+          <input type="text" v-model="addPaymentForm.note" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="可选">
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-5">
-        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showPaymentModal = false">取消</button>
-        <button class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700" @click="submitPayment" :disabled="saving">{{ saving ? '提交中...' : '确认收款' }}</button>
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showAddPaymentModal = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700" @click="submitAddPayment" :disabled="saving">{{ saving ? '提交中...' : '确认收款' }}</button>
       </div>
     </div>
   </div>
 
-  <!-- Refund Modal -->
-  <div v-if="showRefundModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showRefundModal = false">
-    <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
-      <h5 class="font-semibold text-gray-900 mb-4">登记退款</h5>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">退款金额 (元) <span class="text-red-500">*</span></label>
-          <input type="number" v-model="refundForm.amount" min="0.01" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="0.00">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1">退款原因 <span class="text-red-500">*</span></label>
-          <textarea v-model="refundForm.reason" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="请填写退款原因"></textarea>
-        </div>
-      </div>
+  <!-- ═══ 分配班主任弹窗 ═══ -->
+  <div v-if="showAssignModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showAssignModal = false">
+    <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-1">分配教务班主任</h5>
+      <p class="text-sm text-gray-500 mb-4">学生: <strong>{{ assignLeadName }}</strong></p>
+      <searchable-select
+        :items="coordinators"
+        label-key="display_name"
+        sub-label-key="role"
+        placeholder="搜索教务班主任..."
+        v-model="assignCoordinatorId">
+      </searchable-select>
       <div class="flex justify-end gap-2 mt-5">
-        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showRefundModal = false">取消</button>
-        <button class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600" @click="submitRefund" :disabled="saving">{{ saving ? '提交中...' : '确认退款' }}</button>
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showAssignModal = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitAssignCoordinator">确认分配</button>
       </div>
     </div>
   </div>
 
-  <!-- 删除确认弹窗 -->
+  <!-- ═══ 删除确认弹窗 ═══ -->
   <div v-if="deleteConfirm.show" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="deleteConfirm.show=false">
     <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-xl">
       <h5 class="font-semibold text-gray-900 mb-2">{{ deleteConfirm.title }}</h5>
@@ -2696,7 +3291,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
            class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition"
            :class="l.overdue_days > 3 ? 'bg-red-50 border-l-2 border-red-400' : ''"
            @click="openLead(l.id)">
-        <div>
+        <div class="flex items-center gap-2">
+          <span v-if="l.lead_rank" class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[.5rem] font-bold text-white leading-none flex-shrink-0" :class="l.lead_rank === 'A' ? 'bg-pink-500' : l.lead_rank === 'B' ? 'bg-red-500' : 'bg-blue-500'">{{ l.lead_rank }}</span>
           <span class="font-medium text-sm" :class="l.overdue_days > 3 ? 'text-red-800' : ''">{{ l.name }}</span>
           <span v-if="l.next_followup_at" class="text-xs ml-2"
                 :class="l.overdue_days > 3 ? 'text-red-600 font-semibold' : 'text-gray-400'">
@@ -2716,109 +3312,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 </div>
 </script>
 
-<!-- Students / 签约学生总览 -->
-<script type="text/x-template" id="tpl-students">
-<div>
-  <div class="flex items-center justify-between mb-4">
-    <div>
-      <h3 class="text-xl font-bold text-gray-900">签约学生</h3>
-      <p class="text-sm text-gray-500 mt-0.5">已签约学生 · 课时消耗 · 续费管理</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <input type="text" v-model="search" @input="debounceSearch" placeholder="搜索学生姓名/手机..." class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none w-56">
-      <button class="px-2 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-100" @click="downloadCSV">
-        <i class="bi bi-download"></i> 导出CSV
-      </button>
-    </div>
-  </div>
-
-  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
-  <div v-else-if="list.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无签约学生</div>
-  <div v-else class="space-y-3">
-    <div v-for="s in list" :key="s.id"
-         class="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:shadow-md transition"
-         @click="openLead(s.id)">
-      <div class="flex items-start justify-between mb-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">{{ s.name[0] }}</div>
-          <div>
-            <h5 class="text-base font-semibold text-gray-900">{{ s.name }}</h5>
-            <p class="text-xs text-gray-400">{{ s.phone || '-' }} · {{ s.source || '-' }}</p>
-          </div>
-        </div>
-        <div class="text-right text-xs">
-          <span class="text-gray-500">跟进人: {{ s.assignee_name || '未分配' }}</span>
-          <br>
-          <span class="text-gray-400">班主任: {{ s.coordinator_name || '未分配' }}</span>
-        </div>
-        <div class="flex items-center gap-1 ml-2" @click.stop>
-          <button v-if="canAssignCoordinator" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-indigo-50 hover:border-indigo-300" @click="openAssignCoordinator(s)">
-            <i class="bi bi-person-plus text-xs"></i> 分配
-          </button>
-        </div>
-      </div>
-
-      <!-- Key stats -->
-      <div class="grid grid-cols-4 gap-3">
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500 mb-0.5">合同金额</p>
-          <p class="text-sm font-bold text-gray-800">¥{{ s.contract?.total_amount?.toLocaleString() || 0 }}</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500 mb-0.5">剩余课时</p>
-          <p class="text-sm font-bold" :class="s.remaining_hours <= 5 ? 'text-red-600' : 'text-gray-800'">
-            {{ s.remaining_hours || 0 }}<span class="text-xs font-normal text-gray-400">/{{ s.total_hours || 0 }}h</span>
-          </p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500 mb-0.5">最近上课</p>
-          <p class="text-sm font-bold text-gray-800">{{ s.last_class?.start_time?.slice(0,10) || '-' }}</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500 mb-0.5">下次上课</p>
-          <p class="text-sm font-bold text-gray-800">{{ s.next_class?.start_time?.slice(0,10) || '-' }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pagination -->
-  <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 mt-4">
-    <button class="pagination-btn" @click="goPage(page-1)" :disabled="page===1">&lt;</button>
-    <button v-for="n in pageNumbers" :key="n"
-            class="pagination-btn" :class="{ active: n === page }"
-            @click="goPage(n)" :disabled="n==='...'">{{ n }}</button>
-    <button class="pagination-btn" @click="goPage(page+1)" :disabled="page===totalPages">&gt;</button>
-  </div>
-
-  <!-- Low hours alert -->
-  <div v-if="list.filter(s => s.remaining_hours <= 5).length > 0" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
-    <i class="bi bi-exclamation-triangle-fill text-amber-500 text-lg"></i>
-    <span class="text-sm text-amber-800">
-      <strong>{{ list.filter(s => s.remaining_hours <= 5).length }}</strong> 名学生课时即将用完，请及时安排续费沟通
-    </span>
-  </div>
-
-  <!-- Assign Coordinator Modal -->
-  <div v-if="showAssignModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showAssignModal = false">
-    <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-xl">
-      <h5 class="font-semibold text-gray-900 mb-1">分配教务班主任</h5>
-      <p class="text-sm text-gray-500 mb-4">学生: <strong>{{ assignLeadName }}</strong></p>
-      <searchable-select
-        :items="coordinators"
-        label-key="display_name"
-        sub-label-key="role"
-        placeholder="搜索教务班主任..."
-        v-model="assignCoordinatorId">
-      </searchable-select>
-      <div class="flex justify-end gap-2 mt-5">
-        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showAssignModal = false">取消</button>
-        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitAssignCoordinator">确认分配</button>
-      </div>
-    </div>
-  </div>
-</div>
-</script>
+<!-- Finance / 财务管理 -->
 
 <!-- Finance / 财务管理 -->
 
@@ -3147,6 +3641,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=22"></script>
-</body>
+<script src="js/app.js?v=75"></script>
+
+  </body>
 </html>

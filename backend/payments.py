@@ -6,10 +6,52 @@
   - 每笔操作写审计日志
   - 退款不超过已收金额
 """
-from router import get, post, delete
+import datetime
+from router import get, post, delete, put
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid, get_conn
 from permissions import can
+
+
+@get("/api/payments/list")
+def list_all_payments(handler, token_payload, qs, body):
+    """所有收款记录列表，按日期倒序，附带学生/合同/课时包信息"""
+    if not can(token_payload["role"], "contract:view"):
+        error_response(handler, "无权访问", 403)
+        return
+
+    date_from = qs.get("date_from", [None])[0]
+    date_to = qs.get("date_to", [None])[0]
+    search = qs.get("search", [None])[0]
+
+    join_clause = "LEFT JOIN contracts c ON pr.contract_id = c.id LEFT JOIN leads l ON c.lead_id = l.id"
+    where = ["pr.type = 'payment'"]
+    params = []
+
+    if date_from:
+        where.append("pr.payment_date >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("pr.payment_date <= ?")
+        params.append(date_to)
+    if search:
+        where.append("l.name LIKE ?")
+        params.append(f"%{search}%")
+
+    where_sql = " AND ".join(where)
+
+    rows = query(
+        f"""SELECT pr.id as payment_id, pr.payment_date, pr.amount, pr.method,
+                   pr.contract_id, c.lead_id, c.sign_type, c.signed_at,
+                   l.name as lead_name,
+                   COALESCE((SELECT SUM(p.total_hours) FROM packages p WHERE p.contract_id = pr.contract_id), 0) as total_hours
+            FROM payment_records pr
+            {join_clause}
+            WHERE {where_sql}
+            ORDER BY pr.payment_date DESC, pr.id DESC""",
+        tuple(params),
+    )
+    ok_response(handler, rows)
 
 
 @get("/api/contracts/{contract_id}/payments")
@@ -56,14 +98,18 @@ def create_payment(handler, token_payload, qs, body, contract_id=None):
     uid = token_payload["sub"]
     uname = token_payload.get("name", "")
 
+    payment_date = body.get("payment_date", "")
+    if not payment_date:
+        payment_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
     conn = get_conn()
     try:
         conn.execute("BEGIN")
 
         # 写入流水
         execute_lastrowid(
-            "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id) VALUES (?,?,?,?,?,?)",
-            (cid, amount, "payment", method, note, uid),
+            "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date) VALUES (?,?,?,?,?,?,?)",
+            (cid, amount, "payment", method, note, uid, payment_date),
         )
 
         # 原子更新实收金额
@@ -154,6 +200,52 @@ def create_refund(handler, token_payload, qs, body, contract_id=None):
         (cid,),
     )
     ok_response(handler, contract)
+
+
+@put("/api/contracts/{contract_id}/payments/{payment_id}")
+def update_payment(handler, token_payload, qs, body, contract_id=None, payment_id=None):
+    """更新付款记录的收款日期"""
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    pid = int(payment_id)
+    p = query_one("SELECT id FROM payment_records WHERE id=? AND contract_id=?", (pid, int(contract_id)))
+    if not p:
+        error_response(handler, "记录不存在", 404)
+        return
+    payment_date = body.get("payment_date", "")
+    execute("UPDATE payment_records SET payment_date=? WHERE id=?", (payment_date, pid))
+    add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"修改收款日期: {payment_date}")
+    ok_response(handler, {"message": "已更新"})
+
+
+@put("/api/contracts/{contract_id}/payments/{payment_id}/amount")
+def update_payment_amount(handler, token_payload, qs, body, contract_id=None, payment_id=None):
+    """更新付款金额（原子调整 paid_amount）"""
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    cid = int(contract_id)
+    pid = int(payment_id)
+    p = query_one("SELECT id, amount FROM payment_records WHERE id=? AND contract_id=?", (pid, cid))
+    if not p:
+        error_response(handler, "记录不存在", 404)
+        return
+    new_amt = float(body.get("amount", 0))
+    old_amt = p["amount"]
+    diff = new_amt - old_amt
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
+        execute("UPDATE payment_records SET amount=? WHERE id=?", (new_amt, pid))
+        execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount,0) + ?, 2) WHERE id=?", (diff, cid))
+        conn.commit()
+    except Exception as e:
+        conn.execute("ROLLBACK")
+        error_response(handler, f"修改失败：{e}", 500)
+        return
+    add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"收款金额 {old_amt} -> {new_amt}")
+    ok_response(handler, {"message": "已更新"})
 
 
 @delete("/api/contracts/{contract_id}/payments/{payment_id}")
