@@ -299,3 +299,44 @@ def create_signing(handler, token_payload, qs, body):
         "lead_name": lead["name"] if lead else "",
         "sign_type": sign_type,
     }, 201)
+
+
+@post("/api/contracts/refresh-sign-types")
+def refresh_sign_types(handler, token_payload, qs, body):
+    """根据实际累计课时重新计算所有合同的 sign_type
+       规则: 同一学生下，签该合同时已有累计 >= 10 课时 → renewal，否则 → new
+    """
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+
+    contracts = query(
+        """SELECT c.id, c.lead_id, c.sign_type, c.signed_at
+           FROM contracts c ORDER BY c.lead_id, c.signed_at ASC"""
+    )
+
+    updated = 0
+    lead_hours = {}  # lead_id -> cumulative hours so far
+
+    for c in contracts:
+        cid = c["id"]
+        lid = c["lead_id"]
+        prior = lead_hours.get(lid, 0)
+        should = "renewal" if prior >= 10 else "new"
+
+        if c["sign_type"] != should:
+            execute("UPDATE contracts SET sign_type=? WHERE id=?", (should, cid))
+            updated += 1
+
+        # 累加当前合同的课时供后续合同判断
+        cur_hrs = query_one(
+            "SELECT COALESCE(SUM(total_hours),0) as h FROM packages WHERE contract_id=?",
+            (cid,),
+        )["h"]
+        lead_hours[lid] = prior + cur_hrs
+
+    uid = token_payload["sub"]
+    uname = token_payload.get("name", "")
+    add_oplog(uid, uname, "refresh", "contract", 0, f"重算 sign_type，修正 {updated} 条")
+
+    ok_response(handler, {"updated": updated, "message": f"已重算，{updated} 条合同类型已修正"})

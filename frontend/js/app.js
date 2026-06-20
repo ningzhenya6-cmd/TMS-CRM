@@ -1506,6 +1506,12 @@ app.component('include-signing', {
       paymentRow.sign_type = newType;
       toast(newType === 'renewal' ? '已改为续费' : '已改为新签', 'success');
     },
+    async refreshSignTypes() {
+      const res = await API.post('/contracts/refresh-sign-types');
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast(res.data?.message || '已完成', 'success');
+      this.loadPayments();
+    },
     // ── Add Payment ──
     openAddPayment(s) {
       const c = s.contract;
