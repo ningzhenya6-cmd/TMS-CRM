@@ -912,12 +912,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <span class="text-xs font-bold text-amber-600">¥{{ (stats.quarter_amt || 0).toLocaleString() }}</span>
           <span class="text-[.6rem] text-gray-400">{{ stats.quarter_students ?? 0 }}人 · {{ stats.quarter_hours || 0 }}h</span>
         </div>
+        <div class="flex gap-2 mt-1 text-[.55rem]">
+          <span class="text-green-600">新签 ¥{{ (stats.quarter_new_amt || 0).toLocaleString() }}</span>
+          <span class="text-amber-600">续费 ¥{{ (stats.quarter_renewal_amt || 0).toLocaleString() }}</span>
+        </div>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-3">
         <p class="text-[.6rem] text-gray-500">年度汇总</p>
         <div class="flex items-center gap-3 mt-1">
           <span class="text-xs font-bold text-indigo-600">¥{{ (stats.year_amt || 0).toLocaleString() }}</span>
           <span class="text-[.6rem] text-gray-400">{{ stats.year_students ?? 0 }}人 · {{ stats.year_hours || 0 }}h</span>
+        </div>
+        <div class="flex gap-2 mt-1 text-[.55rem]">
+          <span class="text-green-600">新签 ¥{{ (stats.year_new_amt || 0).toLocaleString() }}</span>
+          <span class="text-amber-600">续费 ¥{{ (stats.year_renewal_amt || 0).toLocaleString() }}</span>
         </div>
       </div>
     </div>
@@ -3651,7 +3659,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=83"></script>
+<script src="js/app.js?v=84"></script>
 
   </body>
 </html>
