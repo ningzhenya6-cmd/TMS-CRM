@@ -116,25 +116,26 @@ def dashboard(handler, token_payload, qs, body):
 
     # ── 本月签约明细 ──
     result["contracts_this_month"] = query_one("SELECT COUNT(*) as cnt FROM contracts WHERE strftime('%Y-%m', created_at)=?", (cur,))["cnt"]
+    result["payments_this_month"] = query_one("SELECT COUNT(*) as cnt FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=?", (cur,))["cnt"]
     result["new_sign_this_month"] = query_one(
-        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='new'", (cur,))["cnt"]
+        "SELECT COUNT(*) as cnt FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=? AND sign_type='new'", (cur,))["cnt"]
     result["renewal_this_month"] = query_one(
-        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='renewal'", (cur,))["cnt"]
+        "SELECT COUNT(*) as cnt FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=? AND sign_type='renewal'", (cur,))["cnt"]
     result["enrolled_this_month"] = query_one("SELECT COUNT(DISTINCT lead_id) as cnt FROM contracts WHERE strftime('%Y-%m', created_at)=?", (cur,))["cnt"]
     result["hours_this_month"] = query_one(
         "SELECT COALESCE(SUM(p.total_hours),0) as total FROM packages p JOIN contracts c ON p.contract_id=c.id WHERE strftime('%Y-%m', c.created_at)=?", (cur,))["total"]
-    # 新签/续费流水
+    # 新签/续费流水（按收款日期统计）
     result["new_sign_amt"] = query_one(
-        "SELECT COALESCE(SUM(pr.amount),0) as total FROM payment_records pr WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='new'", (cur,))["total"]
+        "SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=? AND sign_type='new'", (cur,))["total"]
     result["renewal_amt"] = query_one(
-        "SELECT COALESCE(SUM(pr.amount),0) as total FROM payment_records pr WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='renewal'", (cur,))["total"]
+        "SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=? AND sign_type='renewal'", (cur,))["total"]
 
     # 上月签约
     result["contracts_last_month"] = query_one("SELECT COUNT(*) as cnt FROM contracts WHERE strftime('%Y-%m', created_at)=?", (prev,))["cnt"]
     result["new_sign_last_month"] = query_one(
-        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='new'", (prev,))["cnt"]
+        "SELECT COUNT(*) as cnt FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=? AND sign_type='new'", (prev,))["cnt"]
     result["renewal_last_month"] = query_one(
-        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='renewal'", (prev,))["cnt"]
+        "SELECT COUNT(*) as cnt FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at))=? AND sign_type='renewal'", (prev,))["cnt"]
 
     # ── 季度汇总 ──
     result["quarter_amt"] = query_one(

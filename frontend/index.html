@@ -900,7 +900,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <span class="w-px h-3 bg-gray-200"></span>
           <span class="text-amber-600 font-medium">续费 {{ stats.renewal_this_month ?? 0 }} 单 · ¥{{ (stats.renewal_amt || 0).toLocaleString() }}</span>
           <span class="text-[.55rem] text-gray-400">上月 {{ stats.renewal_last_month ?? 0 }} 单</span>
-          <span class="ml-auto text-[.6rem] text-gray-400">新签占比 {{ stats.contracts_this_month ? Math.round((stats.new_sign_this_month || 0) / (stats.contracts_this_month || 1) * 100) : 0 }}%</span>
+          <span class="ml-auto text-[.6rem] text-gray-400">新签占比 {{ stats.payments_this_month ? Math.round((stats.new_sign_this_month || 0) / (stats.payments_this_month || 1) * 100) : 0 }}%</span>
         </div>
       </div>
     </div>
@@ -3651,7 +3651,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=82"></script>
+<script src="js/app.js?v=83"></script>
 
   </body>
 </html>
