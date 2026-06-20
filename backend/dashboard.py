@@ -5,6 +5,19 @@ from db import query, query_one
 from permissions import can
 
 
+def _sq(val):
+    """STRFTIME shortcut helper"""
+    from db import query_one as _q
+    r = _q(f"SELECT {val}")
+    return list(r.values())[0] if r else None
+
+# Pre-compute date strings at module load
+_CUR = _sq("strftime('%Y-%m', 'now', 'localtime')") or "2026-06"
+_PREV = _sq("strftime('%Y-%m', 'now', 'localtime', '-1 month')") or "2026-05"
+_QSTART = _sq("strftime('%Y-%m', datetime('now','localtime','start of month','-2 months'))") or "2026-04"
+_YSTART = (_sq("strftime('%Y', 'now', 'localtime')") or "2026") + "-01"
+
+
 @get("/api/dashboard")
 def dashboard(handler, token_payload, qs, body):
     role = token_payload["role"]
@@ -23,6 +36,10 @@ def dashboard(handler, token_payload, qs, body):
         result["my_total"] = query_one("SELECT COUNT(*) as cnt FROM leads WHERE assignee_id=?", (user_id,))["cnt"]
         result["my_following"] = query_one("SELECT COUNT(*) as cnt FROM leads WHERE assignee_id=? AND status='following'", (user_id,))["cnt"]
         result["my_enrolled"] = query_one("SELECT COUNT(*) as cnt FROM leads WHERE assignee_id=? AND status='enrolled'", (user_id,))["cnt"]
+        result["pending_contact"] = query_one(
+            "SELECT COUNT(*) as cnt FROM leads WHERE assignee_id=? AND (contact_status IN ('not_reached','follow_up') OR (contact_status='' AND (SELECT COUNT(*) FROM followups WHERE lead_id=leads.id)=0))",
+            (user_id,),
+        )["cnt"]
         result["overdue"] = query_one(
             "SELECT COUNT(*) as cnt FROM leads WHERE assignee_id=? AND next_followup_at IS NOT NULL AND next_followup_at < datetime('now','localtime')",
             (user_id,),
@@ -56,7 +73,6 @@ def dashboard(handler, token_payload, qs, body):
                WHERE l.coordinator_id=? AND s.status='pending'""",
             (user_id,),
         )["cnt"]
-        # 新分配学生
         result["newly_assigned_students"] = query(
             """SELECT l.id, l.name, l.phone, l.coordinator_at,
                       COALESCE((SELECT SUM(p.total_hours) FROM contracts c
@@ -73,6 +89,74 @@ def dashboard(handler, token_payload, qs, body):
             (user_id,),
         )
 
-    # 通用
+    # ═══════════════════════════════════════
+    #  通用统计看板
+    # ═══════════════════════════════════════
+
+    cur, prev = _CUR, _PREV
+    qstart, ystart = _QSTART, _YSTART
+
+    # 本月/上月新录入
+    result["leads_this_month"] = query_one(
+        "SELECT COUNT(*) as cnt FROM leads WHERE strftime('%Y-%m', created_at) = ?", (cur,))["cnt"]
+    result["leads_last_month"] = query_one(
+        "SELECT COUNT(*) as cnt FROM leads WHERE strftime('%Y-%m', created_at) = ?", (prev,))["cnt"]
+
+    # ABC 等级（只统计未签约的）
+    not_enrolled = "status NOT IN ('enrolled','closed','lost')"
+    result["rank_a"] = query_one(f"SELECT COUNT(*) as cnt FROM leads WHERE lead_rank='A' AND {not_enrolled}")["cnt"]
+    result["rank_b"] = query_one(f"SELECT COUNT(*) as cnt FROM leads WHERE lead_rank='B' AND {not_enrolled}")["cnt"]
+    result["rank_c"] = query_one(f"SELECT COUNT(*) as cnt FROM leads WHERE lead_rank='C' AND {not_enrolled}")["cnt"]
+    result["rank_a_last"] = query_one(
+        f"SELECT COUNT(*) as cnt FROM leads WHERE lead_rank='A' AND strftime('%Y-%m', updated_at)=? AND {not_enrolled}", (prev,))["cnt"]
+    result["rank_b_last"] = query_one(
+        f"SELECT COUNT(*) as cnt FROM leads WHERE lead_rank='B' AND strftime('%Y-%m', updated_at)=? AND {not_enrolled}", (prev,))["cnt"]
+    result["rank_c_last"] = query_one(
+        f"SELECT COUNT(*) as cnt FROM leads WHERE lead_rank='C' AND strftime('%Y-%m', updated_at)=? AND {not_enrolled}", (prev,))["cnt"]
+
+    # ── 本月签约明细 ──
+    result["contracts_this_month"] = query_one("SELECT COUNT(*) as cnt FROM contracts WHERE strftime('%Y-%m', created_at)=?", (cur,))["cnt"]
+    result["new_sign_this_month"] = query_one(
+        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='new'", (cur,))["cnt"]
+    result["renewal_this_month"] = query_one(
+        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='renewal'", (cur,))["cnt"]
+    result["enrolled_this_month"] = query_one("SELECT COUNT(DISTINCT lead_id) as cnt FROM contracts WHERE strftime('%Y-%m', created_at)=?", (cur,))["cnt"]
+    result["hours_this_month"] = query_one(
+        "SELECT COALESCE(SUM(p.total_hours),0) as total FROM packages p JOIN contracts c ON p.contract_id=c.id WHERE strftime('%Y-%m', c.created_at)=?", (cur,))["total"]
+    # 新签/续费流水
+    result["new_sign_amt"] = query_one(
+        "SELECT COALESCE(SUM(pr.amount),0) as total FROM payment_records pr WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='new'", (cur,))["total"]
+    result["renewal_amt"] = query_one(
+        "SELECT COALESCE(SUM(pr.amount),0) as total FROM payment_records pr WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='renewal'", (cur,))["total"]
+
+    # 上月签约
+    result["contracts_last_month"] = query_one("SELECT COUNT(*) as cnt FROM contracts WHERE strftime('%Y-%m', created_at)=?", (prev,))["cnt"]
+    result["new_sign_last_month"] = query_one(
+        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='new'", (prev,))["cnt"]
+    result["renewal_last_month"] = query_one(
+        "SELECT COUNT(DISTINCT pr.id) as cnt FROM payment_records pr JOIN contracts c ON pr.contract_id=c.id WHERE pr.type='payment' AND strftime('%Y-%m', pr.created_at)=? AND pr.sign_type='renewal'", (prev,))["cnt"]
+
+    # ── 季度汇总 ──
+    result["quarter_amt"] = query_one(
+        "SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment' AND strftime('%Y-%m', created_at) BETWEEN ? AND ?", (qstart, cur))["total"]
+    result["quarter_students"] = query_one(
+        "SELECT COUNT(DISTINCT lead_id) as cnt FROM contracts WHERE strftime('%Y-%m', created_at) BETWEEN ? AND ?", (qstart, cur))["cnt"]
+    result["quarter_hours"] = query_one(
+        "SELECT COALESCE(SUM(p.total_hours),0) as total FROM packages p JOIN contracts c ON p.contract_id=c.id WHERE strftime('%Y-%m', c.created_at) BETWEEN ? AND ?", (qstart, cur))["total"]
+
+    # ── 年度汇总 ──
+    result["year_amt"] = query_one("SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment' AND strftime('%Y-%m', created_at) >= ?", (ystart,))["total"]
+    result["year_students"] = query_one("SELECT COUNT(DISTINCT lead_id) as cnt FROM contracts WHERE strftime('%Y-%m', created_at) >= ?", (ystart,))["cnt"]
+    result["year_hours"] = query_one(
+        "SELECT COALESCE(SUM(p.total_hours),0) as total FROM packages p JOIN contracts c ON p.contract_id=c.id WHERE strftime('%Y-%m', c.created_at) >= ?", (ystart,))["total"]
+
+    # 收款
+    result["paid_this_month"] = query_one(
+        "SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at)) = ?", (cur,))["total"]
+    result["paid_last_month"] = query_one(
+        "SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment' AND strftime('%Y-%m', COALESCE(NULLIF(payment_date,''), created_at)) = ?", (prev,))["total"]
+    result["total_paid"] = query_one("SELECT COALESCE(SUM(amount),0) as total FROM payment_records WHERE type='payment'")["total"]
+    result["enrolled_count"] = query_one("SELECT COUNT(*) as cnt FROM leads WHERE status='enrolled'")["cnt"]
     result["total_leads"] = query_one("SELECT COUNT(*) as cnt FROM leads")["cnt"]
+
     ok_response(handler, result)
