@@ -196,16 +196,21 @@ def init_db():
         "ALTER TABLE leads ADD COLUMN coordinator_id INTEGER REFERENCES users(id)",
         "ALTER TABLE leads ADD COLUMN coordinator_at TEXT",
         "ALTER TABLE leads ADD COLUMN lost_reason TEXT DEFAULT ''",
+        "ALTER TABLE leads ADD COLUMN lead_rank TEXT DEFAULT ''",
+        "ALTER TABLE leads ADD COLUMN contact_status TEXT DEFAULT ''",
         "ALTER TABLE contracts ADD COLUMN sign_type TEXT NOT NULL DEFAULT 'new'",
         "ALTER TABLE schedules ADD COLUMN teacher_id INTEGER REFERENCES teachers(id)",
         "ALTER TABLE schedules ADD COLUMN tutoring_form TEXT DEFAULT ''",
         "ALTER TABLE schedules ADD COLUMN actual_duration_minutes INTEGER",
         "ALTER TABLE followups ADD COLUMN followup_type TEXT DEFAULT ''",
+        "ALTER TABLE followups ADD COLUMN followup_rank TEXT DEFAULT ''",
+        "ALTER TABLE payment_records ADD COLUMN payment_date TEXT DEFAULT ''",
         "ALTER TABLE contracts ADD COLUMN paid_amount REAL DEFAULT 0",
         "ALTER TABLE consulting_reports ADD COLUMN report_type TEXT NOT NULL DEFAULT 'risk'",
         "ALTER TABLE consulting_reports ADD COLUMN program_url TEXT DEFAULT ''",
         "ALTER TABLE consulting_reports ADD COLUMN program_courses TEXT DEFAULT ''",
         "ALTER TABLE consulting_reports ADD COLUMN target_level TEXT DEFAULT ''",
+        "ALTER TABLE payment_records ADD COLUMN hours REAL DEFAULT 0",
     ]:
         try:
             conn.execute(ddl)
@@ -305,6 +310,19 @@ def init_db():
             created_by      INTEGER NOT NULL REFERENCES users(id),
             created_at      TEXT NOT NULL DEFAULT (datetime('now','localtime')),
             updated_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    # -- 作业上传 --
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS homework_uploads (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id     INTEGER NOT NULL REFERENCES leads(id),
+            file_name   TEXT NOT NULL,
+            file_size   INTEGER DEFAULT 0,
+            file_path   TEXT NOT NULL,
+            uploaded_by INTEGER NOT NULL REFERENCES users(id),
+            created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
         )
     """)
 

@@ -44,8 +44,7 @@ def list_all_payments(handler, token_payload, qs, body):
         f"""SELECT pr.id as payment_id, pr.payment_date, pr.amount, pr.method,
                    pr.contract_id, c.lead_id, c.sign_type, c.signed_at,
                    l.name as lead_name,
-                   (SELECT p.id FROM packages p WHERE p.contract_id = pr.contract_id LIMIT 1) as pkg_id,
-                   COALESCE((SELECT SUM(p.total_hours) FROM packages p WHERE p.contract_id = pr.contract_id), 0) as total_hours
+                   COALESCE(pr.hours, 0) as total_hours
             FROM payment_records pr
             {join_clause}
             WHERE {where_sql}
@@ -109,8 +108,8 @@ def create_payment(handler, token_payload, qs, body, contract_id=None):
 
         # 写入流水
         execute_lastrowid(
-            "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date) VALUES (?,?,?,?,?,?,?)",
-            (cid, amount, "payment", method, note, uid, payment_date),
+            "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours) VALUES (?,?,?,?,?,?,?,?)",
+            (cid, amount, "payment", method, note, uid, payment_date, float(body.get("hours", 0))),
         )
 
         # 原子更新实收金额
@@ -246,6 +245,24 @@ def update_payment_amount(handler, token_payload, qs, body, contract_id=None, pa
         error_response(handler, f"修改失败：{e}", 500)
         return
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"收款金额 {old_amt} -> {new_amt}")
+    ok_response(handler, {"message": "已更新"})
+
+
+@put("/api/contracts/{contract_id}/payments/{payment_id}/hours")
+def update_payment_hours(handler, token_payload, qs, body, contract_id=None, payment_id=None):
+    """更新收款记录的课时（每笔收款独立记录课时，互不影响）"""
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    cid = int(contract_id)
+    pid = int(payment_id)
+    p = query_one("SELECT id, hours FROM payment_records WHERE id=? AND contract_id=?", (pid, cid))
+    if not p:
+        error_response(handler, "记录不存在", 404)
+        return
+    new_hrs = float(body.get("hours", 0))
+    execute("UPDATE payment_records SET hours=? WHERE id=?", (new_hrs, pid))
+    add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"收款课时 {p['hours']} -> {new_hrs}h")
     ok_response(handler, {"message": "已更新"})
 
 

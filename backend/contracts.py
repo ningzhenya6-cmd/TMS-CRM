@@ -260,10 +260,10 @@ def create_signing(handler, token_payload, qs, body):
             ),
         )
 
-        # 3. 创建收款记录
+        # 3. 创建收款记录（每笔收款独立记录课时）
         pay_id = execute_lastrowid(
-            """INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date)
-               VALUES (?,?,?,?,?,?,?)""",
+            """INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours)
+               VALUES (?,?,?,?,?,?,?,?)""",
             (
                 cid,
                 payment_amount,
@@ -272,6 +272,7 @@ def create_signing(handler, token_payload, qs, body):
                 body.get("note", ""),
                 uid,
                 payment_date,
+                total_hours,
             ),
         )
 
