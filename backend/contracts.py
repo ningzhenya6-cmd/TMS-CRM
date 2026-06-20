@@ -90,7 +90,7 @@ def create_contract(handler, token_payload, qs, body):
            WHERE c.lead_id=?""",
         (int(lead_id),),
     )["h"]
-    sign_type = "renewal" if prev_hours >= 10 else "new"
+    sign_type = "renewal" if prev_hours > 10 else "new"
 
     cid = execute_lastrowid(
         """INSERT INTO contracts (lead_id, contract_no, total_amount, status, signed_at, remark, created_by, sign_type)
@@ -211,7 +211,7 @@ def create_signing(handler, token_payload, qs, body):
            WHERE c.lead_id=?""",
         (int(lead_id),),
     )["h"]
-    sign_type = "renewal" if prev_hours >= 10 else "new"
+    sign_type = "renewal" if prev_hours > 10 else "new"
 
     signed_at = body.get("signed_at", "")
     if not signed_at:
@@ -305,7 +305,7 @@ def create_signing(handler, token_payload, qs, body):
 @post("/api/contracts/refresh-sign-types")
 def refresh_sign_types(handler, token_payload, qs, body):
     """根据实际累计课时重新计算所有合同的 sign_type
-       规则: 同一学生下，签该合同时已有累计 >= 10 课时 → renewal，否则 → new
+       规则: 同一学生下，签该合同时已有累计 > 10 课时 → renewal，否则 → new
     """
     if not can(token_payload["role"], "contract:manage"):
         error_response(handler, "无权操作", 403)
@@ -323,7 +323,7 @@ def refresh_sign_types(handler, token_payload, qs, body):
         cid = c["id"]
         lid = c["lead_id"]
         prior = lead_hours.get(lid, 0)
-        should = "renewal" if prior >= 10 else "new"
+        should = "renewal" if prior > 10 else "new"
 
         if c["sign_type"] != should:
             execute("UPDATE contracts SET sign_type=? WHERE id=?", (should, cid))
