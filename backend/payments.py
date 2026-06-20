@@ -42,7 +42,7 @@ def list_all_payments(handler, token_payload, qs, body):
 
     rows = query(
         f"""SELECT pr.id as payment_id, pr.payment_date, pr.amount, pr.method,
-                   pr.contract_id, c.lead_id, c.sign_type, c.signed_at,
+                   pr.contract_id, c.lead_id, pr.sign_type, c.signed_at,
                    l.name as lead_name,
                    COALESCE(pr.hours, 0) as total_hours
             FROM payment_records pr
@@ -106,10 +106,20 @@ def create_payment(handler, token_payload, qs, body, contract_id=None):
     try:
         conn.execute("BEGIN")
 
+        # 计算签名类型：该学生此笔之前累计课时
+        prev = query_one(
+            """SELECT COALESCE(SUM(pr2.hours),0) as h
+               FROM payment_records pr2
+               JOIN contracts c2 ON pr2.contract_id = c2.id
+               WHERE c2.lead_id=(SELECT lead_id FROM contracts WHERE id=?)""",
+            (cid,),
+        )["h"]
+        pay_sign_type = "renewal" if prev > 10 else "new"
+
         # 写入流水
         execute_lastrowid(
-            "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours) VALUES (?,?,?,?,?,?,?,?)",
-            (cid, amount, "payment", method, note, uid, payment_date, float(body.get("hours", 0))),
+            "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours, sign_type) VALUES (?,?,?,?,?,?,?,?,?)",
+            (cid, amount, "payment", method, note, uid, payment_date, float(body.get("hours", 0)), pay_sign_type),
         )
 
         # 原子更新实收金额
@@ -263,6 +273,26 @@ def update_payment_hours(handler, token_payload, qs, body, contract_id=None, pay
     new_hrs = float(body.get("hours", 0))
     execute("UPDATE payment_records SET hours=? WHERE id=?", (new_hrs, pid))
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"收款课时 {p['hours']} -> {new_hrs}h")
+    ok_response(handler, {"message": "已更新"})
+
+
+@put("/api/contracts/{contract_id}/payments/{payment_id}/sign-type")
+def update_payment_sign_type(handler, token_payload, qs, body, contract_id=None, payment_id=None):
+    """更新收款记录的 sign_type（每笔收款独立类型）"""
+    if not can(token_payload["role"], "contract:manage"):
+        error_response(handler, "无权操作", 403)
+        return
+    pid = int(payment_id)
+    p = query_one("SELECT id, sign_type FROM payment_records WHERE id=? AND contract_id=?", (pid, int(contract_id)))
+    if not p:
+        error_response(handler, "记录不存在", 404)
+        return
+    new_type = body.get("sign_type", "new")
+    if new_type not in ("new", "renewal"):
+        error_response(handler, "类型只能是 new 或 renewal")
+        return
+    execute("UPDATE payment_records SET sign_type=? WHERE id=?", (new_type, pid))
+    add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"类型 {p['sign_type']} -> {new_type}")
     ok_response(handler, {"message": "已更新"})
 
 

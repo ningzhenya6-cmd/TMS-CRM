@@ -1499,7 +1499,7 @@ app.component('include-signing', {
       this.loadPayments();
     },
     async toggleSignType(paymentRow, newType) {
-      const res = await API.put('/contracts/' + paymentRow.contract_id, { sign_type: newType });
+      const res = await API.put('/contracts/' + paymentRow.contract_id + '/payments/' + paymentRow.payment_id + '/sign-type', { sign_type: newType });
       if (res.error) { toast(res.error, 'error'); return; }
       paymentRow.sign_type = newType;
       toast(newType === 'renewal' ? '已改为续费' : '已改为新签', 'success');

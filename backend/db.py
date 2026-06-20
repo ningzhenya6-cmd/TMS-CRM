@@ -211,6 +211,7 @@ def init_db():
         "ALTER TABLE consulting_reports ADD COLUMN program_courses TEXT DEFAULT ''",
         "ALTER TABLE consulting_reports ADD COLUMN target_level TEXT DEFAULT ''",
         "ALTER TABLE payment_records ADD COLUMN hours REAL DEFAULT 0",
+        "ALTER TABLE payment_records ADD COLUMN sign_type TEXT NOT NULL DEFAULT 'new'",
     ]:
         try:
             conn.execute(ddl)

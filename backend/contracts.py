@@ -203,23 +203,18 @@ def create_signing(handler, token_payload, qs, body):
         error_response(handler, "收款金额必须大于 0")
         return
 
-    # 计算新签/续费：该学生已有合同下课时包的总课时
+    # 计算新签/续费：该学生此笔收款之前累计的课时（基于 payment_records.hours）
     prev_hours = query_one(
-        """SELECT COALESCE(SUM(p.total_hours),0) as h
-           FROM packages p
-           JOIN contracts c ON p.contract_id = c.id
-           WHERE c.lead_id=?""",
+        """SELECT COALESCE(SUM(pr.hours),0) as h
+           FROM payment_records pr
+           JOIN contracts c2 ON pr.contract_id = c2.id
+           WHERE c2.lead_id=?""",
         (int(lead_id),),
     )["h"]
     sign_type = "renewal" if prev_hours > 10 else "new"
 
-    signed_at = body.get("signed_at", "")
-    if not signed_at:
-        signed_at = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
-
-    payment_date = body.get("payment_date", "")
-    if not payment_date:
-        payment_date = signed_at
+    signed_at = body.get("signed_at", "") or __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+    payment_date = body.get("payment_date", "") or signed_at
 
     uid = token_payload["sub"]
     uname = token_payload.get("name", "")
@@ -262,8 +257,8 @@ def create_signing(handler, token_payload, qs, body):
 
         # 3. 创建收款记录（每笔收款独立记录课时）
         pay_id = execute_lastrowid(
-            """INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours)
-               VALUES (?,?,?,?,?,?,?,?)""",
+            """INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours, sign_type)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
             (
                 cid,
                 payment_amount,
@@ -273,6 +268,7 @@ def create_signing(handler, token_payload, qs, body):
                 uid,
                 payment_date,
                 total_hours,
+                sign_type,
             ),
         )
 
@@ -304,40 +300,39 @@ def create_signing(handler, token_payload, qs, body):
 
 @post("/api/contracts/refresh-sign-types")
 def refresh_sign_types(handler, token_payload, qs, body):
-    """根据实际累计课时重新计算所有合同的 sign_type
-       规则: 同一学生下，签该合同时已有累计 > 10 课时 → renewal，否则 → new
+    """根据实际累计课时重新计算所有收款记录的 sign_type
+       规则: 同一学生下，该笔收款前已有累计 > 10 课时 → renewal，否则 → new
     """
     if not can(token_payload["role"], "contract:manage"):
         error_response(handler, "无权操作", 403)
         return
 
-    contracts = query(
-        """SELECT c.id, c.lead_id, c.sign_type, c.signed_at
-           FROM contracts c ORDER BY c.lead_id, c.signed_at ASC"""
+    payments = query(
+        """SELECT pr.id, pr.contract_id, pr.hours, pr.sign_type,
+                   c.lead_id, l.name as lead_name
+            FROM payment_records pr
+            JOIN contracts c ON pr.contract_id = c.id
+            JOIN leads l ON c.lead_id = l.id
+            ORDER BY c.lead_id, pr.payment_date ASC, pr.id ASC"""
     )
 
     updated = 0
     lead_hours = {}  # lead_id -> cumulative hours so far
 
-    for c in contracts:
-        cid = c["id"]
-        lid = c["lead_id"]
+    for p in payments:
+        pid = p["id"]
+        lid = p["lead_id"]
         prior = lead_hours.get(lid, 0)
         should = "renewal" if prior > 10 else "new"
 
-        if c["sign_type"] != should:
-            execute("UPDATE contracts SET sign_type=? WHERE id=?", (should, cid))
+        if p["sign_type"] != should:
+            execute("UPDATE payment_records SET sign_type=? WHERE id=?", (should, pid))
             updated += 1
 
-        # 累加当前合同的课时供后续合同判断
-        cur_hrs = query_one(
-            "SELECT COALESCE(SUM(total_hours),0) as h FROM packages WHERE contract_id=?",
-            (cid,),
-        )["h"]
-        lead_hours[lid] = prior + cur_hrs
+        lead_hours[lid] = prior + (p["hours"] or 0)
 
     uid = token_payload["sub"]
     uname = token_payload.get("name", "")
-    add_oplog(uid, uname, "refresh", "contract", 0, f"重算 sign_type，修正 {updated} 条")
+    add_oplog(uid, uname, "refresh", "payment", 0, f"重算 sign_type，修正 {updated} 条")
 
-    ok_response(handler, {"updated": updated, "message": f"已重算，{updated} 条合同类型已修正"})
+    ok_response(handler, {"updated": updated, "message": f"已重算，{updated} 条收款类型已修正"})
