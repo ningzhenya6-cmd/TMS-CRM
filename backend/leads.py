@@ -12,6 +12,7 @@ def list_leads(handler, token_payload, qs, body):
     page_size = int(qs.get("page_size", [15])[0])
     status = qs.get("status", [None])[0]
     source = qs.get("source", [None])[0]
+    rank = qs.get("rank", [None])[0]
     search = qs.get("search", [None])[0]
     assignee_id = qs.get("assignee_id", [None])[0]
     date_from = qs.get("date_from", [None])[0]
@@ -34,6 +35,9 @@ def list_leads(handler, token_payload, qs, body):
     if source and source != "all":
         where.append("l.source=?")
         params.append(source)
+    if rank and rank != "all":
+        where.append("l.lead_rank=?")
+        params.append(rank)
     if assignee_id:
         where.append("l.assignee_id=?")
         params.append(int(assignee_id))
@@ -78,6 +82,7 @@ def export_leads(handler, token_payload, qs, body):
     """导出线索 CSV"""
     status = qs.get("status", [None])[0]
     source = qs.get("source", [None])[0]
+    rank = qs.get("rank", [None])[0]
     search = qs.get("search", [None])[0]
     date_from = qs.get("date_from", [None])[0]
     date_to = qs.get("date_to", [None])[0]
@@ -97,6 +102,9 @@ def export_leads(handler, token_payload, qs, body):
     if source and source != "all":
         where.append("l.source=?")
         params.append(source)
+    if rank and rank != "all":
+        where.append("l.lead_rank=?")
+        params.append(rank)
     if search:
         like = f"%{search}%"
         where.append("(l.name LIKE ? OR l.phone LIKE ? OR l.wechat LIKE ?)")

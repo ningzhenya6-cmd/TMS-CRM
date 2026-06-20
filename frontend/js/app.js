@@ -220,7 +220,7 @@ app.component('include-leads', {
   data() {
     return {
       list: [], total: 0, page: 1, pageSize: 15,
-      search: '', filters: { status: 'all', source: 'all', dateFrom: '', dateTo: '' },
+      search: '', filters: { status: 'all', source: 'all', rank: 'all', dateFrom: '', dateTo: '' },
       selectedIds: [], showCreate: false, showAssign: false,
       creating: false, assignTarget: '', users: [],
       createForm: { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' },
@@ -247,7 +247,7 @@ app.component('include-leads', {
   methods: {
     async load() {
       if (TMSStore.leadsPage && TMSStore.leadsPage > 1) { this.page = TMSStore.leadsPage; TMSStore.leadsPage = 1; }
-      let p = `?page=${this.page}&page_size=${this.pageSize}&status=${this.filters.status}&source=${this.filters.source}`;
+      let p = `?page=${this.page}&page_size=${this.pageSize}&status=${this.filters.status}&source=${this.filters.source}&rank=${this.filters.rank}`;
       if (this.filters.dateFrom) p += `&date_from=${this.filters.dateFrom}`;
       if (this.filters.dateTo) p += `&date_to=${this.filters.dateTo}`;
       if (this.search) p += '&search=' + encodeURIComponent(this.search);
@@ -269,6 +269,7 @@ app.component('include-leads', {
       const params = new URLSearchParams();
       if (this.filters.status !== 'all') params.set('status', this.filters.status);
       if (this.filters.source !== 'all') params.set('source', this.filters.source);
+      if (this.filters.rank !== 'all') params.set('rank', this.filters.rank);
       if (this.filters.dateFrom) params.set('date_from', this.filters.dateFrom);
       if (this.filters.dateTo) params.set('date_to', this.filters.dateTo);
       if (this.search) params.set('search', this.search);

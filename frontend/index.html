@@ -978,6 +978,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <option value="all">全部来源</option>
         <option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option>
       </select>
+      <select v-model="filters.rank" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
+        <option value="all">全部等级</option>
+        <option value="A">A级</option>
+        <option value="B">B级</option>
+        <option value="C">C级</option>
+      </select>
       <input type="date" v-model="filters.dateFrom" @change="onDateChange"
              class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-36"
              :max="filters.dateTo || undefined" title="开始日期">
@@ -3659,7 +3665,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=84"></script>
+<script src="js/app.js?v=85"></script>
 
   </body>
 </html>
