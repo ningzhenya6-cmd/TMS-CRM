@@ -1484,10 +1484,23 @@ app.component('include-signing', {
     async updatePkgHrs(paymentRow, newVal) {
       const v = parseFloat(newVal);
       if (isNaN(v) || v < 0) return;
-      const pid = paymentRow.pkg_id;
-      if (!pid) return;
-      const res = await API.put('/packages/' + pid, { total_hours: v });
-      if (res.error) { toast(res.error, 'error'); return; }
+      const cid = paymentRow.contract_id;
+      const pkgRes = await API.get('/packages?contract_id=' + cid);
+      if (pkgRes.error) { toast(pkgRes.error, 'error'); return; }
+      const pkgs = pkgRes.data || [];
+      if (pkgs.length === 0) return;
+      const oldTotal = pkgs.reduce((s, p) => s + (p.total_hours || 0), 0);
+      if (oldTotal <= 0) { toast('当前课时为0，无法分配', 'error'); return; }
+      // 按比例更新每个课时包，最后一个吸收舍入误差
+      let allocated = 0;
+      for (let i = 0; i < pkgs.length; i++) {
+        const ratio = pkgs[i].total_hours / oldTotal;
+        const newHrs = i === pkgs.length - 1
+          ? Math.round((v - allocated) * 10) / 10  // 最后一个补齐
+          : Math.round(v * ratio * 10) / 10;
+        allocated += newHrs;
+        await API.put('/packages/' + pkgs[i].id, { total_hours: Math.max(0, newHrs) });
+      }
       paymentRow.total_hours = v;
       toast('课时已更新', 'success');
     },
