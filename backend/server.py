@@ -82,7 +82,9 @@ class TMSHandler(BaseHTTPRequestHandler):
                         return
 
                 kwargs = m.groupdict()
-                body = parse_body(self) if method in ("POST", "PUT", "DELETE") else {}
+                # 跳过 multipart 请求的 body 预解析（文件上传需要原始数据）
+                ct = self.headers.get("Content-Type", "")
+                body = parse_body(self) if method in ("POST", "PUT", "DELETE") and "multipart/form-data" not in ct else {}
                 try:
                     handler_fn(self, token_payload, qs, body, **kwargs)
                 except Exception as e:
@@ -124,6 +126,11 @@ class TMSHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(content)))
+            # HTML 禁止浏览器缓存，确保前端更新后立即生效
+            if ext == ".html":
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
             self._send_cors()
             self.end_headers()
             self.wfile.write(content)
@@ -162,6 +169,9 @@ def run_server(host="0.0.0.0", port=8766):
     import payments  # noqa
     import growth  # noqa
     import consulting  # noqa
+    import webhook  # noqa
+    import homework  # noqa
+    import batch_feedback  # noqa
 
     server = HTTPServer((host, port), TMSHandler)
     print(f"[TMS] 🚀 服务启动: http://{host}:{port}")

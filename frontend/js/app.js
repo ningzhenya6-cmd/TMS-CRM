@@ -90,6 +90,7 @@ const ROLE_MENU = [
   { id: 'consulting', label: '学业分析', icon: 'bi-clipboard-data', roles: ['cs', 'consultant', 'academic', 'admin', 'supervisor'], view: 'consulting' },
   { id: 'teachers', label: '师资管理', icon: 'bi-person-video3', roles: ['coordinator', 'admin', 'supervisor'], view: 'teachers' },
   { id: 'divider2', divider: true },
+  { id: 'batch-feedback', label: '批量反馈', icon: 'bi-lightning-charge', roles: ['cs', 'consultant', 'academic', 'coordinator', 'admin', 'supervisor'], view: 'batch-feedback' },
   { id: 'pool', label: '公海池', icon: 'bi-water', roles: ['admin', 'supervisor', 'cs', 'consultant'], view: 'pool' },
   { id: 'finance', label: '财务管理', icon: 'bi-currency-dollar', roles: ['admin', 'supervisor'], view: 'finance' },
 ];
@@ -2739,4 +2740,122 @@ app.component('include-consulting', {
     },
   },
   created() { this.load(); },
+});
+
+/* ════════════════════════════════════════
+   批量反馈组件
+   ════════════════════════════════════════ */
+app.component('include-batch-feedback', {
+  props: ['user', 'switchView', 'roleLabel', 'statusBadge'],
+  template: '#tpl-batch-feedback',
+  data() {
+    return {
+      leadId: '', allLeadsForSearch: [],
+      linksText: '', genRunning: false,
+      batchId: '', batchStarted: false,
+      batchProgress: { total: 0, completed: 0, current_step: '' },
+      batchStatus: '',
+      batchResults: [],
+      pollTimer: null,
+      // Quick add
+      showQuickAdd: false, quickSaving: false,
+      quickForm: { name: '', phone: '', source: '' },
+      // View feedback
+      showViewFeedback: false, viewScheduleId: null, viewFeedbackData: {},
+    };
+  },
+  computed: {
+    selectedLead() {
+      if (!this.leadId) return null;
+      return this.allLeadsForSearch.find(l => l.id == this.leadId) || null;
+    },
+    parsedLinks() {
+      return (this.linksText || '').split('\n').map(s => s.trim()).filter(s => s && s.startsWith('http'));
+    },
+  },
+  methods: {
+    async loadLeads() {
+      const res = await API.get('/leads?page=1&page_size=100000');
+      if (!res.error) this.allLeadsForSearch = res.data?.items || [];
+    },
+    async submitQuickAdd() {
+      if (!this.quickForm.name.trim()) { toast('请输入学生姓名', 'error'); return; }
+      this.quickSaving = true;
+      const res = await API.post('/leads', {
+        name: this.quickForm.name.trim(),
+        phone: this.quickForm.phone.trim(),
+        source: this.quickForm.source.trim() || '其他',
+      });
+      this.quickSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('学生已添加', 'success');
+      this.showQuickAdd = false;
+      this.quickForm = { name: '', phone: '', source: '' };
+      await this.loadLeads();
+      if (res.data) this.leadId = res.data.id || res.data.data?.id;
+    },
+    async startBatch() {
+      if (!this.leadId || this.parsedLinks.length === 0) return;
+      this.genRunning = true;
+      this.batchStarted = true;
+      this.batchResults = this.parsedLinks.map((l, i) => ({ idx: i, link: l, status: 'pending' }));
+
+      const res = await API.post('/batch-feedback/generate', {
+        lead_id: parseInt(this.leadId),
+        links: this.parsedLinks,
+      });
+      if (res.error) { toast(res.error, 'error'); this.genRunning = false; return; }
+
+      this.batchId = res.data?.batch_id;
+      this.pollProgress();
+    },
+    async pollProgress() {
+      if (!this.batchId) { this.genRunning = false; return; }
+      const res = await API.get('/batch-feedback/progress?batch_id=' + this.batchId);
+      if (res.error) { this.genRunning = false; return; }
+      const data = res.data;
+      this.batchProgress = data;
+      this.batchStatus = data.status;
+      if (data.results && data.results.length) {
+        this.batchResults = data.results;
+      }
+      if (data.status === 'done') {
+        this.genRunning = false;
+        if (this.pollTimer) clearInterval(this.pollTimer);
+        return;
+      }
+      this.pollTimer = setTimeout(() => this.pollProgress(), 2000);
+    },
+    async viewFeedback(scheduleId) {
+      this.viewScheduleId = scheduleId;
+      const res = await API.get('/schedules/' + scheduleId + '/feedback');
+      if (res.error) { toast(res.error, 'error'); return; }
+      this.viewFeedbackData = res.data || {};
+      if (!this.viewFeedbackData.studentName && this.selectedLead) {
+        this.viewFeedbackData.studentName = this.selectedLead.name;
+      }
+      this.showViewFeedback = true;
+    },
+    closeViewFeedback() { this.showViewFeedback = false; },
+    async saveViewFeedback() {
+      const res = await API.post('/schedules/' + this.viewScheduleId + '/feedback', this.viewFeedbackData);
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('已保存', 'success');
+      this.closeViewFeedback();
+    },
+    copyBatchFeedback(includeInternal) {
+      const d = this.viewFeedbackData;
+      let text = `【课次反馈】${d.studentName || ''}\n\n`;
+      text += `📚 教学内容:\n${d.content_covered || ''}\n\n`;
+      text += `📝 学生表现:\n${d.student_performance || ''}\n\n`;
+      text += `⚠️ 薄弱环节:\n${d.difficulties || ''}\n\n`;
+      text += `📖 作业完成:\n${d.homework_completion || ''}`;
+      if (includeInternal) {
+        text += `\n\n📋 教师备注:\n${d.teacher_notes || ''}\n\n`;
+        text += `💡 后续建议:\n${d.next_focus || ''}`;
+      }
+      navigator.clipboard.writeText(text).then(() => toast('已复制', 'success')).catch(() => toast('复制失败', 'error'));
+    },
+  },
+  created() { this.loadLeads(); },
 });

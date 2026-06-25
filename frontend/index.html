@@ -242,6 +242,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <include-consulting v-if="currentView === 'consulting'"
             :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
         </include-consulting>
+        <include-batch-feedback v-if="currentView === 'batch-feedback'"
+            :user="user" :switch-view="switchView" :role-label="roleLabel" :status-badge="statusBadge">
+        </include-batch-feedback>
       </div>
     </main>
   </div>
@@ -3663,9 +3666,130 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 </div>
 </script>
 
+<!-- Batch Feedback -->
+<script type="text/x-template" id="tpl-batch-feedback">
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-xl font-bold text-gray-900">批量反馈</h3>
+      <p class="text-sm text-gray-500 mt-0.5">粘贴多个 ClassIn 链接，一键生成全部课后反馈</p>
+    </div>
+  </div>
+
+  <!-- 第1步：选择学生 -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+    <h5 class="font-semibold text-gray-800 mb-3">第1步：选择学生</h5>
+    <div class="flex items-center gap-3">
+      <div class="flex-1 max-w-md">
+        <searchable-select
+          :items="allLeadsForSearch"
+          label-key="name"
+          sub-label-key="phone"
+          placeholder="搜索已有学生..."
+          v-model="leadId">
+        </searchable-select>
+      </div>
+      <span class="text-xs text-gray-400">或</span>
+      <button class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showQuickAdd = true">
+        <i class="bi bi-plus-lg"></i> 快速添加
+      </button>
+    </div>
+    <div v-if="selectedLead" class="mt-3 px-3 py-2 bg-indigo-50 rounded-lg text-sm text-indigo-700 inline-flex items-center gap-2">
+      <i class="bi bi-person-check"></i> {{ selectedLead.name }} {{ selectedLead.phone ? '· ' + selectedLead.phone : '' }}
+    </div>
+  </div>
+
+  <!-- 第2步：粘贴链接 -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+    <h5 class="font-semibold text-gray-800 mb-3">第2步：粘贴 ClassIn 链接</h5>
+    <textarea v-model="linksText" :disabled="genRunning" rows="6"
+      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none font-mono"
+      placeholder="每行粘贴一个 ClassIn 回放链接...&#10;https://live.eeo.cn/pc.html?lessonKey=xxx&#10;https://live.eeo.cn/webcast.php?courseKey=xxx&lessonid=yyy"></textarea>
+    <p class="text-xs text-gray-400 mt-1">已识别 <strong>{{ parsedLinks.length }}</strong> 个链接</p>
+  </div>
+
+  <!-- 第3步：一键生成 -->
+  <div class="mb-4">
+    <button :disabled="!leadId || parsedLinks.length === 0 || genRunning"
+      class="px-5 py-2.5 text-sm rounded-lg text-white font-medium disabled:opacity-40 transition"
+      :class="genRunning ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'"
+      @click="startBatch">
+      <i class="bi bi-lightning-charge"></i>
+      {{ genRunning ? '生成中...' : '一键生成 ' + parsedLinks.length + ' 节课后反馈' }}
+    </button>
+  </div>
+
+  <!-- 进度面板 -->
+  <div v-if="batchStarted" class="bg-white rounded-xl border border-gray-200 p-5">
+    <h5 class="font-semibold text-gray-800 mb-3">
+      {{ genRunning ? '生成中 — ' + batchProgress.current_step : (batchStatus === 'done' ? '✅ 生成完成' : '') }}
+      <span class="text-xs font-normal text-gray-400 ml-2" v-if="batchStatus === 'done'">
+        成功 {{ batchResults.filter(r => r.status === 'done').length }} / {{ batchResults.length }}
+      </span>
+    </h5>
+    <div class="space-y-2 max-h-96 overflow-y-auto">
+      <div v-for="(r, i) in batchResults" :key="i"
+        class="flex items-center gap-3 p-3 rounded-lg border text-sm"
+        :class="r.status === 'done' ? 'border-green-200 bg-green-50' : r.status === 'error' ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'">
+        <span class="text-xs text-gray-400 w-6 text-center">{{ i+1 }}</span>
+        <span class="flex-1 text-xs text-gray-600 truncate">{{ (r.link || '').slice(0,60) }}</span>
+        <span v-if="r.status === 'done'" class="text-xs text-green-600 font-medium flex items-center gap-1">
+          <i class="bi bi-check-circle-fill"></i>
+          <a href="#" class="underline hover:text-green-800" @click.prevent="viewFeedback(r.schedule_id)">查看反馈</a>
+        </span>
+        <span v-else-if="r.status === 'error'" class="text-xs text-red-500" :title="r.error">
+          <i class="bi bi-exclamation-circle"></i> 失败
+        </span>
+        <span v-else class="text-xs text-gray-400 flex items-center gap-1">
+          <span class="inline-block w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span> 等待...
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 查看反馈弹窗 -->
+  <div v-if="showViewFeedback" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeViewFeedback">
+    <div class="bg-white rounded-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-1">课后反馈</h5>
+      <p class="text-xs text-gray-400 mb-4">{{ viewFeedbackData.studentName || '' }} · {{ viewFeedbackData.classin_link || '' }}</p>
+      <div class="space-y-3 text-sm">
+        <div><label class="block text-xs text-gray-500 mb-0.5">教学内容</label><textarea v-model="viewFeedbackData.content_covered" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"></textarea></div>
+        <div><label class="block text-xs text-gray-500 mb-0.5">学生表现</label><textarea v-model="viewFeedbackData.student_performance" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"></textarea></div>
+        <div><label class="block text-xs text-gray-500 mb-0.5">薄弱环节</label><textarea v-model="viewFeedbackData.difficulties" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"></textarea></div>
+        <div><label class="block text-xs text-gray-500 mb-0.5">作业完成</label><input v-model="viewFeedbackData.homework_completion" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"></div>
+        <div><label class="block text-xs text-gray-500 mb-0.5">教师备注（内部）</label><textarea v-model="viewFeedbackData.teacher_notes" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"></textarea></div>
+        <div><label class="block text-xs text-gray-500 mb-0.5">后续建议（内部）</label><textarea v-model="viewFeedbackData.next_focus" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"></textarea></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-100" @click="copyBatchFeedback(true)"><i class="bi bi-clipboard"></i> 复制完整版</button>
+        <button class="px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-100" @click="copyBatchFeedback(false)"><i class="bi bi-clipboard-check"></i> 复制家长版</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="saveViewFeedback">保存</button>
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="closeViewFeedback">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快速添加学生弹窗 -->
+  <div v-if="showQuickAdd" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showQuickAdd = false">
+    <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-xl">
+      <h5 class="font-semibold text-gray-900 mb-4">快速添加学生</h5>
+      <div class="space-y-3">
+        <div><label class="block text-xs text-gray-600 mb-1">姓名 <span class="text-red-500">*</span></label><input v-model="quickForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="学生姓名"></div>
+        <div><label class="block text-xs text-gray-600 mb-1">手机</label><input v-model="quickForm.phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="选填"></div>
+        <div><label class="block text-xs text-gray-600 mb-1">来源</label><input v-model="quickForm.source" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 转介绍"></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showQuickAdd = false">取消</button>
+        <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitQuickAdd" :disabled="quickSaving">{{ quickSaving ? '添加中...' : '添加' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+</script>
+
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=85"></script>
+<script src="js/app.js?v=86"></script>
 
   </body>
 </html>
