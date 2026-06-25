@@ -2759,7 +2759,7 @@ app.component('include-batch-feedback', {
       pollTimer: null,
       // Quick add
       showQuickAdd: false, quickSaving: false,
-      quickForm: { name: '', phone: '', source: '' },
+      quickForm: { name: '', phone: '', source: '', created_at: '' },
       // View feedback
       showViewFeedback: false, viewScheduleId: null, viewFeedbackData: {},
     };
@@ -2785,12 +2785,13 @@ app.component('include-batch-feedback', {
         name: this.quickForm.name.trim(),
         phone: this.quickForm.phone.trim(),
         source: this.quickForm.source.trim() || '其他',
+        created_at: this.quickForm.created_at || undefined,
       });
       this.quickSaving = false;
       if (res.error) { toast(res.error, 'error'); return; }
       toast('学生已添加', 'success');
       this.showQuickAdd = false;
-      this.quickForm = { name: '', phone: '', source: '' };
+      this.quickForm = { name: '', phone: '', source: '', created_at: '' };
       await this.loadLeads();
       if (res.data) this.leadId = res.data.id || res.data.data?.id;
     },

@@ -238,9 +238,11 @@ def create_lead(handler, token_payload, qs, body):
         error_response(handler, "姓名不能为空")
         return
 
+    created_at = body.get("created_at", "") or __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
+
     lead_id = execute_lastrowid(
-        """INSERT INTO leads (name, phone, wechat, source, country, grade, remark, creator_id, status)
-           VALUES (?,?,?,?,?,?,?,?,'pending')""",
+        """INSERT INTO leads (name, phone, wechat, source, country, grade, remark, creator_id, status, created_at)
+           VALUES (?,?,?,?,?,?,?,?,'pending',?)""",
         (
             name,
             body.get("phone", ""),
@@ -250,6 +252,7 @@ def create_lead(handler, token_payload, qs, body):
             body.get("grade", ""),
             body.get("remark", ""),
             token_payload["sub"],
+            created_at,
         ),
     )
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
