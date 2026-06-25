@@ -2769,6 +2769,7 @@ app.component('include-batch-feedback', {
       if (!this.leadId) return null;
       return this.allLeadsForSearch.find(l => l.id == this.leadId) || null;
     },
+    openLeadDetail(id) { TMSStore.leadId = id; TMSStore.fromView = 'batch-feedback'; this.switchView('lead-detail'); },
     parsedLinks() {
       return (this.linksText || '').split('\n').map(s => s.trim()).filter(s => s && s.startsWith('http'));
     },

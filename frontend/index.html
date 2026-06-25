@@ -3694,8 +3694,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <i class="bi bi-plus-lg"></i> 快速添加
       </button>
     </div>
-    <div v-if="selectedLead" class="mt-3 px-3 py-2 bg-indigo-50 rounded-lg text-sm text-indigo-700 inline-flex items-center gap-2">
-      <i class="bi bi-person-check"></i> {{ selectedLead.name }} {{ selectedLead.phone ? '· ' + selectedLead.phone : '' }}
+    <div v-if="selectedLead" class="mt-3 flex items-center gap-3">
+      <span class="px-3 py-2 bg-indigo-50 rounded-lg text-sm text-indigo-700 inline-flex items-center gap-2">
+        <i class="bi bi-person-check"></i> {{ selectedLead.name }} {{ selectedLead.phone ? '· ' + selectedLead.phone : '' }}
+      </span>
+      <a href="#" class="text-xs text-indigo-600 underline hover:text-indigo-800" @click.prevent="openLeadDetail(selectedLead.id)">
+        <i class="bi bi-arrow-right"></i> 进入学生详情
+      </a>
     </div>
   </div>
 
@@ -3745,6 +3750,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </span>
       </div>
     </div>
+    <div v-if="batchStatus === 'done' && selectedLead" class="mt-3 text-center">
+      <a href="#" class="text-sm text-indigo-600 underline hover:text-indigo-800" @click.prevent="openLeadDetail(selectedLead.id)">
+        <i class="bi bi-file-text"></i> 进入学生详情 → 生成整体学情报告
+      </a>
+    </div>
   </div>
 
   <!-- 查看反馈弹窗 -->
@@ -3790,7 +3800,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=87"></script>
+<script src="js/app.js?v=88"></script>
 
   </body>
 </html>
