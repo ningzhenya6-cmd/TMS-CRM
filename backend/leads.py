@@ -297,7 +297,8 @@ def update_lead(handler, token_payload, qs, body, lead_id=None):
 
     # ── 其他字段正常更新 ──
     allowed_fields = ["name", "phone", "wechat", "source", "country", "grade",
-                      "assignee_id", "remark", "coordinator_id", "lost_reason"]
+                      "assignee_id", "remark", "coordinator_id", "lost_reason",
+                      "created_at", "lead_rank", "contact_status"]
     updates = []
     params = []
     for field in allowed_fields:
