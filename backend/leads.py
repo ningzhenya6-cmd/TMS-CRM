@@ -76,6 +76,14 @@ def list_leads(handler, token_payload, qs, body):
         "items": rows,
     })
 
+@get("/api/leads/sources")
+def list_sources(handler, token_payload, qs, body):
+    """返回数据库里所有来源及其数量"""
+    rows = query(
+        "SELECT source, COUNT(*) as cnt FROM leads WHERE source != '' GROUP BY source ORDER BY cnt DESC"
+    )
+    ok_response(handler, rows)
+
 
 @get("/api/leads/export")
 def export_leads(handler, token_payload, qs, body):

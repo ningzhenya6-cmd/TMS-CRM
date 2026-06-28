@@ -225,7 +225,7 @@ app.component('include-leads', {
       selectedIds: [], showCreate: false, showAssign: false,
       creating: false, assignTarget: '', users: [],
       createForm: { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' },
-      sourceOptions: ['抖音', '小红书', '视频号', '转介绍', '线下活动', '线上', '其他'],
+      sourceOptions: [],
       searchTimer: null,
       deleteConfirm: { show: false, title: '', message: '', type: '', id: null, loading: false },
     };
@@ -263,6 +263,10 @@ app.component('include-leads', {
     },
     onDateChange() { this.page = 1; this.load(); },
     goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
+    async loadSources() {
+      const res = await API.get('/leads/sources');
+      if (!res.error) this.sourceOptions = res.data || [];
+    },
     toggleAll(e) { this.selectedIds = e.target.checked ? this.list.map(l => l.id) : []; },
     openLead(id, ev) { if (ev?.target?.type === 'checkbox') return; TMSStore.leadId = id; TMSStore.fromView = this.currentView; TMSStore.leadsPage = this.page; TMSStore.leadsList = this.list.map(l => l.id); this.switchView('lead-detail'); },
     openCreate() { this.createForm = { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' }; this.showCreate = true; },
@@ -343,7 +347,7 @@ app.component('include-leads', {
       this.load();
     },
   },
-  created() { this.load(); },
+  created() { this.load(); this.loadSources(); },
 });
 
 /* ════════════════════════════════════════

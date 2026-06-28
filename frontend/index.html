@@ -979,7 +979,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </select>
       <select v-model="filters.source" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
         <option value="all">全部来源</option>
-        <option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option>
+        <option v-for="s in sourceOptions" :key="s.source" :value="s.source">{{ s.source }} ({{ s.cnt }})</option>
       </select>
       <select v-model="filters.rank" @change="load" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
         <option value="all">全部等级</option>
@@ -1064,7 +1064,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <div><label class="block text-xs text-gray-600 mb-1">微信</label><input type="text" v-model="createForm.wechat" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="微信号"></div>
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-xs text-gray-600 mb-1">来源</label><select v-model="createForm.source" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"><option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}</option></select></div>
+          <div><label class="block text-xs text-gray-600 mb-1">来源</label><select v-model="createForm.source" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"><option v-for="s in sourceOptions" :key="s.source" :value="s.source">{{ s.source }}</option></select></div>
           <div><label class="block text-xs text-gray-600 mb-1">国家</label><input type="text" v-model="createForm.country" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: 英国"></div>
         </div>
         <div><label class="block text-xs text-gray-600 mb-1">年级</label><input type="text" v-model="createForm.grade" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="如: A-Level"></div>
@@ -3800,7 +3800,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=89"></script>
+<script src="js/app.js?v=90"></script>
 
   </body>
 </html>
