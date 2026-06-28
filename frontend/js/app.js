@@ -261,12 +261,15 @@ app.component('include-leads', {
       clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 300);
     },
-    onDateChange() { this.page = 1; this.load(); },
-    goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
     async loadSources() {
-      const res = await API.get('/leads/sources');
+      const params = new URLSearchParams();
+      if (this.filters.dateFrom) params.set('date_from', this.filters.dateFrom);
+      if (this.filters.dateTo) params.set('date_to', this.filters.dateTo);
+      const res = await API.get('/leads/sources?' + params.toString());
       if (!res.error) this.sourceOptions = res.data || [];
     },
+    onDateChange() { this.page = 1; this.load(); this.loadSources(); },
+    goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
     toggleAll(e) { this.selectedIds = e.target.checked ? this.list.map(l => l.id) : []; },
     openLead(id, ev) { if (ev?.target?.type === 'checkbox') return; TMSStore.leadId = id; TMSStore.fromView = this.currentView; TMSStore.leadsPage = this.page; TMSStore.leadsList = this.list.map(l => l.id); this.switchView('lead-detail'); },
     openCreate() { this.createForm = { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' }; this.showCreate = true; },

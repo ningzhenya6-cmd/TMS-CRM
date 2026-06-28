@@ -78,9 +78,31 @@ def list_leads(handler, token_payload, qs, body):
 
 @get("/api/leads/sources")
 def list_sources(handler, token_payload, qs, body):
-    """返回数据库里所有来源及其数量"""
+    """返回来源及其数量，支持日期范围筛选，遵循角色权限"""
+    date_from = qs.get("date_from", [None])[0]
+    date_to = qs.get("date_to", [None])[0]
+
+    role = token_payload["role"]
+    user_id = token_payload["sub"]
+
+    where = ["source != ''"]
+    params = []
+
+    scope_clause, scope_params = scope_where("lead", role, user_id, "l")
+    where.append(scope_clause)
+    params.extend(scope_params)
+
+    if date_from:
+        where.append("date(l.created_at) >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("date(l.created_at) <= ?")
+        params.append(date_to)
+
+    where_sql = " AND ".join(where)
     rows = query(
-        "SELECT source, COUNT(*) as cnt FROM leads WHERE source != '' GROUP BY source ORDER BY cnt DESC"
+        f"SELECT l.source, COUNT(*) as cnt FROM leads l WHERE {where_sql} GROUP BY l.source ORDER BY cnt DESC",
+        tuple(params),
     )
     ok_response(handler, rows)
 
