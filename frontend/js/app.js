@@ -256,6 +256,15 @@ app.component('include-leads', {
       if (res.error) return;
       this.list = res.data?.items || [];
       this.total = res.data?.total || 0;
+      // 保存到全局 Store 供详情页跨页导航
+      TMSStore.leadsList = this.list.map(l => l.id);
+      TMSStore.leadsTotal = this.total;
+      TMSStore.leadsPage = this.page;
+      TMSStore.leadsFilters = {
+        status: this.filters.status, source: this.filters.source, rank: this.filters.rank,
+        dateFrom: this.filters.dateFrom, dateTo: this.filters.dateTo, search: this.search,
+        pageSize: this.pageSize,
+      };
     },
     debounceSearch() {
       clearTimeout(this.searchTimer);
@@ -417,11 +426,38 @@ app.component('include-lead-detail', {
     },
     canDelete() { return this.user && ['admin', 'supervisor'].includes(this.user.role); },
     curLeadIndex() { return TMSStore.leadsList.indexOf(this.lead?.id); },
-    hasPrevLead() { return this.curLeadIndex > 0; },
-    hasNextLead() { return this.curLeadIndex >= 0 && this.curLeadIndex < TMSStore.leadsList.length - 1; },
+    // 计算全局位置：前几页的总条数 + 当前页位置
+    globalLeadIndex() {
+      const pageSize = TMSStore.leadsFilters.pageSize || 15;
+      return (TMSStore.leadsPage - 1) * pageSize + this.curLeadIndex;
+    },
+    hasPrevLead() {
+      if (this.curLeadIndex > 0) return true;
+      // 当前页第一个，但还有上一页
+      return TMSStore.leadsPage > 1;
+    },
+    hasNextLead() {
+      if (this.curLeadIndex >= 0 && this.curLeadIndex < TMSStore.leadsList.length - 1) return true;
+      // 当前页最后一个，但还有下一页
+      const pageSize = TMSStore.leadsFilters.pageSize || 15;
+      return TMSStore.leadsPage * pageSize < TMSStore.leadsTotal;
+    },
     canManageContract() { return this.user && ['coordinator', 'academic', 'admin', 'supervisor'].includes(this.user.role); },
   },
   methods: {
+    async _loadLeadsPage(pageNum) {
+      const f = TMSStore.leadsFilters;
+      let p = `?page=${pageNum}&page_size=${f.pageSize || 15}&status=${f.status || 'all'}&source=${f.source || 'all'}&rank=${f.rank || 'all'}`;
+      if (f.dateFrom) p += `&date_from=${f.dateFrom}`;
+      if (f.dateTo) p += `&date_to=${f.dateTo}`;
+      if (f.search) p += '&search=' + encodeURIComponent(f.search);
+      const res = await API.get('/leads' + p);
+      if (res.error) return null;
+      TMSStore.leadsList = (res.data?.items || []).map(l => l.id);
+      TMSStore.leadsTotal = res.data?.total || 0;
+      TMSStore.leadsPage = pageNum;
+      return TMSStore.leadsList;
+    },
     async load() {
       const id = TMSStore.leadId;
       if (!id) return;
@@ -528,28 +564,49 @@ app.component('include-lead-detail', {
       this.load();
     },
     goBack() { const v = TMSStore.fromView || 'leads'; this.switchView(v); },
-    goPrevLead() {
+    async goPrevLead() {
       const idx = this.curLeadIndex;
       if (idx > 0) {
         this.lead = null;
         TMSStore.leadId = TMSStore.leadsList[idx - 1];
         this.load();
         this.loadHomework();
+      } else if (TMSStore.leadsPage > 1) {
+        // 需要加载上一页
+        const prevPage = TMSStore.leadsPage - 1;
+        const list = await this._loadLeadsPage(prevPage);
+        if (list && list.length > 0) {
+          this.lead = null;
+          TMSStore.leadId = list[list.length - 1]; // 上一页最后一条
+          this.load();
+          this.loadHomework();
+        }
+      }
+    },
+    async goNextLead() {
+      const idx = this.curLeadIndex;
+      const pageSize = TMSStore.leadsFilters.pageSize || 15;
+      if (idx >= 0 && idx < TMSStore.leadsList.length - 1) {
+        this.lead = null;
+        TMSStore.leadId = TMSStore.leadsList[idx + 1];
+        this.load();
+        this.loadHomework();
+      } else if (TMSStore.leadsPage * pageSize < TMSStore.leadsTotal) {
+        // 需要加载下一页
+        const nextPage = TMSStore.leadsPage + 1;
+        const list = await this._loadLeadsPage(nextPage);
+        if (list && list.length > 0) {
+          this.lead = null;
+          TMSStore.leadId = list[0]; // 下一页第一条
+          this.load();
+          this.loadHomework();
+        }
       }
     },
     updateContactStatus() {
       if (!this.lead || !this.lead.id) return;
       const val = this.lead.contact_status || '';
       API.put('/leads/' + this.lead.id, { contact_status: val });
-    },
-    goNextLead() {
-      const idx = this.curLeadIndex;
-      if (idx >= 0 && idx < TMSStore.leadsList.length - 1) {
-        this.lead = null;
-        TMSStore.leadId = TMSStore.leadsList[idx + 1];
-        this.load();
-        this.loadHomework();
-      }
     },
 
     // ── 整体学情报告 ──
