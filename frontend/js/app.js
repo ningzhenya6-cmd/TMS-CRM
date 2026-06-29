@@ -115,6 +115,9 @@ const app = Vue.createApp({
       const item = ROLE_MENU.find(m => m.view === this.currentView);
       return item ? item.label : 'TMS 学管系统';
     },
+    overdueBadge() {
+      try { return window.TMSStore?.overdueCount || 0; } catch(e) { return 0; }
+    },
   },
   methods: {
     hasRole(roles) {
