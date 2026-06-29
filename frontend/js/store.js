@@ -10,6 +10,7 @@
     leadsList: [],      // 资源列表当前页的线索（用于上下条导航）
     leadsTotal: 0,      // 资源列表总条数
     leadsFilters: {},   // 资源列表当前筛选条件
+    overdueCount: 0,    // 超期跟进数量（侧边栏角标用）
   });
 
   // 导出到全局

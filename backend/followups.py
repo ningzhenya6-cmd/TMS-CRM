@@ -6,7 +6,7 @@ from router import get, post, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
 from statemachine import transition_lead
-from permissions import can
+from permissions import can, scope_where
 
 
 def _calc_next_deadline(rank, signed_at=None):
@@ -44,6 +44,8 @@ def _calc_next_deadline(rank, signed_at=None):
                 days_added += 1
     elif rank == "D":
         deadline = base + datetime.timedelta(days=30)
+        while deadline.weekday() >= 5:
+            deadline += datetime.timedelta(days=1)
     else:
         return ""
 
@@ -56,6 +58,83 @@ def _get_next_weekday(base, offset_days):
     while d.weekday() >= 5:
         d += datetime.timedelta(days=1)
     return d
+
+
+@get("/api/followups/plan")
+def get_followup_plan(handler, token_payload, qs, body):
+    """跟进计划 API — 按角色隔离+排序+分页
+    tab=overdue|today|upcoming
+    """
+    page = int(qs.get("page", [1])[0])
+    page_size = int(qs.get("page_size", [20])[0])
+    tab = qs.get("tab", ["overdue"])[0]
+
+    role = token_payload["role"]
+    user_id = token_payload["sub"]
+
+    scope_clause, scope_params = scope_where("lead", role, user_id, "l")
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d 18:00")
+
+    where = [
+        "l.next_followup_at IS NOT NULL",
+        "l.next_followup_at != ''",
+        "l.status NOT IN ('enrolled','closed','lost')",
+        "COALESCE(l.followup_paused, 0)=0",
+        scope_clause,
+    ]
+    params = list(scope_params)
+
+    if tab == "overdue":
+        where.append("l.next_followup_at < ?")
+        params.append(today_str)
+        order = "l.next_followup_at ASC"
+    elif tab == "today":
+        where.append("l.next_followup_at >= ? AND l.next_followup_at < ?")
+        params.append(today_str[:10] + " 00:00")
+        params.append(today_str[:10] + " 23:59")
+        order = "l.next_followup_at ASC"
+    elif tab == "upcoming":
+        where.append("l.next_followup_at > ?")
+        params.append(today_str)
+        order = "l.next_followup_at ASC"
+    else:
+        order = "l.next_followup_at ASC"
+
+    where_sql = " AND ".join(where)
+
+    total = query_one(
+        f"SELECT COUNT(*) as cnt FROM leads l WHERE {where_sql}", tuple(params)
+    )["cnt"]
+
+    offset = (page - 1) * page_size
+    rows = query(
+        f"""SELECT l.id, l.name, l.phone, l.lead_rank, l.status,
+                   l.next_followup_at, l.last_followup_at,
+                   l.assignee_id, l.overdue_count,
+                   u.display_name as assignee_name,
+                   (SELECT f.content FROM followups f WHERE f.lead_id=l.id ORDER BY f.created_at DESC LIMIT 1) as last_content
+            FROM leads l
+            LEFT JOIN users u ON l.assignee_id = u.id
+            WHERE {where_sql}
+            ORDER BY {order}
+            LIMIT ? OFFSET ?""",
+        tuple(params) + (page_size, offset),
+    )
+
+    # 计算 overdue_days
+    now = datetime.datetime.now()
+    for r in rows:
+        if r["next_followup_at"]:
+            try:
+                nd = datetime.datetime.strptime(r["next_followup_at"][:19], "%Y-%m-%d %H:%M")
+                diff = (now - nd).days
+                r["overdue_days"] = diff if diff > 0 else 0
+            except (ValueError, TypeError):
+                r["overdue_days"] = 0
+        else:
+            r["overdue_days"] = 0
+
+    ok_response(handler, {"total": total, "page": page, "page_size": page_size, "items": rows})
 
 
 @get("/api/followups/{lead_id}")
@@ -194,3 +273,4 @@ def get_overdue_stats(handler, token_payload, qs, body):
     )
 
     ok_response(handler, {"total_overdue": overdue_count, "by_consultant": by_consultant})
+

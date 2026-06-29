@@ -212,7 +212,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                @click="switchView(item.view); sidebarOpen=false"
                v-show="hasRole(item.roles)">
             <i :class="item.icon" class="text-base w-5 text-center"></i>
-            <span>{{ item.label }}</span>
+            <span class="flex-1">{{ item.label }}</span>
+            <span v-if="item.view === 'followup-plan' && TMSStore.overdueCount > 0" class="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[.6rem] font-bold text-white bg-red-500 rounded-full">{{ TMSStore.overdueCount > 99 ? '99+' : TMSStore.overdueCount }}</span>
           </div>
         </div>
       </nav>
@@ -3386,37 +3387,70 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
   </div>
   <div class="flex gap-1 mb-4">
     <button v-for="t in tabs" :key="t.key"
-            class="px-4 py-2 text-sm rounded-lg transition"
+            class="px-4 py-2 text-sm rounded-lg transition relative"
             :class="t.key === activeTab ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'"
-            @click="switchTab(t.key)">{{ t.label }}</button>
+            @click="switchTab(t.key)">
+      {{ t.label }}
+      <span v-if="t.key === 'overdue' && total > 0" class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[.6rem] rounded-full font-bold"
+            :class="t.key === activeTab ? 'bg-white text-indigo-700' : 'bg-red-100 text-red-700'">{{ total }}</span>
+    </button>
   </div>
-  <div class="bg-white rounded-xl border border-gray-200">
-    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-      <h6 class="text-sm font-semibold text-gray-800">{{ activeTabLabel }}</h6>
-      <span class="text-xs text-gray-500">{{ followups.length }} 条</span>
+
+  <div v-if="loading" class="text-center py-10 text-gray-400">加载中...</div>
+  <div v-else-if="list.length === 0" class="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">暂无数据</div>
+  <div v-else>
+    <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-left">
+            <th class="px-3 py-2.5 text-gray-600 font-medium text-xs">评级</th>
+            <th class="px-3 py-2.5 text-gray-600 font-medium text-xs">学生</th>
+            <th class="px-3 py-2.5 text-gray-600 font-medium text-xs">跟进人</th>
+            <th class="px-3 py-2.5 text-gray-600 font-medium text-xs">联系方式</th>
+            <th class="px-3 py-2.5 text-gray-600 font-medium text-xs">截止日期</th>
+            <th class="px-3 py-2.5 text-gray-600 font-medium text-xs">状态</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="l in list" :key="l.id"
+              class="hover:bg-gray-50 cursor-pointer transition"
+              :class="l.overdue_days > 3 ? 'bg-red-50' : l.overdue_days > 0 ? 'bg-orange-50' : ''"
+              @click="openLead(l.id)">
+            <td class="px-3 py-2.5">
+              <span v-if="l.lead_rank" class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[.55rem] font-bold text-white leading-none"
+                    :class="l.lead_rank === 'A' ? 'bg-pink-500' : l.lead_rank === 'B' ? 'bg-red-500' : 'bg-blue-500'">{{ l.lead_rank }}</span>
+              <span v-else class="text-gray-300 text-xs">—</span>
+            </td>
+            <td class="px-3 py-2.5 font-medium text-gray-900 text-sm">{{ l.name }}</td>
+            <td class="px-3 py-2.5 text-xs text-gray-500">{{ l.assignee_name || '未分配' }}</td>
+            <td class="px-3 py-2.5 text-xs text-gray-500">{{ l.phone || '-' }}</td>
+            <td class="px-3 py-2.5 text-xs whitespace-nowrap"
+                :class="l.overdue_days > 0 ? 'text-red-600 font-semibold' : 'text-gray-500'">
+              {{ (l.next_followup_at || '').slice(0,10) }}
+              <span v-if="l.overdue_days > 0" class="ml-1">(逾期{{ l.overdue_days }}天)</span>
+            </td>
+            <td class="px-3 py-2.5">
+              <span v-if="l.overdue_days > 3" class="inline-flex items-center gap-1 text-xs text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full font-medium">
+                <i class="bi bi-exclamation-triangle-fill"></i> 超时
+              </span>
+              <span v-else-if="l.overdue_days > 0" class="inline-flex items-center gap-1 text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full font-medium">
+                逾期
+              </span>
+              <span v-else-if="l.overdue_days === 0 && activeTab === 'today'" class="inline-flex items-center gap-1 text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full font-medium">
+                今日
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div v-if="followups.length === 0" class="p-8 text-center text-sm text-gray-400">暂无数据</div>
-    <div v-else class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-      <div v-for="l in followups" :key="l.id"
-           class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition"
-           :class="l.overdue_days > 3 ? 'bg-red-50 border-l-2 border-red-400' : ''"
-           @click="openLead(l.id)">
-        <div class="flex items-center gap-2">
-          <span v-if="l.lead_rank" class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[.5rem] font-bold text-white leading-none flex-shrink-0" :class="l.lead_rank === 'A' ? 'bg-pink-500' : l.lead_rank === 'B' ? 'bg-red-500' : 'bg-blue-500'">{{ l.lead_rank }}</span>
-          <span class="font-medium text-sm" :class="l.overdue_days > 3 ? 'text-red-800' : ''">{{ l.name }}</span>
-          <span v-if="l.next_followup_at" class="text-xs ml-2"
-                :class="l.overdue_days > 3 ? 'text-red-600 font-semibold' : 'text-gray-400'">
-            截止: {{ l.next_followup_at.slice(0,10) }}
-            <span v-if="l.overdue_days > 0" class="ml-1">(逾期{{ l.overdue_days }}天)</span>
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span v-if="l.overdue_days > 3" class="inline-flex items-center gap-1 text-xs text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full font-medium">
-            <i class="bi bi-exclamation-triangle-fill"></i> 超时
-          </span>
-          <div v-html="statusBadge(l.status)"></div>
-        </div>
-      </div>
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 mt-4">
+      <button class="pagination-btn" @click="goPage(page-1)" :disabled="page===1">&lt;</button>
+      <button v-for="n in pageNumbers" :key="n"
+              class="pagination-btn" :class="{ active: n === page }"
+              @click="goPage(n)" :disabled="n==='...'">{{ n }}</button>
+      <button class="pagination-btn" @click="goPage(page+1)" :disabled="page===totalPages">&gt;</button>
     </div>
   </div>
 </div>
@@ -3883,7 +3917,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=97"></script>
+<script src="js/app.js?v=98"></script>
 
   </body>
 </html>

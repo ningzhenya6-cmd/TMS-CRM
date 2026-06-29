@@ -203,6 +203,7 @@ app.component('include-dashboard', {
       if (res.error) return;
       this.stats = res.data || {};
       this.overdueCount = res.data?.overdue || 0;
+      TMSStore.overdueCount = res.data?.overdue || 0;
       this.pendingContact = res.data?.pending_contact || 0;
       const lr = await API.get('/leads?page=1&page_size=5');
       if (!lr.error) this.recentLeads = lr.data?.items || [];
@@ -1035,7 +1036,7 @@ app.component('include-followup-plan', {
   template: '#tpl-followup-plan',
   data() {
     return {
-      activeTab: 'overdue', followups: [],
+      activeTab: 'overdue', list: [], total: 0, page: 1, pageSize: 20, loading: false,
       tabs: [
         { key: 'overdue', label: '逾期跟进' },
         { key: 'today', label: '今日跟进' },
@@ -1048,36 +1049,37 @@ app.component('include-followup-plan', {
       const t = this.tabs.find(t => t.key === this.activeTab);
       return t ? t.label : '';
     },
+    totalPages() { return Math.max(1, Math.ceil(this.total / this.pageSize)); },
+    pageNumbers() {
+      const tp = this.totalPages, p = this.page, pages = [];
+      if (tp <= 7) { for (let i = 1; i <= tp; i++) pages.push(i); }
+      else {
+        pages.push(1);
+        if (p > 3) pages.push('...');
+        for (let i = Math.max(2, p - 1); i <= Math.min(tp - 1, p + 1); i++) pages.push(i);
+        if (p < tp - 2) pages.push('...');
+        pages.push(tp);
+      }
+      return pages;
+    },
   },
   methods: {
     async load() {
-      const res = await API.get('/leads?page=1&page_size=50');
-      if (res.error) return;
-      let items = res.data?.items || [];
-      const today = new Date().toISOString().slice(0, 10);
-      const todayDate = new Date(today);
-      // 计算逾期天数
-      items = items.map(l => {
-        if (l.next_followup_at) {
-          const next = new Date(l.next_followup_at.slice(0, 10));
-          const diff = Math.floor((todayDate - next) / (86400000));
-          l.overdue_days = diff > 0 ? diff : 0;
-        } else {
-          l.overdue_days = 0;
-        }
-        return l;
-      });
-      if (this.activeTab === 'overdue') {
-        items = items.filter(l => l.next_followup_at && l.next_followup_at < today && !['enrolled', 'closed', 'lost'].includes(l.status));
-      } else if (this.activeTab === 'today') {
-        items = items.filter(l => l.next_followup_at && l.next_followup_at.slice(0, 10) === today);
-      } else {
-        items = items.filter(l => l.next_followup_at && l.next_followup_at.slice(0, 10) > today);
+      this.loading = true;
+      const params = new URLSearchParams();
+      params.set('tab', this.activeTab);
+      params.set('page', this.page);
+      params.set('page_size', this.pageSize);
+      const res = await API.get('/followups/plan?' + params.toString());
+      if (!res.error) {
+        this.list = res.data?.items || [];
+        this.total = res.data?.total || 0;
       }
-      this.followups = items;
+      this.loading = false;
     },
-    switchTab(key) { this.activeTab = key; this.load(); },
-    openLead(id) { TMSStore.leadId = id; TMSStore.fromView = this.currentView; this.switchView('lead-detail'); },
+    switchTab(key) { this.activeTab = key; this.page = 1; this.load(); },
+    goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
+    openLead(id) { TMSStore.leadId = id; TMSStore.fromView = 'followup-plan'; this.switchView('lead-detail'); },
   },
   created() { this.load(); },
 });
