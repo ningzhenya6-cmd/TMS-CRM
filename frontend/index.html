@@ -44,7 +44,8 @@
   }
 })();
 </script>
-<!-- Tailwind CSS (Play CDN) -->
+<!-- Tailwind CSS — 先加载静态编译版（X5降级用），再加载JIT引擎（桌面端覆盖） -->
+<link rel="stylesheet" href="/lib/tailwind-x5.css">
 <script src="/lib/tailwind.min.js"></script>
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="/lib/bootstrap-icons.min.css">
@@ -3863,7 +3864,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=95"></script>
+<script src="js/app.js?v=96"></script>
 
   </body>
 </html>
