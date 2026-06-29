@@ -173,6 +173,26 @@ def run_server(host="0.0.0.0", port=8766):
     import homework  # noqa
     import batch_feedback  # noqa
 
+    # 启动超期检查后台线程（P1）
+    try:
+        webhook_url = os.environ.get("DINGTALK_WEBHOOK", "")
+        secret = os.environ.get("DINGTALK_SECRET", "")
+        # 如果没有环境变量，尝试从 .env 文件读取
+        env_file = os.path.join(_BACKEND_DIR, "..", ".env")
+        if os.path.exists(env_file):
+            with open(env_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("DINGTALK_WEBHOOK="):
+                        webhook_url = line.split("=", 1)[1].strip()
+                    elif line.startswith("DINGTALK_SECRET="):
+                        secret = line.split("=", 1)[1].strip()
+        if webhook_url:
+            from overdue_checker import start as start_checker
+            start_checker(webhook_url, secret)
+    except Exception as e:
+        print(f"[TMS] ⚠️ 超期检查启动失败: {e}")
+
     server = HTTPServer((host, port), TMSHandler)
     print(f"[TMS] 🚀 服务启动: http://{host}:{port}")
     print(f"[TMS] 📁 前端: {FRONTEND_DIR}")

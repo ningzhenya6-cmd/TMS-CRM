@@ -212,6 +212,15 @@ def init_db():
         "ALTER TABLE consulting_reports ADD COLUMN target_level TEXT DEFAULT ''",
         "ALTER TABLE payment_records ADD COLUMN hours REAL DEFAULT 0",
         "ALTER TABLE payment_records ADD COLUMN sign_type TEXT NOT NULL DEFAULT 'new'",
+        "ALTER TABLE followups ADD COLUMN urgency_label TEXT DEFAULT ''",
+        "ALTER TABLE followups ADD COLUMN enrollment_timeline TEXT DEFAULT ''",
+        "ALTER TABLE followups ADD COLUMN application_stage TEXT DEFAULT ''",
+        "ALTER TABLE leads ADD COLUMN followup_paused INTEGER DEFAULT 0",
+        "ALTER TABLE leads ADD COLUMN paused_reason TEXT DEFAULT ''",
+        "ALTER TABLE leads ADD COLUMN overdue_count INTEGER DEFAULT 0",
+        "ALTER TABLE leads ADD COLUMN last_overdue_at TEXT DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN dingtalk_id TEXT DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''",
     ]:
         try:
             conn.execute(ddl)

@@ -373,7 +373,7 @@ app.component('include-lead-detail', {
       lead: null, followContent: '', followupType: '', nextAction: '', nextDate: '',
       showLostModal: false, lostReason: '',
       followupTypeOptions: ['电话沟通', '微信沟通', '到访面谈', '试听反馈', '续费沟通', '其他'],
-      followupRank: '',
+      followupRank: '', followupUrgencyLabel: '', followupEnrollmentTimeline: '', followupApplicationStage: '',
       contactStatus: '',
       lostReasonOptions: ['价格因素', '已选择其他机构', '时间安排冲突', '需求变更', '联系不上', '其他'],
       // 学业分析
@@ -477,16 +477,25 @@ app.component('include-lead-detail', {
     },
     async submitFollow() {
       if (!this.followContent.trim()) return;
-      const res = await API.post('/followups', {
+      if (!this.followupRank) { toast('请选择本次评级', 'error'); return; }
+      const body = {
         lead_id: this.lead.id,
         content: this.followContent,
         followup_type: this.followupType,
+        followup_rank: this.followupRank,
         next_action: this.nextAction,
         next_date: this.nextDate,
-      });
+        contact_status: this.contactStatus,
+      };
+      if (this.followupRank === 'A' && this.followupUrgencyLabel) body.urgency_label = this.followupUrgencyLabel;
+      if (this.followupRank === 'B' && this.followupEnrollmentTimeline) body.enrollment_timeline = this.followupEnrollmentTimeline;
+      if (this.followupRank === 'C' && this.followupApplicationStage) body.application_stage = this.followupApplicationStage;
+      const res = await API.post('/followups', body);
       if (res.error) { toast(res.error, 'error'); return; }
       toast('跟进记录已保存', 'success');
-      this.followContent = ''; this.followupType = ''; this.followupRank = ''; this.nextAction = ''; this.nextDate = '';
+      this.followContent = ''; this.followupType = ''; this.followupRank = '';
+      this.followupUrgencyLabel = ''; this.followupEnrollmentTimeline = ''; this.followupApplicationStage = '';
+      this.nextAction = ''; this.nextDate = ''; this.contactStatus = '';
       this.load();
     },
     // ── 删除操作 ──

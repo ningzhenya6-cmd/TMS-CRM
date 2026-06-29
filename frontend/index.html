@@ -1139,11 +1139,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div><span class="text-gray-500 text-xs">教务班主任</span><p class="font-medium">{{ lead.coordinator_name || '未分配' }}</p></div>
         <div><span class="text-gray-500 text-xs">最近跟进</span><p class="font-medium">{{ lead.last_followup_at ? lead.last_followup_at.slice(0,10) : '-' }}</p></div>
         <div><span class="text-gray-500 text-xs">下次跟进</span>
-          <p class="font-medium" v-if="lead.next_followup_at" :class="overdueDays > 3 ? 'text-red-600' : ''">
+          <p class="font-medium flex items-center gap-1" v-if="lead.next_followup_at">
+            <span class="inline-block w-2 h-2 rounded-full"
+              :class="overdueDays > 0 ? 'bg-red-500' : (overdueDays < 0 && overdueDays > -1 ? 'bg-yellow-500' : 'bg-green-500')"></span>
             {{ lead.next_followup_at.slice(0,10) }}
-            <span v-if="overdueDays > 0" class="text-xs ml-1" :class="overdueDays > 3 ? 'text-red-500 font-semibold' : 'text-orange-500'">
-              (逾期{{ overdueDays }}天)
-            </span>
+            <span v-if="overdueDays > 3" class="text-xs text-red-600 font-semibold">(逾期{{ overdueDays }}天) 🔴</span>
+            <span v-else-if="overdueDays > 0" class="text-xs text-orange-500">(逾期{{ overdueDays }}天) 🟡</span>
+            <span v-else-if="overdueDays < 0 && overdueDays > -1" class="text-xs text-yellow-600">今日截止 🟡</span>
+            <span v-else class="text-xs text-green-600">🟢</span>
           </p>
           <p v-else class="font-medium">-</p>
         </div>
@@ -1279,15 +1282,39 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             <option value="not_reached" class="text-red-600">❌ 未接通</option>
             <option value="follow_up" class="text-amber-600">🔄 需跟进</option>
           </select>
-          <select v-model="followupRank" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
-            <option value="">本次评级</option>
-            <option value="A" class="text-pink-600 font-semibold">A</option>
-            <option value="B" class="text-red-600 font-semibold">B</option>
-            <option value="C" class="text-blue-600 font-semibold">C</option>
+          <select v-model="followupRank" required class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
+            <option value="">评级 *</option>
+            <option value="A" class="text-pink-600 font-semibold">A 高意向/紧急</option>
+            <option value="B" class="text-red-600 font-semibold">B 有意向</option>
+            <option value="C" class="text-blue-600 font-semibold">C 潜在</option>
+            <option value="D" class="text-gray-500 font-semibold">D 培育池</option>
+          </select>
+          <!-- A类展开：紧急程度 -->
+          <select v-if="followupRank === 'A'" v-model="followupUrgencyLabel" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
+            <option value="">紧急程度</option>
+            <option value="挂科风险">📕 挂科风险</option>
+            <option value="被警告">⚠️ 被警告</option>
+            <option value="论文截止">📝 论文截止</option>
+            <option value="考前提分">🎯 考前提分</option>
+            <option value="其他">其他</option>
+          </select>
+          <!-- B类展开：距入学时间 -->
+          <select v-if="followupRank === 'B'" v-model="followupEnrollmentTimeline" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
+            <option value="">距入学时间</option>
+            <option value="<1月">&lt; 1个月</option>
+            <option value="1-3月">1-3个月</option>
+            <option value=">3月">&gt; 3个月</option>
+          </select>
+          <!-- C类展开：选校阶段 -->
+          <select v-if="followupRank === 'C'" v-model="followupApplicationStage" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none">
+            <option value="">选校阶段</option>
+            <option value="选校中">选校中</option>
+            <option value="申请中">申请中</option>
+            <option value="未定">未定</option>
           </select>
           <input type="text" v-model="nextAction" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none" placeholder="下次行动">
           <input type="date" v-model="nextDate" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none">
-          <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700" @click="submitFollow" :disabled="!followContent.trim()">提交</button>
+          <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700" @click="submitFollow" :disabled="!followContent.trim() || !followupRank">提交</button>
         </div>
       </div>
       <div class="divide-y divide-gray-100 max-h-80 overflow-y-auto">
@@ -3800,7 +3827,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=92"></script>
+<script src="js/app.js?v=93"></script>
 
   </body>
 </html>
