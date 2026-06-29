@@ -392,6 +392,10 @@ app.component('include-lead-detail', {
       consultingReport: null,
       // 删除确认
       deleteConfirm: { show: false, title: '', message: '', type: '', id: null, loading: false },
+      // 分配跟进人
+      showDetailAssign: false,
+      detailAssignId: '',
+      assignUsers: [],
       // 编辑线索
       showEditModal: false,
       editForm: {},
@@ -425,6 +429,7 @@ app.component('include-lead-detail', {
       return diff > 0 ? diff : 0;
     },
     canDelete() { return this.user && ['admin', 'supervisor'].includes(this.user.role); },
+    canAssign() { return this.user && ['admin', 'supervisor', 'cs', 'consultant'].includes(this.user.role); },
     curLeadIndex() { return TMSStore.leadsList.indexOf(this.lead?.id); },
     // 计算全局位置：前几页的总条数 + 当前页位置
     globalLeadIndex() {
@@ -616,6 +621,22 @@ app.component('include-lead-detail', {
       if (!this.lead || !this.lead.id) return;
       const val = this.lead.contact_status || '';
       API.put('/leads/' + this.lead.id, { contact_status: val });
+    },
+    async openDetailAssign() {
+      this.detailAssignId = '';
+      this.showDetailAssign = true;
+      const res = await API.get('/auth/users');
+      if (!res.error) {
+        this.assignUsers = (res.data || []).filter(u => ['cs', 'consultant', 'admin', 'supervisor'].includes(u.role));
+      }
+    },
+    async submitDetailAssign() {
+      if (!this.detailAssignId) { toast('请选择跟进人', 'error'); return; }
+      const res = await API.put('/leads/' + this.lead.id, { assignee_id: parseInt(this.detailAssignId) });
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('跟进人已分配', 'success');
+      this.showDetailAssign = false;
+      this.load();
     },
 
     // ── 整体学情报告 ──
