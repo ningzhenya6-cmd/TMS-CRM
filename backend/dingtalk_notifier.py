@@ -8,7 +8,8 @@ import time
 import hmac
 import hashlib
 import base64
-import urllib.request, urllib.parse
+import urllib.request
+import urllib.parse
 
 # 默认配置（从 .env 读取或覆盖）
 _WEBHOOK_URL = os.environ.get("DINGTALK_WEBHOOK", "")
@@ -17,9 +18,9 @@ _WEBHOOK_SECRET = os.environ.get("DINGTALK_SECRET", "")
 
 def _sign(timestamp):
     """HMAC-SHA256 签名"""
-    secret = _WEBHOOK_SECRET.encode("utf-8")
-    string_to_sign = f"{timestamp}\n{secret}".encode("utf-8")
-    h = hmac.new(secret, string_to_sign, digestmod=hashlib.sha256)
+    secret_key = _WEBHOOK_SECRET.encode("utf-8")
+    string_to_sign = f"{timestamp}\n{_WEBHOOK_SECRET}".encode("utf-8")
+    h = hmac.new(secret_key, string_to_sign, digestmod=hashlib.sha256)
     sign = base64.b64encode(h.digest()).decode("utf-8")
     return urllib.parse.quote(sign, safe="")
 
@@ -53,7 +54,7 @@ def send_overdue_notice(overdue_list):
 
 {items_text}
 
-👉 [点击前往 CRM 处理](https://tms.global1v1.com)
+👉 [点击前往 CRM 处理](https://tms.global1v1.com/go.html)
 """
 
     payload = {

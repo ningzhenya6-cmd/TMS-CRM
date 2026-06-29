@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>正在跳转...</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;background:#f3f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:16px;padding:32px 24px;text-align:center;max-width:340px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.icon{font-size:48px;margin-bottom:12px}
+h2{font-size:18px;color:#1f2937;margin-bottom:8px}
+p{font-size:13px;color:#6b7280;margin-bottom:24px;line-height:1.5}
+.btn{display:block;width:100%;padding:14px;font-size:15px;border:none;border-radius:12px;cursor:pointer;font-weight:600;margin-bottom:10px;text-decoration:none}
+.btn-primary{background:#4f46e5;color:#fff}
+.btn-primary:active{background:#4338ca}
+.btn-secondary{background:#f3f4f6;color:#374151;font-weight:400;font-size:13px}
+.btn-secondary:active{background:#e5e7eb}
+.hidden{display:none}
+#status{font-size:12px;color:#9ca3af;margin-top:16px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#4f46e5;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">📱</div>
+  <h2>正在跳转至系统浏览器...</h2>
+  <p id="desc">如果未自动跳转，请点击下方按钮手动打开</p>
+  <div id="autoArea">
+    <div class="spinner"></div>
+    <span style="font-size:13px;color:#6b7280">尝试跳转中...</span>
+  </div>
+  <a id="manualBtn" class="btn btn-primary hidden" href="https://tms.global1v1.com/">打开系统浏览器</a>
+  <a class="btn btn-secondary" href="https://tms.global1v1.com/">留在当前页面打开</a>
+  <div id="status"></div>
+</div>
+<script>
+(function(){
+  var ua = navigator.userAgent.toLowerCase();
+  var isDingTalk = ua.indexOf('dingtalk') > -1;
+  var target = 'https://tms.global1v1.com/';
+
+  // 尝试各种跳转方案
+  function jump() {
+    if (isDingTalk) {
+      // 方案1: 使用钉钉开放能力跳转（部分版本支持）
+      try {
+        if (typeof dd !== 'undefined' && dd.env && dd.env.openURL) {
+          dd.env.openURL({url: target});
+          return;
+        }
+      } catch(e) {}
+
+      // 方案2: intent scheme（Android Chrome）
+      try {
+        var intentUrl = 'intent://tms.global1v1.com#Intent;scheme=https;end';
+        var a = document.createElement('a');
+        a.href = intentUrl;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch(e) {}
+
+      // 方案3: 直接跳
+      setTimeout(function(){ window.location.href = target; }, 500);
+    } else {
+      window.location.href = target;
+    }
+  }
+
+  // 显示手动按钮（兜底）
+  setTimeout(function(){
+    document.getElementById('autoArea').classList.add('hidden');
+    document.getElementById('manualBtn').classList.remove('hidden');
+    document.getElementById('desc').textContent = '自动跳转失败，请点击下方按钮';
+  }, 3000);
+
+  // 尝试跳转
+  setTimeout(jump, 200);
+})();
+</script>
+</body>
+</html>
