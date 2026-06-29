@@ -54,7 +54,7 @@ def send_overdue_notice(overdue_list):
 
 {items_text}
 
-👉 [点击前往 CRM 处理](https://tms.global1v1.com/go.html)
+👉 [点击前往 CRM 处理](intent://tms.global1v1.com#Intent;scheme=https;end)
 """
 
     payload = {
