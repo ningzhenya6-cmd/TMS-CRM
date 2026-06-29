@@ -7,7 +7,43 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<!-- X5 内核兼容 -->
+<meta name="x5-orientation" content="portrait">
+<meta name="x5-fullscreen" content="false">
+<meta name="x5-page-mode" content="app">
 <title>TMS — 辅导管理系统</title>
+<script>
+// 钉钉/微信 X5 内核检测 — 提示用系统浏览器打开
+(function(){
+  var ua = navigator.userAgent.toLowerCase();
+  var isDingTalk = ua.indexOf('dingtalk') > -1;
+  var isWeChat = ua.indexOf('micromessenger') > -1;
+  var isQQ = ua.indexOf('qq/') > -1 || ua.indexOf('mqqbrowser') > -1;
+  var isX5 = ua.indexOf('x5') > -1 || ua.indexOf('qqbrowser') > -1;
+  if (isDingTalk || isWeChat || isQQ || isX5) {
+    var div = document.createElement('div');
+    div.id = 'browser-tip';
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:12px 16px;background:#fff3cd;border-bottom:2px solid #ffc107;font-size:13px;color:#856404;text-align:center;font-family:sans-serif;';
+    div.innerHTML = '<b>📱 建议使用系统浏览器打开</b>&nbsp; 右上角点···选择"浏览器打开"，体验更完整';
+    document.documentElement.style.paddingTop = '48px';
+    // 尝试自动跳转系统浏览器（仅钉钉）
+    if (isDingTalk) {
+      div.innerHTML += '&nbsp; <a href="https://tms.global1v1.com/" style="color:#056de8;text-decoration:underline;font-weight:bold;">[去浏览器]</a>';
+      // 钉钉 scheme 跳转
+      setTimeout(function(){
+        var link = document.createElement('a');
+        link.href = 'https://tms.global1v1.com/';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+      }, 500);
+    }
+    setTimeout(function(){ if (document.getElementById('browser-tip')) document.getElementById('browser-tip').style.display = 'none'; }, 8000);
+    var s = document.createElement('style');
+    s.textContent = 'body{filter:none!important;-webkit-filter:none!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important;mix-blend-mode:normal!important;background-color:#f3f4f6!important}';
+    document.head.appendChild(s);
+  }
+})();
+</script>
 <!-- Tailwind CSS (Play CDN) -->
 <script src="/lib/tailwind.min.js"></script>
 <!-- Bootstrap Icons -->
@@ -3827,7 +3863,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=93"></script>
+<script src="js/app.js?v=94"></script>
 
   </body>
 </html>
