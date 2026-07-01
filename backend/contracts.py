@@ -224,24 +224,25 @@ def create_signing(handler, token_payload, qs, body):
         conn.execute("BEGIN")
 
         # 1. 创建合同
-        cid = execute_lastrowid(
+        cur = conn.execute(
             """INSERT INTO contracts (lead_id, contract_no, total_amount, status, signed_at, remark, created_by, sign_type, paid_amount)
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (
                 int(lead_id),
                 body.get("contract_no", ""),
-                payment_amount,  # total_amount = 收款金额（合同金额由收款决定）
+                payment_amount,
                 body.get("status", "active"),
                 signed_at,
                 body.get("remark", ""),
                 uid,
                 sign_type,
-                payment_amount,  # 首笔收款直接计入 paid_amount
+                payment_amount,
             ),
         )
+        cid = cur.lastrowid
 
         # 2. 创建课时包
-        pid = execute_lastrowid(
+        cur = conn.execute(
             """INSERT INTO packages (contract_id, name, total_hours, used_hours, price_per_hour, status, remark)
                VALUES (?,?,?,?,?,?,?)""",
             (
@@ -254,9 +255,10 @@ def create_signing(handler, token_payload, qs, body):
                 "",
             ),
         )
+        pid = cur.lastrowid
 
-        # 3. 创建收款记录（每笔收款独立记录课时）
-        pay_id = execute_lastrowid(
+        # 3. 创建收款记录
+        cur = conn.execute(
             """INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours, sign_type)
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (
@@ -271,13 +273,17 @@ def create_signing(handler, token_payload, qs, body):
                 sign_type,
             ),
         )
+        pay_id = cur.lastrowid
 
         # 4. 更新学生状态为已签约
-        execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
+        conn.execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
 
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"签约失败：{e}", 500)
         return
 
