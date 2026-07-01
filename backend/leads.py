@@ -13,6 +13,7 @@ def list_leads(handler, token_payload, qs, body):
     status = qs.get("status", [None])[0]
     source = qs.get("source", [None])[0]
     rank = qs.get("rank", [None])[0]
+    wechat = qs.get("wechat", [None])[0]
     search = qs.get("search", [None])[0]
     assignee_id = qs.get("assignee_id", [None])[0]
     date_from = qs.get("date_from", [None])[0]
@@ -38,6 +39,11 @@ def list_leads(handler, token_payload, qs, body):
     if rank and rank != "all":
         where.append("l.lead_rank=?")
         params.append(rank)
+    if wechat:
+        where.append("l.wechat=?")
+        params.append(wechat)
+        # 按微信号搜索时直接返回，不分页（查重用）
+        page_size = 5
     if assignee_id:
         where.append("l.assignee_id=?")
         params.append(int(assignee_id))
