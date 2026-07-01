@@ -5,17 +5,16 @@ from db import query, query_one
 from permissions import can
 
 
-def _sq(val):
-    """STRFTIME shortcut helper"""
+def _date_str(sql):
+    """查询 SQLite 返回单行单列"""
     from db import query_one as _q
-    r = _q(f"SELECT {val}")
-    return list(r.values())[0] if r else None
+    r = _q(f"SELECT {sql}")
+    return list(r.values())[0] if r else ""
 
-# Pre-compute date strings at module load
-_CUR = _sq("strftime('%Y-%m', 'now', 'localtime')") or "2026-06"
-_PREV = _sq("strftime('%Y-%m', 'now', 'localtime', '-1 month')") or "2026-05"
-_QSTART = _sq("strftime('%Y-%m', datetime('now','localtime','start of month','-2 months'))") or "2026-04"
-_YSTART = (_sq("strftime('%Y', 'now', 'localtime')") or "2026") + "-01"
+def _cur():    return _date_str("strftime('%Y-%m', 'now', 'localtime')")
+def _prev():   return _date_str("strftime('%Y-%m', 'now', 'localtime', '-1 month')")
+def _qstart(): return _date_str("strftime('%Y-%m', datetime('now','localtime','start of month','-2 months'))")
+def _ystart(): return _date_str("strftime('%Y', 'now', 'localtime')") + "-01"
 
 
 @get("/api/dashboard")
@@ -93,8 +92,8 @@ def dashboard(handler, token_payload, qs, body):
     #  通用统计看板
     # ═══════════════════════════════════════
 
-    cur, prev = _CUR, _PREV
-    qstart, ystart = _QSTART, _YSTART
+    cur, prev = _cur(), _prev()
+    qstart, ystart = _qstart(), _ystart()
 
     # 本月/上月新录入
     result["leads_this_month"] = query_one(
