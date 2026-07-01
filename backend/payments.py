@@ -116,28 +116,31 @@ def create_payment(handler, token_payload, qs, body, contract_id=None):
         )["h"]
         pay_sign_type = "renewal" if prev > 10 else "new"
 
-        # 写入流水
-        execute_lastrowid(
+        # 写入流水（用 conn.execute 不走全局 execute——它 auto-commit 会破坏手动事务）
+        cur = conn.execute(
             "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id, payment_date, hours, sign_type) VALUES (?,?,?,?,?,?,?,?,?)",
             (cid, amount, "payment", method, note, uid, payment_date, float(body.get("hours", 0)), pay_sign_type),
         )
 
-        # 如果这笔是续费，同步更新合同的 sign_type（权威来源是 payment_records）
+        # 如果这笔是续费，同步更新合同的 sign_type
         if pay_sign_type == "renewal":
-            execute("UPDATE contracts SET sign_type='renewal' WHERE id=? AND sign_type!='renewal'", (cid,))
+            conn.execute("UPDATE contracts SET sign_type='renewal' WHERE id=? AND sign_type!='renewal'", (cid,))
 
         # 原子更新实收金额
-        execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) + ?, 2) WHERE id=?", (amount, cid))
+        conn.execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) + ?, 2) WHERE id=?", (amount, cid))
 
         # 检查是否收满 → 自动完成
         updated = query_one("SELECT paid_amount, total_amount FROM contracts WHERE id=?", (cid,))
         new_paid = updated["paid_amount"]
         if new_paid >= updated["total_amount"] and c["status"] != "completed":
-            execute("UPDATE contracts SET status='completed' WHERE id=?", (cid,))
+            conn.execute("UPDATE contracts SET status='completed' WHERE id=?", (cid,))
 
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"收款失败：{e}", 500)
         return
 
@@ -184,22 +187,22 @@ def create_refund(handler, token_payload, qs, body, contract_id=None):
     try:
         conn.execute("BEGIN")
 
-        # 写入流水（退款用负数记录）
-        execute_lastrowid(
+        conn.execute(
             "INSERT INTO payment_records (contract_id, amount, type, method, note, operator_id) VALUES (?,?,?,?,?,?)",
             (cid, -amount, "refund", "退款", reason, uid),
         )
 
-        # 原子扣减实收金额
-        execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) - ?, 2) WHERE id=?", (amount, cid))
+        conn.execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) - ?, 2) WHERE id=?", (amount, cid))
 
-        # 如果之前已完成，退款后退回 active
         if c["status"] == "completed":
-            execute("UPDATE contracts SET status='active' WHERE id=?", (cid,))
+            conn.execute("UPDATE contracts SET status='active' WHERE id=?", (cid,))
 
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"退款失败：{e}", 500)
         return
 
@@ -251,11 +254,14 @@ def update_payment_amount(handler, token_payload, qs, body, contract_id=None, pa
     conn = get_conn()
     try:
         conn.execute("BEGIN")
-        execute("UPDATE payment_records SET amount=? WHERE id=?", (new_amt, pid))
-        execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount,0) + ?, 2) WHERE id=?", (diff, cid))
+        conn.execute("UPDATE payment_records SET amount=? WHERE id=?", (new_amt, pid))
+        conn.execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount,0) + ?, 2) WHERE id=?", (diff, cid))
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"修改失败：{e}", 500)
         return
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "update", "payment", pid, f"收款金额 {old_amt} -> {new_amt}")
@@ -323,18 +329,18 @@ def delete_payment(handler, token_payload, qs, body, contract_id=None, payment_i
         conn.execute("BEGIN")
 
         if amount > 0:
-            # 原先的收款 → 扣减已收金额
-            execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) - ?, 2) WHERE id=?", (amount, cid))
+            conn.execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) - ?, 2) WHERE id=?", (amount, cid))
         else:
-            # 原先的退款 → 加回已收金额
-            execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) + ?, 2) WHERE id=?", (abs(amount), cid))
+            conn.execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) + ?, 2) WHERE id=?", (abs(amount), cid))
 
-        # 删除流水
-        execute("DELETE FROM payment_records WHERE id=?", (pid,))
+        conn.execute("DELETE FROM payment_records WHERE id=?", (pid,))
 
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"删除失败：{e}", 500)
         return
 
