@@ -1100,7 +1100,7 @@ app.component('include-schedules', {
       teachers: [], leads: [],
       showModal: false, editId: null, saving: false,
       loading: false,
-      form: { lead_id: '', tutor_id: '', subject: '', start_time: '', end_time: '', status: 'pending', remark: '', tutoring_form: '', actual_duration_minutes: '', repeat_count: 4, repeat_enabled: false },
+      form: { lead_id: '', tutor_id: '', teacher_name: '', subject: '', start_time: '', end_time: '', status: 'pending', remark: '', tutoring_form: '', actual_duration_minutes: '', repeat_count: 4, repeat_enabled: false },
       statusMap: { pending: '待上课', completed: '已完成', cancelled: '已取消', in_progress: '进行中' },
       hoursPopup: null,
       // 课后反馈

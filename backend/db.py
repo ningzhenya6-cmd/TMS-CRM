@@ -202,6 +202,7 @@ def init_db():
         "ALTER TABLE schedules ADD COLUMN teacher_id INTEGER REFERENCES teachers(id)",
         "ALTER TABLE schedules ADD COLUMN tutoring_form TEXT DEFAULT ''",
         "ALTER TABLE schedules ADD COLUMN actual_duration_minutes INTEGER",
+        "ALTER TABLE schedules ADD COLUMN teacher_name TEXT DEFAULT ''",
         "ALTER TABLE followups ADD COLUMN followup_type TEXT DEFAULT ''",
         "ALTER TABLE followups ADD COLUMN followup_rank TEXT DEFAULT ''",
         "ALTER TABLE payment_records ADD COLUMN payment_date TEXT DEFAULT ''",

@@ -2365,8 +2365,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             label-key="display_name"
             sub-label-key=""
             placeholder="搜索老师姓名..."
-            v-model="form.tutor_id">
+            v-model="form.teacher_id">
           </searchable-select>
+          <div v-if="!form.teacher_id" class="mt-1">
+            <input type="text" v-model="form.teacher_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" placeholder="搜不到老师？直接输入姓名">
+          </div>
         </div>
         <div>
           <label class="block text-xs text-gray-600 mb-1">科目</label>

@@ -87,7 +87,7 @@ def list_schedules(handler, token_payload, qs, body):
     rows = query(
         f"""SELECT s.*, l.name as lead_name,
                    u.display_name as tutor_name,
-                   t.name as teacher_name,
+                   COALESCE(t.name, s.teacher_name, '') as teacher_name,
                    t.academic_background as teacher_background,
                    t.subjects as teacher_subjects,
                    t.level as teacher_level,
@@ -163,7 +163,7 @@ def export_schedules(handler, token_payload, qs, body):
         params.append(f"%{search}%")
 
     rows = query(
-        f"""SELECT s.id, l.name as lead_name, t.name as teacher_name,
+        f"""SELECT s.id, l.name as lead_name, COALESCE(t.name, s.teacher_name, '') as teacher_name,
                    s.subject, s.tutoring_form, s.start_time, s.end_time,
                    s.duration_minutes, s.actual_duration_minutes, s.status,
                    s.remark, s.classin_link
@@ -196,7 +196,7 @@ def export_schedules(handler, token_payload, qs, body):
 def get_schedule(handler, token_payload, qs, body, schedule_id=None):
     s = query_one(
         """SELECT s.*, l.name as lead_name, u.display_name as tutor_name,
-                  t.name as teacher_name,
+                  COALESCE(t.name, s.teacher_name, '') as teacher_name,
                   t.academic_background as teacher_background,
                   t.subjects as teacher_subjects,
                   t.level as teacher_level,
@@ -281,13 +281,14 @@ def create_schedule(handler, token_payload, qs, body):
             cur_end = end_time
 
         sid = execute_lastrowid(
-            """INSERT INTO schedules (lead_id, tutor_id, teacher_id, subject, start_time, end_time,
+            """INSERT INTO schedules (lead_id, tutor_id, teacher_id, teacher_name, subject, start_time, end_time,
                duration_minutes, status, remark, created_by, tutoring_form)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 int(lead_id),
                 int(body["tutor_id"]) if body.get("tutor_id") else None,
                 int(teacher_id) if teacher_id else None,
+                body.get("teacher_name", ""),
                 body.get("subject", ""),
                 cur_start,
                 cur_end,
@@ -351,8 +352,8 @@ def update_schedule(handler, token_payload, qs, body, schedule_id=None):
             error_response(handler, msg, 409)
             return
 
-    allowed = ["tutor_id", "teacher_id", "subject", "start_time", "end_time", "status", "remark",
-               "lead_id", "tutoring_form", "actual_duration_minutes"]
+    allowed = ["tutor_id", "teacher_id", "teacher_name", "subject", "start_time", "end_time", "status",
+               "remark", "lead_id", "tutoring_form", "actual_duration_minutes"]
     updates = []
     params = []
     for field in allowed:
@@ -383,7 +384,14 @@ def update_schedule(handler, token_payload, qs, body, schedule_id=None):
     # 如果 actual_duration_minutes 被设置且旧值为 NULL（首次录入实际时长）
     new_actual = body.get("actual_duration_minutes")
     old_actual = existing.get("actual_duration_minutes")
-    if new_actual is not None and old_actual is None:
+    new_status = body.get("status")
+    old_status = existing["status"]
+
+    # 避免双重扣减：同一请求同时设 actual_duration 和 status=completed 时只扣一次
+    both_completing = (new_actual is not None and old_actual is None
+                       and new_status == "completed" and old_status != "completed")
+
+    if new_actual is not None and old_actual is None and not both_completing:
         lead_id = body.get("lead_id") or existing["lead_id"]
         hours = round(int(new_actual) / 60, 1)
         if hours > 0:
@@ -404,9 +412,7 @@ def update_schedule(handler, token_payload, qs, body, schedule_id=None):
                           "use", "package", pkg["id"],
                           f"录入实际时长自动扣课时: {hours}h (排课ID: {sid})")
 
-    # ── 自动扣课时：排课标为 completed 时，从学生活跃课时包扣减 ──
-    new_status = body.get("status")
-    old_status = existing["status"]
+    # ── 自动扣课时：排课标为 completed 时 ──
     if new_status == "completed" and old_status != "completed":
         lead_id = body.get("lead_id") or existing["lead_id"]
         # 优先使用实际时长
@@ -466,7 +472,7 @@ def update_schedule(handler, token_payload, qs, body, schedule_id=None):
 
     updated = query_one(
         """SELECT s.*, l.name as lead_name, u.display_name as tutor_name,
-                  t.name as teacher_name,
+                  COALESCE(t.name, s.teacher_name, '') as teacher_name,
                   t.academic_background as teacher_background,
                   t.subjects as teacher_subjects,
                   t.level as teacher_level
@@ -480,16 +486,88 @@ def update_schedule(handler, token_payload, qs, body, schedule_id=None):
     ok_response(handler, updated)
 
 
+@post("/api/schedules/batch_delete")
+def batch_delete_schedules(handler, token_payload, qs, body):
+    """批量删除排课"""
+    if not can(token_payload["role"], "schedule:manage"):
+        error_response(handler, "无权删除", 403)
+        return
+    ids = body.get("ids", [])
+    if not ids or not isinstance(ids, list):
+        error_response(handler, "请提供要删除的排课ID列表", 400)
+        return
+
+    deleted = 0
+    for sid in ids:
+        s = query_one("SELECT * FROM schedules WHERE id=?", (int(sid),))
+        if not s:
+            continue
+        # 恢复课时
+        actual = s.get("actual_duration_minutes") or s.get("duration_minutes") or 0
+        if actual > 0 and s.get("lead_id"):
+            hours = round(actual / 60, 1)
+            packages = query(
+                """SELECT p.id, p.used_hours FROM packages p
+                   JOIN contracts c ON p.contract_id = c.id
+                   WHERE c.lead_id=? AND c.status='active' AND p.status='active'
+                   ORDER BY p.id ASC""",
+                (s["lead_id"],),
+            )
+            remaining_hours = hours
+            for pkg in packages:
+                if remaining_hours <= 0:
+                    break
+                pkg_used = pkg["used_hours"] or 0
+                if pkg_used >= remaining_hours:
+                    execute("UPDATE packages SET used_hours = ROUND(used_hours - ?, 1) WHERE id=?", (remaining_hours, pkg["id"]))
+                    remaining_hours = 0
+                else:
+                    execute("UPDATE packages SET used_hours = 0 WHERE id=?", (pkg["id"],))
+                    remaining_hours -= pkg_used
+
+        execute("DELETE FROM lesson_feedback WHERE schedule_id=?", (int(sid),))
+        execute("DELETE FROM schedules WHERE id=?", (int(sid),))
+        deleted += 1
+
+    add_oplog(token_payload["sub"], token_payload.get("name", ""), "delete", "schedule", 0, f"批量删除 {deleted} 条排课")
+    ok_response(handler, {"message": f"已删除 {deleted} 条排课", "count": deleted})
+
+
 @delete("/api/schedules/{schedule_id}")
 def delete_schedule(handler, token_payload, qs, body, schedule_id=None):
     if not can(token_payload["role"], "schedule:manage"):
         error_response(handler, "无权删除", 403)
         return
     sid = int(schedule_id)
-    s = query_one("SELECT id FROM schedules WHERE id=?", (sid,))
+    s = query_one("SELECT * FROM schedules WHERE id=?", (sid,))
     if not s:
         error_response(handler, "排课不存在", 404)
         return
+
+    # 如果已录入实际时长，恢复课时包消耗
+    actual = s.get("actual_duration_minutes") or s.get("duration_minutes") or 0
+    if actual > 0 and s.get("lead_id"):
+        hours = round(actual / 60, 1)
+        # 找到该学生的活跃课时包，退回课时
+        packages = query(
+            """SELECT p.id, p.used_hours FROM packages p
+               JOIN contracts c ON p.contract_id = c.id
+               WHERE c.lead_id=? AND c.status='active' AND p.status='active'
+               ORDER BY p.id ASC""",
+            (s["lead_id"],),
+        )
+        remaining = hours
+        for pkg in packages:
+            if remaining <= 0:
+                break
+            pkg_used = pkg["used_hours"] or 0
+            if pkg_used >= remaining:
+                execute("UPDATE packages SET used_hours = ROUND(used_hours - ?, 1) WHERE id=?", (remaining, pkg["id"]))
+                remaining = 0
+            else:
+                execute("UPDATE packages SET used_hours = 0 WHERE id=?", (pkg["id"],))
+                remaining -= pkg_used
+
     execute("DELETE FROM lesson_feedback WHERE schedule_id=?", (sid,))
     execute("DELETE FROM schedules WHERE id=?", (sid,))
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
