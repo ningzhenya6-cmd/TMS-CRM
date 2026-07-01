@@ -364,25 +364,24 @@ def delete_lead(handler, token_payload, qs, body, lead_id=None):
     conn = get_conn()
     try:
         conn.execute("BEGIN")
-        # 先删各依赖子表（无 ON DELETE CASCADE 的表）
-        execute("DELETE FROM schedules WHERE lead_id=?", (lead_id,))
-        execute("DELETE FROM exam_results WHERE lead_id=?", (lead_id,))
-        execute("DELETE FROM admission_results WHERE lead_id=?", (lead_id,))
-        execute("DELETE FROM consulting_reports WHERE lead_id=?", (lead_id,))
-        execute("DELETE FROM lesson_feedback WHERE lead_id=?", (lead_id,))
-        # 有 CASCADE 的表（followups, contracts）也会自动删，但显式删以防外键未启用
-        execute("DELETE FROM followups WHERE lead_id=?", (lead_id,))
-        # 删合同前要先删 payment_records 和 packages（无 CASCADE）
+        conn.execute("DELETE FROM schedules WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM exam_results WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM admission_results WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM consulting_reports WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM lesson_feedback WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM followups WHERE lead_id=?", (lead_id,))
         for r in query("SELECT id FROM contracts WHERE lead_id=?", (lead_id,)):
             cid = r["id"]
-            execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
-            execute("DELETE FROM packages WHERE contract_id=?", (cid,))
-        execute("DELETE FROM contracts WHERE lead_id=?", (lead_id,))
-        # 最后删线索
-        execute("DELETE FROM leads WHERE id=?", (lead_id,))
+            conn.execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
+            conn.execute("DELETE FROM packages WHERE contract_id=?", (cid,))
+        conn.execute("DELETE FROM contracts WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM leads WHERE id=?", (lead_id,))
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"删除失败：{e}", 500)
         return
 

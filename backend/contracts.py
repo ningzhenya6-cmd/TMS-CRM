@@ -157,15 +157,15 @@ def delete_contract(handler, token_payload, qs, body, contract_id=None):
     conn = get_conn()
     try:
         conn.execute("BEGIN")
-        # 先删付款流水（无 ON DELETE CASCADE）
-        execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
-        # 再删课时包（有 CASCADE 但显式删除更安全）
-        execute("DELETE FROM packages WHERE contract_id=?", (cid,))
-        # 最后删合同
-        execute("DELETE FROM contracts WHERE id=?", (cid,))
+        conn.execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
+        conn.execute("DELETE FROM packages WHERE contract_id=?", (cid,))
+        conn.execute("DELETE FROM contracts WHERE id=?", (cid,))
         conn.commit()
     except Exception as e:
-        conn.execute("ROLLBACK")
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         error_response(handler, f"删除失败：{e}", 500)
         return
 
