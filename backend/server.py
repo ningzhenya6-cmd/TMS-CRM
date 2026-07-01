@@ -172,6 +172,7 @@ def run_server(host="0.0.0.0", port=8766):
     import webhook  # noqa
     import homework  # noqa
     import batch_feedback  # noqa
+    import reports  # noqa
 
     # 启动操作日志清理（每60分钟检查一次）
     def _oplog_cleanup_loop():

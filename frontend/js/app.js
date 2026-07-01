@@ -1095,6 +1095,9 @@ app.component('include-schedules', {
   data() {
     return {
       list: [], total: 0,
+      hourSummary: {},
+      monthlyRows: [],
+      showMonthly: false,
       dateFrom: '', dateTo: '', filterTutor: '', filterStatus: '',
       filterLeadName: '',
       teachers: [], leads: [],
@@ -1103,6 +1106,11 @@ app.component('include-schedules', {
       form: { lead_id: '', tutor_id: '', teacher_name: '', subject: '', start_time: '', end_time: '', status: 'pending', remark: '', tutoring_form: '', actual_duration_minutes: '', repeat_count: 4, repeat_enabled: false },
       statusMap: { pending: '待上课', completed: '已完成', cancelled: '已取消', in_progress: '进行中' },
       hoursPopup: null,
+      activeView: 'date',
+      viewTabs: [
+        { key: 'date', label: '按日期' },
+        { key: 'student', label: '按学生' },
+      ],
       // 课后反馈
       showFeedbackModal: false,
       feedbackScheduleId: null,
@@ -1127,10 +1135,46 @@ app.component('include-schedules', {
       const groups = {};
       for (const s of this.list) {
         const d = (s.start_time || '').slice(0, 10);
-        if (!groups[d]) groups[d] = { date: d, dateLabel: this.dateLabel(d), items: [] };
+        if (!groups[d]) groups[d] = { date: d, dateLabel: this.dateLabel(d), items: [], allSelected: false };
         groups[d].items.push(s);
       }
-      return Object.values(groups).sort((a, b) => a.date < b.date ? -1 : 1);
+      const arr = Object.values(groups).sort((a, b) => a.date < b.date ? -1 : 1);
+      for (const g of arr) g.allSelected = g.items.every(i => this.selectedScheduleIds.includes(i.id));
+      return arr;
+    },
+    studentGroups() {
+      const groups = {};
+      for (const s of this.list) {
+        const key = s.lead_id || '0';
+        if (!groups[key]) groups[key] = { leadId: key, leadName: s.lead_name || '未知', items: [], total_hours: 0, used_hours: 0, scheduled_hours: 0, remaining_hours: 0, completedCount: 0, scheduledMinutes: 0, usedRatio: 0, expanded: false };
+        groups[key].items.push(s);
+        if (s.status === 'completed' || (s.status === 'pending' && new Date(s.end_time) <= new Date())) groups[key].completedCount++;
+        const mins = s.actual_duration_minutes || (s.status === 'completed' ? s.duration_minutes : 0) || 0;
+        groups[key].scheduledMinutes += mins;
+      }
+      const arr = Object.values(groups).sort((a, b) => b.items.length - a.items.length);
+      for (const g of arr) {
+        const last = g.items[g.items.length - 1];
+        g.total_hours = last.total_hours || 0;
+        g.used_hours = last.used_hours || 0;
+        g.remaining_hours = last.remaining_hours || 0;
+        g.scheduled_hours = Math.round(g.scheduledMinutes / 60 * 10) / 10;
+        g.usedRatio = g.total_hours > 0 ? Math.min(1, g.used_hours / g.total_hours) : 0;
+      }
+      return arr;
+    },
+    monthStats() {
+      const now = new Date();
+      const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      const m = this.list.filter(s => (s.start_time || '').startsWith(ym));
+      const completed = m.filter(s => s.status === 'completed' || (s.status === 'pending' && new Date(s.end_time) <= new Date())).length;
+      const pending = m.filter(s => s.status === 'pending' && new Date(s.end_time) > new Date()).length;
+      const hours = m.reduce((sum, s) => sum + ((s.actual_duration_minutes || s.duration_minutes || 0) / 60), 0);
+      return {
+        total: m.length, completed, pending,
+        hours: Math.round(hours * 10) / 10,
+        rate: m.length > 0 ? Math.round(completed / m.length * 100) : 0,
+      };
     },
     aiGenerating() {
       const s = this.genStatus.status;
@@ -1172,6 +1216,33 @@ app.component('include-schedules', {
       if (s.actual_duration_minutes) return `${s.actual_duration_minutes}min(实际)`;
       return `${s.duration_minutes || '-'}min`;
     },
+    getStatusLabel(s) {
+      if (s.status === 'cancelled') return '已取消';
+      if (s.status === 'completed' || (s.status === 'pending' && new Date(s.end_time) <= new Date())) return '已完成';
+      if (s.status === 'in_progress') return '进行中';
+      return '待上课';
+    },
+    getStatusClass(s) {
+      if (s.status === 'cancelled') return 'bg-red-100 text-red-800';
+      if (s.status === 'completed' || (s.status === 'pending' && new Date(s.end_time) <= new Date())) return 'bg-green-100 text-green-800';
+      if (s.status === 'in_progress') return 'bg-blue-100 text-blue-800';
+      return 'bg-yellow-100 text-yellow-800';
+    },
+    getScheduleHours(s) {
+      const mins = s.actual_duration_minutes || (s.status === 'completed' ? s.duration_minutes : 0) || 0;
+      if (!mins) return '';
+      return '-' + Math.round(mins / 60 * 10) / 10 + 'h';
+    },
+    toggleGroup(group) {
+      const allSelected = group.items.every(i => this.selectedScheduleIds.includes(i.id));
+      if (allSelected) {
+        this.selectedScheduleIds = this.selectedScheduleIds.filter(id => !group.items.some(i => i.id === id));
+      } else {
+        for (const i of group.items) {
+          if (!this.selectedScheduleIds.includes(i.id)) this.selectedScheduleIds.push(i.id);
+        }
+      }
+    },
     async load() {
       this.loading = true;
       const params = new URLSearchParams();
@@ -1180,8 +1251,14 @@ app.component('include-schedules', {
       if (this.filterTutor) params.set('teacher_id', this.filterTutor);
       if (this.filterStatus) params.set('status', this.filterStatus);
       if (this.filterLeadName) params.set('search', this.filterLeadName);
-      const res = await API.get('/schedules?' + params.toString());
-      if (!res.error) { this.list = res.data?.items || []; this.total = res.data?.total || 0; }
+      const [sRes, hRes] = await Promise.all([
+        API.get('/schedules?' + params.toString()),
+        API.get('/reports/hour-summary'),
+      ]);
+      if (!sRes.error) { this.list = sRes.data?.items || []; this.total = sRes.data?.total || 0; }
+      if (!hRes.error) { this.hourSummary = hRes.data || {}; }
+      const mRes = await API.get('/reports/hour-monthly');
+      if (!mRes.error) { this.monthlyRows = mRes.data?.months || []; }
       this.loading = false;
     },
     async loadTeachers() {
