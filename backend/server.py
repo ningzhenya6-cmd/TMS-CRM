@@ -173,6 +173,21 @@ def run_server(host="0.0.0.0", port=8766):
     import homework  # noqa
     import batch_feedback  # noqa
 
+    # 启动操作日志清理（每60分钟检查一次）
+    def _oplog_cleanup_loop():
+        import time
+        from db import execute
+        while True:
+            try:
+                execute("DELETE FROM operation_logs WHERE created_at < datetime('now','localtime','-30 days')")
+            except Exception:
+                pass
+            time.sleep(3600)
+
+    import threading
+    t2 = threading.Thread(target=_oplog_cleanup_loop, daemon=True, name="oplog-cleaner")
+    t2.start()
+
     # 启动超期检查后台线程（P1）
     try:
         webhook_url = os.environ.get("DINGTALK_WEBHOOK", "")
