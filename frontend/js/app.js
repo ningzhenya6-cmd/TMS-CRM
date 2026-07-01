@@ -251,7 +251,6 @@ app.component('include-leads', {
   },
   methods: {
     async load() {
-      if (TMSStore.leadsPage && TMSStore.leadsPage > 1) { this.page = TMSStore.leadsPage; TMSStore.leadsPage = 1; }
       let p = `?page=${this.page}&page_size=${this.pageSize}&status=${this.filters.status}&source=${this.filters.source}&rank=${this.filters.rank}`;
       if (this.filters.dateFrom) p += `&date_from=${this.filters.dateFrom}`;
       if (this.filters.dateTo) p += `&date_to=${this.filters.dateTo}`;
