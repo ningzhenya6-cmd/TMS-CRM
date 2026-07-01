@@ -122,6 +122,10 @@ def create_payment(handler, token_payload, qs, body, contract_id=None):
             (cid, amount, "payment", method, note, uid, payment_date, float(body.get("hours", 0)), pay_sign_type),
         )
 
+        # 如果这笔是续费，同步更新合同的 sign_type（权威来源是 payment_records）
+        if pay_sign_type == "renewal":
+            execute("UPDATE contracts SET sign_type='renewal' WHERE id=? AND sign_type!='renewal'", (cid,))
+
         # 原子更新实收金额
         execute("UPDATE contracts SET paid_amount = ROUND(COALESCE(paid_amount, 0) + ?, 2) WHERE id=?", (amount, cid))
 
