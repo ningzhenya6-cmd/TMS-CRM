@@ -284,6 +284,31 @@ app.component('include-leads', {
     goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
     toggleAll(e) { this.selectedIds = e.target.checked ? this.list.map(l => l.id) : []; },
     openLead(id, ev) { if (ev?.target?.type === 'checkbox') return; TMSStore.leadId = id; TMSStore.fromView = this.currentView; TMSStore.leadsPage = this.page; TMSStore.leadsList = this.list.map(l => l.id); this.switchView('lead-detail'); },
+    openBatch() {
+      this.batchForm = { lead_id: '', status: 'pending', items: [] };
+      this.showBatchModal = true;
+      if (!this.teachers.length) this.loadTeachers();
+      if (!this.leads.length) this.loadLeads();
+    },
+    addBatchFixed() {
+      this.batchForm.items.push({ type: 'fixed', date: '', start_time: '14:00', end_time: '15:00', teacher_id: '', teacher_name: '', subject: '', tutoring_form: '', repeat_weeks: 1, start_date: '', day_of_week: 1 });
+    },
+    addBatchWeekly() {
+      this.batchForm.items.push({ type: 'weekly', day_of_week: 1, start_time: '14:00', end_time: '15:00', start_date: '', repeat_weeks: 4, teacher_id: '', teacher_name: '', subject: '', tutoring_form: '' });
+    },
+    removeBatchItem(i) { this.batchForm.items.splice(i, 1); },
+    async submitBatch() {
+      if (!this.batchForm.lead_id) { toast('请选择学生', 'error'); return; }
+      if (this.batchForm.items.length === 0) { toast('请添加排课', 'error'); return; }
+      this.batchSaving = true;
+      const payload = { lead_id: parseInt(this.batchForm.lead_id), status: this.batchForm.status, items: this.batchForm.items };
+      const res = await API.post('/schedules/batch', payload);
+      this.batchSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('已创建 ' + (res.data?.count || 0) + ' 节排课', 'success');
+      this.showBatchModal = false;
+      this.load();
+    },
     openCreate() { this.createForm = { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' }; this.showCreate = true; },
     downloadCSV() {
       const params = new URLSearchParams();
@@ -1101,6 +1126,8 @@ app.component('include-schedules', {
       dateFrom: '', dateTo: '', filterTutor: '', filterStatus: '',
       filterLeadName: '',
       teachers: [], leads: [],
+      showBatchModal: false, batchSaving: false,
+      batchForm: { lead_id: '', status: 'pending', items: [] },
       showModal: false, editId: null, saving: false,
       loading: false,
       form: { lead_id: '', tutor_id: '', teacher_name: '', subject: '', start_time: '', end_time: '', status: 'pending', remark: '', tutoring_form: '', actual_duration_minutes: '', repeat_count: 4, repeat_enabled: false },
@@ -1162,6 +1189,14 @@ app.component('include-schedules', {
         g.usedRatio = g.total_hours > 0 ? Math.min(1, g.used_hours / g.total_hours) : 0;
       }
       return arr;
+    },
+    batchTotal() {
+      let t = 0;
+      for (const item of (this.batchForm?.items || [])) {
+        if (item.type === 'fixed') t += 1;
+        else if (item.type === 'weekly') t += (item.repeat_weeks || 1);
+      }
+      return t;
     },
     monthStats() {
       const now = new Date();
@@ -1268,6 +1303,31 @@ app.component('include-schedules', {
     async loadLeads() {
       const res = await API.get('/leads?page=1&page_size=200');
       if (!res.error) { this.leads = res.data?.items || []; }
+    },
+    openBatch() {
+      this.batchForm = { lead_id: '', status: 'pending', items: [] };
+      this.showBatchModal = true;
+      if (!this.teachers.length) this.loadTeachers();
+      if (!this.leads.length) this.loadLeads();
+    },
+    addBatchFixed() {
+      this.batchForm.items.push({ type: 'fixed', date: '', start_time: '14:00', end_time: '15:00', teacher_id: '', teacher_name: '', subject: '', tutoring_form: '', repeat_weeks: 1, start_date: '', day_of_week: 1 });
+    },
+    addBatchWeekly() {
+      this.batchForm.items.push({ type: 'weekly', day_of_week: 1, start_time: '14:00', end_time: '15:00', start_date: '', repeat_weeks: 4, teacher_id: '', teacher_name: '', subject: '', tutoring_form: '' });
+    },
+    removeBatchItem(i) { this.batchForm.items.splice(i, 1); },
+    async submitBatch() {
+      if (!this.batchForm.lead_id) { toast('请选择学生', 'error'); return; }
+      if (this.batchForm.items.length === 0) { toast('请添加排课', 'error'); return; }
+      this.batchSaving = true;
+      const payload = { lead_id: parseInt(this.batchForm.lead_id), status: this.batchForm.status, items: this.batchForm.items };
+      const res = await API.post('/schedules/batch', payload);
+      this.batchSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('已创建 ' + (res.data?.count || 0) + ' 节排课', 'success');
+      this.showBatchModal = false;
+      this.load();
     },
     openCreate() {
       this.editId = null;
@@ -1834,6 +1894,31 @@ app.component('include-teachers', {
       if (!res.error) this.detailTeacher = res.data;
     },
     closeDetail() { this.detailId = null; this.detailTeacher = null; },
+    openBatch() {
+      this.batchForm = { lead_id: '', status: 'pending', items: [] };
+      this.showBatchModal = true;
+      if (!this.teachers.length) this.loadTeachers();
+      if (!this.leads.length) this.loadLeads();
+    },
+    addBatchFixed() {
+      this.batchForm.items.push({ type: 'fixed', date: '', start_time: '14:00', end_time: '15:00', teacher_id: '', teacher_name: '', subject: '', tutoring_form: '', repeat_weeks: 1, start_date: '', day_of_week: 1 });
+    },
+    addBatchWeekly() {
+      this.batchForm.items.push({ type: 'weekly', day_of_week: 1, start_time: '14:00', end_time: '15:00', start_date: '', repeat_weeks: 4, teacher_id: '', teacher_name: '', subject: '', tutoring_form: '' });
+    },
+    removeBatchItem(i) { this.batchForm.items.splice(i, 1); },
+    async submitBatch() {
+      if (!this.batchForm.lead_id) { toast('请选择学生', 'error'); return; }
+      if (this.batchForm.items.length === 0) { toast('请添加排课', 'error'); return; }
+      this.batchSaving = true;
+      const payload = { lead_id: parseInt(this.batchForm.lead_id), status: this.batchForm.status, items: this.batchForm.items };
+      const res = await API.post('/schedules/batch', payload);
+      this.batchSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('已创建 ' + (res.data?.count || 0) + ' 节排课', 'success');
+      this.showBatchModal = false;
+      this.load();
+    },
     openCreate() {
       this.editId = null;
       this.form = { name: '', academic_background: '', highest_degree: '', subjects: '',
@@ -2252,6 +2337,31 @@ app.component('include-trials', {
       this.searchTimer = setTimeout(() => { this.load(); }, 300);
     },
     switchTab(key) { this.activeTab = key; this.load(); },
+    openBatch() {
+      this.batchForm = { lead_id: '', status: 'pending', items: [] };
+      this.showBatchModal = true;
+      if (!this.teachers.length) this.loadTeachers();
+      if (!this.leads.length) this.loadLeads();
+    },
+    addBatchFixed() {
+      this.batchForm.items.push({ type: 'fixed', date: '', start_time: '14:00', end_time: '15:00', teacher_id: '', teacher_name: '', subject: '', tutoring_form: '', repeat_weeks: 1, start_date: '', day_of_week: 1 });
+    },
+    addBatchWeekly() {
+      this.batchForm.items.push({ type: 'weekly', day_of_week: 1, start_time: '14:00', end_time: '15:00', start_date: '', repeat_weeks: 4, teacher_id: '', teacher_name: '', subject: '', tutoring_form: '' });
+    },
+    removeBatchItem(i) { this.batchForm.items.splice(i, 1); },
+    async submitBatch() {
+      if (!this.batchForm.lead_id) { toast('请选择学生', 'error'); return; }
+      if (this.batchForm.items.length === 0) { toast('请添加排课', 'error'); return; }
+      this.batchSaving = true;
+      const payload = { lead_id: parseInt(this.batchForm.lead_id), status: this.batchForm.status, items: this.batchForm.items };
+      const res = await API.post('/schedules/batch', payload);
+      this.batchSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('已创建 ' + (res.data?.count || 0) + ' 节排课', 'success');
+      this.showBatchModal = false;
+      this.load();
+    },
     openCreate() {
       this.editId = null;
       this.form = { lead_id: '', tutor_id: '', teacher_id: '', subject: '试听课', start_time: '', end_time: '', classin_link: '', remark: '' };

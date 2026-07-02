@@ -2411,9 +2411,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <h3 class="text-xl font-bold text-gray-900">排课管理</h3>
       <p class="text-sm text-gray-500 mt-0.5">课程安排 · 教师分配 · 上课记录 · 课时看板</p>
     </div>
-    <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreate">
-      <i class="bi bi-plus-lg"></i> 新增排课
-    </button>
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="openCreate">
+        <i class="bi bi-plus-lg"></i> 新增排课
+      </button>
+      <button class="px-3 py-1.5 text-sm bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50" @click="openBatch">
+        <i class="bi bi-list-check"></i> 批量排课
+      </button>
+    </div>
   </div>
 
   <!-- ═══ 统计卡片 ═══ -->
@@ -2893,6 +2898,50 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" @click="submitFeedback" :disabled="feedbackSaving">
           {{ feedbackSaving ? '保存中...' : '保存反馈' }}
         </button>
+      </div>
+    </div>
+  </div>
+  <!-- ═══ 批量排课弹窗 ═══ -->
+  <div v-if="showBatchModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="showBatchModal = false">
+    <div class="bg-white rounded-xl w-full max-w-3xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <h5 class="font-semibold text-gray-900 mb-4"><i class="bi bi-list-check text-indigo-500 mr-2"></i>批量排课</h5>
+      <div class="mb-4">
+        <label class="block text-xs text-gray-600 mb-1">学生 <span class="text-red-500">*</span></label>
+        <searchable-select :items="leads" label-key="name" sub-label-key="phone" placeholder="搜索学生姓名或手机号..." v-model="batchForm.lead_id"></searchable-select>
+      </div>
+      <div v-if="batchForm.items.length === 0" class="text-center py-8 text-sm text-gray-400 border-2 border-dashed border-gray-200 rounded-xl mb-3">点击下方按钮添加排课时间段</div>
+      <div v-else class="space-y-2 mb-3">
+        <div v-for="(item, i) in batchForm.items" :key="i" class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+          <span class="text-xs text-gray-400 w-5">{{ i+1 }}</span>
+          <select v-model="item.type" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none bg-white w-14"><option value="fixed">指定</option><option value="weekly">每周</option></select>
+          <template v-if="item.type === 'fixed'"><input type="date" v-model="item.date" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none w-28"></template>
+          <template v-if="item.type === 'weekly'">
+            <select v-model="item.day_of_week" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none bg-white"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="0">周日</option></select>
+            <input type="date" v-model="item.start_date" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none w-26">
+            <span class="text-xs text-gray-400">x</span><input type="number" v-model.number="item.repeat_weeks" min="1" max="52" class="text-xs w-12 px-1 py-1 border border-gray-200 rounded outline-none text-center" placeholder="4"><span class="text-xs text-gray-400">周</span>
+          </template>
+          <input type="time" v-model="item.start_time" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none w-20"><span class="text-xs text-gray-300">-</span>
+          <input type="time" v-model="item.end_time" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none w-20">
+          <searchable-select class="min-w-[90px] flex-1" :items="teachers" label-key="name" placeholder="老师" :model-value="item.teacher_id" @update:model-value="item.teacher_id = $event; item.teacher_name = ''"></searchable-select>
+          <input type="text" v-model="item.subject" class="text-xs px-1.5 py-1 border border-gray-200 rounded outline-none w-16" placeholder="科目">
+          <button class="text-red-400 hover:text-red-600 text-xs px-1" @click="removeBatchItem(i)"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="text-xs text-gray-400 text-right">约 {{ batchTotal }} 节</div>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <button class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-100" @click="addBatchFixed"><i class="bi bi-plus-circle"></i> 添加指定日期</button>
+        <button class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-100" @click="addBatchWeekly"><i class="bi bi-arrow-repeat"></i> 添加每周重复</button>
+      </div>
+      <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">状态:</span>
+          <select v-model="batchForm.status" class="text-xs px-2 py-1 border border-gray-200 rounded outline-none"><option value="pending">待上课</option><option value="completed">已完成</option></select>
+          <span v-if="batchForm.status === 'completed'" class="text-xs text-amber-600">(自动扣课时)</span>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showBatchModal = false">取消</button>
+          <button class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40" :disabled="batchSaving || batchForm.items.length === 0 || !batchForm.lead_id" @click="submitBatch">{{ batchSaving ? "创建中..." : "一键创建 " + batchTotal + " 节" }}</button>
+        </div>
       </div>
     </div>
   </div>
