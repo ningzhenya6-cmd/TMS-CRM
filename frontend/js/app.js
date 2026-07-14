@@ -448,7 +448,6 @@ app.component('include-lead-detail', {
       consultingGenStep: '',
       consultingGenProgress: 0,
       consultingGenPollTimer: null,
-      consultingGenPollStart: 0,
       consultingGenReportId: null,
       consultingReport: null,
       // 删除确认
@@ -965,7 +964,6 @@ app.component('include-lead-detail', {
       this.consultingGenStatus = '';
       this.consultingGenStep = '启动分析引擎...';
       this.consultingGenProgress = 0;
-      this.consultingGenPollStart = Date.now();
       const genRes = await API.post('/leads/' + this.lead.id + '/consulting/' + reportId + '/generate');
       if (genRes.error) {
         // researching 状态不算错误
@@ -999,34 +997,14 @@ app.component('include-lead-detail', {
           this.consultingGenActive = false;
           toast('❌ ' + (st.error || '生成失败'), 'error');
         } else if (st.status === 'researching') {
-          // researching 状态：继续轮询，等待 Claude 提交课程数据
-          // 如果超过 30 秒仍无进展，自动切换为直接生成（跳过联网）
-          const elapsed = (Date.now() - this.consultingGenPollStart) / 1000;
-          if (elapsed > 30) {
-            this.consultingGenStep = '联网超时，正在跳过联网直接生成...';
-            await this.skipResearch(reportId);
-          } else {
-            this.pollConsultingProgress(reportId);
-          }
+          // 持续轮询 — 联网搜索是硬性要求，后端穷举重试，永不跳过
+          this.pollConsultingProgress(reportId);
         } else if (st.status && st.status !== 'idle') {
           this.pollConsultingProgress(reportId);
         } else {
           this.consultingGenActive = false;
         }
       }, 2000);
-    },
-    async skipResearch(reportId) {
-      if (this.consultingGenPollTimer) {
-        clearTimeout(this.consultingGenPollTimer);
-        this.consultingGenPollTimer = null;
-      }
-      this.consultingGenStatus = 'generating';
-      this.consultingGenStep = '正在生成分析...';
-      this.consultingGenProgress = 10;
-      const genRes = await API.post('/leads/' + this.lead.id + '/consulting/' + reportId + '/generate?force=1');
-      if (genRes.error) { this.consultingGenActive = false; toast(genRes.error, 'error'); return; }
-      this.consultingGenPollStart = Date.now();
-      this.pollConsultingProgress(reportId);
     },
     async viewConsultingReport(reportId) {
       this.consultingReport = null;

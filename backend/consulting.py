@@ -81,7 +81,7 @@ def _call_deepseek(messages, temperature=0.3, max_tokens=3000, enable_search=Fal
         return {"error": str(e)}
 
 
-def _run_generation(report_id, lead_id, skip_research=False):
+def _run_generation(report_id, lead_id):
     """后台线程：调用 DeepSeek 生成学业风险分析报告"""
     try:
         # 1. 读取报告 + 线索信息
@@ -95,30 +95,51 @@ def _run_generation(report_id, lead_id, skip_research=False):
             _set_progress(report_id, 0, "学生不存在", "error")
             return
 
-        # 1b. 联网搜索目标院校录取要求（统一报告，非 skip 时执行）
+        # 1b. 联网搜索目标院校录取要求 — 硬性要求，穷举重试
+        school = report.get('target_school', '')
+        major = report.get('target_major', '')
+        if not school or not major:
+            err_msg = "目标院校或专业信息不完整，请返回填写后再生成"
+            _set_progress(report_id, 0, err_msg, "error")
+            execute(
+                "UPDATE consulting_reports SET status='error', error_message=?, updated_at=datetime('now','localtime') WHERE id=?",
+                (err_msg, report_id),
+            )
+            return
+
+        max_retries = 3
         search_content = ""
-        if not skip_research:
-            _set_progress(report_id, 5, "正在联网搜索院校信息...", "researching")
-            school = report.get('target_school', '')
-            major = report.get('target_major', '')
-            if school and major:
-                search_prompt = (
-                    f"请搜索 {school} 的 {major} 专业的官方信息，"
-                    f"包括：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
-                    f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
-                    f" 5) 该专业课程特色、学制、学分。请用中文回答，提供具体的数据和信息。"
-                )
-                search_result = _call_deepseek(
-                    [{"role": "user", "content": search_prompt}],
-                    temperature=0.1, max_tokens=2000, enable_search=True,
-                )
-                if "error" not in search_result:
-                    search_content = search_result["content"]
-                    _set_progress(report_id, 20, "院校信息已获取，正在分析学生情况...")
-                else:
-                    _set_progress(report_id, 5, "联网获取信息失败，将基于 AI 知识库直接分析")
+        for attempt in range(1, max_retries + 1):
+            retry_label = f"（第{attempt}次尝试）" if attempt > 1 else ""
+            _set_progress(report_id, 5, f"正在联网搜索院校信息{retry_label}...", "researching")
+            search_prompt = (
+                f"请搜索 {school} 的 {major} 专业的官方信息，"
+                f"包括：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
+                f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
+                f" 5) 该专业课程特色、学制、学分。请用中文回答，提供具体的数据和信息。"
+            )
+            search_result = _call_deepseek(
+                [{"role": "user", "content": search_prompt}],
+                temperature=0.1, max_tokens=2000, enable_search=True,
+            )
+            if "error" not in search_result:
+                search_content = search_result["content"]
+                _set_progress(report_id, 20, "院校信息已获取，正在分析学生情况...")
+                break
             else:
-                _set_progress(report_id, 5, "目标院校信息不完整，跳过联网搜索")
+                err = search_result["error"]
+                _set_progress(report_id, 5, f"联网搜索失败（{attempt}/{max_retries}）：{err[:50]}", "researching")
+                if attempt < max_retries:
+                    time.sleep(5)
+
+        if not search_content:
+            err_msg = f"联网搜索院校信息失败（已重试{max_retries}次），请稍后重试"
+            _set_progress(report_id, 0, err_msg, "error")
+            execute(
+                "UPDATE consulting_reports SET status='error', error_message=?, updated_at=datetime('now','localtime') WHERE id=?",
+                (err_msg, report_id),
+            )
+            return
 
         _set_progress(report_id, 10, "正在分析学生背景...")
 
@@ -138,7 +159,19 @@ def _run_generation(report_id, lead_id, skip_research=False):
 
 所有分析和建议必须基于该路径，不能张冠李戴。
 
-**差距分析必须是多维度的，不只看前置知识。** 影响学业成功的因素包括但不限于：
+**最重要的新增模块——课程分析（course_analysis）：**
+根据目标院校专业的实际课程设置，逐门分析核心课程。每门课分析：
+- 课程名称、学分/学时、考核形式（考试/论文/项目/实验等）
+- 前置知识要求（需要具备什么基础）
+- 学生当前掌握程度评估（根据学生背景判断）
+- 差距分析与薄弱点
+- 建议补充学习的内容和方法
+
+课程分析要具体、实用，让学生看完知道"这门课我差在哪儿、需要补什么"。
+不要笼统地说"加强基础"，要具体到知识点或技能层面。
+课程信息来自联网搜索到的目标院校专业信息，如果搜索结果不够详细，基于专业通用课程体系做合理推断并注明。
+
+**差距分析是多维度的，放在课程分析之后。** 影响学业成功的因素包括但不限于：
 - 前置知识基础（学科知识跨度，特别是当前阶段与目标阶段的衔接）
 - 学习习惯与方法（高中 vs 大学/国内 vs 国外的学习方式差异）
 - 语言能力转型（应试英语→学术英语、专业术语写作）
@@ -154,6 +187,18 @@ def _run_generation(report_id, lead_id, skip_research=False):
 - 学生申硕士，就介绍硕士项目，不是本科
 - 学生已拿Offer，就介绍开学前准备和第一学期选课
 
+**关于建议的措辞（非常重要）：**
+- 不出现"自学"这个词
+- 不直接说"来我们这上课"、"报名辅导"等营销性语言
+- 用以下措辞：
+  * "建议重点强化XX方面"
+  * "建议在入学前重点准备XX内容"
+  * "建议提前熟悉XX知识领域"
+  * "建议针对XX进行系统训练"
+  * "建议把XX作为优先准备方向"
+  * "建议补充XX方面的知识储备"
+- 整体语气：以学生顺利衔接为目标，给出专业、诚恳的学习准备建议
+
 输出必须为 JSON 格式，包含以下字段：
 {
   "report_title": "报告标题（如：海南大学自动化→新南威尔士大学电气工程（预科+本科）的学业风险与规划）",
@@ -162,8 +207,19 @@ def _run_generation(report_id, lead_id, skip_research=False):
     "target": "目标描述（一段话，包含升学路径说明）",
     "key_info": { "当前院校": "", "目标院校": "", "目标专业": "", "当前成绩": "", "语言成绩": "", "升学路径": "" }
   },
-  "program_overview": "目标院校专业概览（针对学生即将进入的具体阶段，不是笼统介绍）",
+  "program_overview": "目标院校专业概览（针对学生即将进入的具体阶段，不是笼统介绍。包含学制、学分要求、课程体系特色等）",
   "core_courses": ["推荐的核心课程方向（如有）"],
+  "course_analysis": [
+    {
+      "course_name": "课程名称",
+      "credits": "学分/学时",
+      "assessment": "考核形式（考试/论文/项目/实验等）",
+      "prerequisites": "前置知识要求",
+      "student_readiness": "学生当前掌握程度评估",
+      "gap": "差距分析与薄弱点",
+      "supplement_action": "建议补充学习的内容和方法（具体到知识点或技能）"
+    }
+  ],
   "gap_analysis": [
     {
       "dimension": "分析维度（如前置知识、学习习惯、语言转型、心理适应等）",
@@ -177,23 +233,24 @@ def _run_generation(report_id, lead_id, skip_research=False):
   "preparation_plan": [
     {
       "phase": "阶段名称（如：签证等待期/预科前/预科期间/本科第一学期/长期）",
-      "tasks": ["具体任务"],
+      "tasks": ["具体任务（不说自学，说建议落实/重点强化）"],
       "timeline": "时间线",
       "goal": "目标"
     }
   ],
   "overall_assessment": "综合评估（包含学术、心理、适应等多维度判断，紧扣学生当前阶段）",
   "risk_level": "low/medium/high",
-  "recommendations": ["具体建议列表（3-5条，可执行）"],
+  "recommendations": ["具体建议列表（3-5条，可执行。措辞要求：不出现自学、不出现营销性语言，用建议强化/建议重点准备/建议提前熟悉等）"],
   "consultant_tips": "给顾问的沟通建议（内部参考，包括如何与家长/学生沟通关键问题）"
 }
 
 请确保：
 - 所有内容紧扣学生的实际升学路径，不张冠李戴
+- course_analysis 是核心新增模块，必须具体、有针对性
 - gap_analysis 维度根据学生实际情况动态确定，不限于学术，涵盖学习习惯、心理、适应等
 - program_overview 针对学生即将进入的具体阶段，不是笼统介绍
 - preparation_plan 的阶段名称与学生的实际时间线匹配
-- recommendations 要具体到可执行层面
+- recommendations 要具体到可执行层面且措辞符合要求
 - 时间线根据当前日期给出具体月份安排
 - consultant_tips 仍要输出，供内部参考"""
 
@@ -624,10 +681,9 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
 
     rid = int(report_id)
     report_type = report.get("report_type", "risk")
-    force = qs.get("force", [None])[0]
 
     # ── 行前准备规划：检查课程数据（缓存/已有） ──
-    if report_type == "preparation" and force != "1":
+    if report_type == "preparation":
         program_courses = report.get("program_courses") or ""
         if not program_courses:
             # 尝试从缓存读取
@@ -660,14 +716,14 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
                 })
                 return
 
-    # ── 学业风险分析：联网搜索院校录取要求 ──
-    if report_type in ("risk", "unified") and force != "1":
+    # ── 学业风险分析：联网搜索院校录取要求（硬性要求，穷举重试） ──
+    if report_type in ("risk", "unified"):
         _gen_progress[rid] = {"progress": 5, "step": "正在联网搜索院校录取要求...", "status": "researching"}
         execute(
             "UPDATE consulting_reports SET status='researching', progress=5, updated_at=datetime('now','localtime') WHERE id=?",
             (rid,),
         )
-        # 线程立即启动，内部先联网搜索再生成报告
+        # 线程启动，内部穷举重试搜索，失败则报告标 error
         t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
         t.start()
         ok_response(handler, {
@@ -677,7 +733,7 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
         })
         return
 
-    # ── 启动生成线程 ──
+    # ── 启动生成线程（仅 preparation 类型会走到这里） ──
     execute(
         "UPDATE consulting_reports SET status='generating', progress=0, updated_at=datetime('now','localtime') WHERE id=?",
         (rid,),
@@ -686,10 +742,7 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
     step_label = "启动分析引擎..."
     _gen_progress[rid] = {"progress": 0, "step": step_label, "status": "generating"}
 
-    # force=1 时跳过联网搜索
-    skip_research = (force == "1")
-    t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)),
-                         kwargs={"skip_research": skip_research}, daemon=True)
+    t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
     msg = "AI 分析已启动"
     t.start()
 
