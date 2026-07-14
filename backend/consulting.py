@@ -22,6 +22,7 @@ from export import generate_docx, generate_pdf
 # AI 生成进度跟踪（内存）
 # ═══════════════════════════════════════════
 _gen_progress = {}
+_gen_retry_count = {}  # report_id → retry round (跨调⽤跟踪重试轮次)
 
 
 def _set_progress(report_id, progress, step, status="generating"):
@@ -132,99 +133,174 @@ def _resolve_official_domain(school_en):
     return ""
 
 
-def _exhaustive_university_search(school, major, lead, report_id):
+def _exhaustive_university_search(school, major, lead, report_id, round_num=1):
     """
     穷举多策略搜索目标院校官方信息，只从学校官网实时抓取。
+    round_num=1: 第⼀轮（7种策略）
+    round_num=2: 重试轮（5种完全不⻅的⻆度）
+    round_num>=3: 重试第三轮（再5种）
     返回 (search_content, error_message, fetched_url)
     """
     school_en = school.strip()
     major_en = major.strip()
     domain = _resolve_official_domain(school_en) or ""
 
-    # ── 最多7种搜索策略，每种用不同角度锁定官网 ──
+    # ── 按重试轮次选择策略（每轮完全不同的搜索角度） ──
     strategies = []
 
-    # ① 中文全称搜录取要求
-    strategies.append({
-        "label": "中文全称录取要求",
-        "prompt": (
+    if round_num == 1:
+        # ═══ 第一轮：录取要求 + 课程结构（7种） ═══
+
+        strategies.append({"label": "中文全称录取要求", "prompt": (
             f"请搜索 {school_en} 的 {major_en} 专业的官方介绍及录取要求信息。"
             f"请优先从学校官网 {domain or school_en} 获取信息。"
             f"需要以下内容：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
             f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
             f" 5) 该专业课程特色、学制、学分。全部用中文回答，提供具体数据。"
-        ),
-    })
+        )})
 
-    # ② 英文全称搜 admission requirements
-    strategies.append({
-        "label": "英文admission requirements",
-        "prompt": (
+        strategies.append({"label": "英文admission requirements", "prompt": (
             f"Search the official website of {school_en} for the {major_en} program admission requirements. "
             f"Only include information from the official {domain or school_en} website. "
             f"Find: 1) GPA requirements 2) English language requirements (IELTS/TOEFL scores) "
             f"3) Prerequisite subjects 4) Portfolio/interview/other selection criteria "
             f"5) Course structure, duration, credits. Provide exact numbers and requirements."
-        ),
-    })
+        )})
 
-    # ③ 英文全称搜 entry requirements + course structure
-    strategies.append({
-        "label": "英文entry requirements+课程",
-        "prompt": (
+        strategies.append({"label": "英文entry requirements+课程", "prompt": (
             f"Search {school_en} {major_en} entry requirements and course structure from the official "
             f"{domain or school_en} website. Find: 1) A-level/IB or equivalent entry requirements "
             f"2) IELTS/TOEFL minimum scores for each band 3) Core modules and optional modules "
             f"4) Teaching and assessment methods 5) Year-by-year programme breakdown. "
             f"Only use official university website data."
-        ),
-    })
+        )})
 
-    # ④ site:官方域名强制锁定
-    if domain:
-        strategies.append({
-            "label": f"site:{domain} 锁定域名",
-            "prompt": (
+        if domain:
+            strategies.append({"label": f"site:{domain} 锁定域名", "prompt": (
                 f"Search site:{domain} for {major_en} program information at {school_en}. "
                 f"Find the official programme page and extract: entry requirements, "
                 f"IELTS/TOEFL scores, course modules, degree classification requirements, "
                 f"and tuition fees. Only return data from the official {domain} domain."
-            ),
-        })
-        strategies.append({
-            "label": f"site:{domain} course catalogue",
-            "prompt": (
+            )})
+            strategies.append({"label": f"site:{domain} course catalogue", "prompt": (
                 f"Search site:{domain} for the {major_en} course catalogue or programme specification. "
                 f"I need the complete module list, credit breakdown per year, "
                 f"assessment weighting, and compulsory vs optional module details for {major_en} at {school_en}. "
                 f"Only use official {domain} data."
-            ),
-        })
+            )})
 
-    # ⑤ 搜 programme specification PDF
-    if domain:
-        strategies.append({
-            "label": "programme specification PDF",
-            "prompt": (
+        if domain:
+            strategies.append({"label": "programme specification PDF", "prompt": (
                 f"Search for the {major_en} programme specification PDF on {school_en} official website "
                 f"(site:{domain}). UK universities publish detailed programme specifications in PDF format "
                 f"listing every module, learning outcomes, and assessment methods. "
                 f"Find and extract the content of this PDF for {major_en} at {school_en}. "
                 f"Only include data from the official {domain} domain."
-            ),
-        })
+            )})
 
-    # ⑥ 搜 course catalogue 课程目录
-    if domain:
-        strategies.append({
-            "label": "course catalogue 课程目录",
-            "prompt": (
+        if domain:
+            strategies.append({"label": "course catalogue 课程目录", "prompt": (
                 f"Search site:{domain} for the {major_en} course catalogue or module directory at {school_en}. "
                 f"Every UK university publishes a programme catalogue with full module descriptions. "
                 f"Find the programme page for {major_en} and extract: all module names, credit values, "
                 f"teaching periods, and assessment breakdown. Only use {domain}."
-            ),
-        })
+            )})
+
+    elif round_num == 2:
+        # ═══ 第二轮：完全不同的角度（5种） ═══
+        # 避开第一轮的"录取要求/课程目录"方向，换成学位要求/学年拆解/考核权重
+
+        if domain:
+            strategies.append({"label": "degree classification requirements", "prompt": (
+                f"Search site:{domain} for {major_en} degree classification requirements and "
+                f"graduation conditions at {school_en}. Find: 1) What degree classification "
+                f"(First/2:1/2:2) is needed to progress 2) Year weighting for final degree "
+                f"3) Compulsory credits per year 4) Dissertation/project requirements "
+                f"5) Progression rules between years. Only use official {domain} data."
+            )})
+
+        if domain:
+            strategies.append({"label": "year-by-year module breakdown", "prompt": (
+                f"Search site:{domain} for the complete year-by-year module breakdown for "
+                f"{major_en} at {school_en}. I need: Level 4 (Year 1), Level 5 (Year 2), "
+                f"and Level 6 (Year 3) module lists separately. For each year list: "
+                f"compulsory modules, optional modules, credit values per module, "
+                f"and total credits per year. Only use official {domain} programme data."
+            )})
+
+        if domain:
+            strategies.append({"label": "assessment weighting breakdown", "prompt": (
+                f"Search site:{domain} for the assessment methods and weighting breakdown "
+                f"for {major_en} modules at {school_en}. Find: 1) Exam vs coursework ratio "
+                f"per module 2) Typical assessment formats (presentations, lab reports, "
+                f"essays, exams) 3) Module pass mark requirements 4) Resit policy. "
+                f"Only use official {domain} data."
+            )})
+
+        if domain:
+            strategies.append({"label": "student programme handbook", "prompt": (
+                f"Search site:{domain} for the {major_en} student handbook, programme handbook, "
+                f"or course handbook at {school_en}. University handbooks contain detailed "
+                f"module descriptions, reading lists, assessment criteria, and academic regulations. "
+                f"Find and extract programme-specific information for {major_en}. "
+                f"Only use official {domain} handbooks."
+            )})
+
+        if domain:
+            strategies.append({"label": "faculty department page", "prompt": (
+                f"Search site:{domain} for the department or faculty page that offers "
+                f"{major_en} at {school_en}. Department pages list staff expertise, "
+                f"research areas, and sometimes module convenors. Find: 1) Department name "
+                f"2) Staff research interests that relate to {major_en} 3) Any programme-specific "
+                f"facilities or resources. Only use official {domain} data."
+            )})
+
+    else:
+        # ═══ 第三轮及以上：再换5种全新角度 ═══
+        # 转向更加细粒度的搜索（时间线、学⻋安排、实习要求、认证、学费）
+
+        if domain:
+            strategies.append({"label": "academic calendar + term dates", "prompt": (
+                f"Search site:{domain} for the academic calendar, term dates, and teaching schedule "
+                f"for {major_en} at {school_en}. Find: 1) Term start and end dates "
+                f"2) Teaching weeks per term 3) Exam periods 4) Reading weeks 5) Break periods. "
+                f"Only use official {domain} data."
+            )})
+
+        if domain:
+            strategies.append({"label": "placement internship year info", "prompt": (
+                f"Search site:{domain} for placement year, internship, or industry year information "
+                f"for {major_en} at {school_en}. Find: 1) Is a placement year available "
+                f"2) How it integrates with the degree structure 3) Application process "
+                f"4) Any placements currently offered to students in this programme. "
+                f"Only use official {domain} data."
+            )})
+
+        if domain:
+            strategies.append({"label": "professional accreditation", "prompt": (
+                f"Search site:{domain} for professional accreditation, exemptions, or industry "
+                f"recognition details for {major_en} at {school_en}. Find: 1) Which professional "
+                f"bodies accredit this programme 2) Exemptions granted 3) Accreditation status "
+                f"4) What graduates typically go on to do. Only use official {domain} data."
+            )})
+
+        if domain:
+            strategies.append({"label": "tuition fees + scholarships", "prompt": (
+                f"Search site:{domain} for tuition fees, additional costs, and scholarship "
+                f"opportunities for {major_en} at {school_en}. Find: 1) Annual tuition fee "
+                f"2) Any mandatory additional costs (field trips, equipment, lab fees) "
+                f"3) Available scholarships or bursaries for this programme 4) Fee status criteria. "
+                f"Only use official {domain} data."
+            )})
+
+        if domain:
+            strategies.append({"label": "graduate outcomes + employability", "prompt": (
+                f"Search site:{domain} for graduate outcomes, career prospects, and alumni "
+                f"destinations for {major_en} at {school_en}. Find: 1) Where graduates work "
+                f"2) Further study destinations 3) Employability support specific to this "
+                f"programme 4) Industry connections or partnerships. "
+                f"Only use official {domain} data."
+            )})
 
     search_content = ""
     last_error = ""
@@ -283,7 +359,7 @@ def _exhaustive_university_search(school, major, lead, report_id):
 # AI 生成报告（后台线程）
 # ═══════════════════════════════════════════
 
-def _run_generation(report_id, lead_id):
+def _run_generation(report_id, lead_id, round_num=1):
     """后台线程：穷举搜索院校官网 → 生成学业风险分析报告"""
     try:
         # 1. 读取报告 + 线索信息
@@ -309,13 +385,16 @@ def _run_generation(report_id, lead_id):
             return
 
         # 2. 穷举多策略搜索院校官网（只从官方域获取）
-        search_content, search_err, _ = _exhaustive_university_search(school, major, lead, report_id)
+        round_label = f"第{round_num}轮" if round_num > 1 else ""
+        _set_progress(report_id, 5, f"正在搜索院校官网{round_label}...", "researching")
+        search_content, search_err, _ = _exhaustive_university_search(school, major, lead, report_id, round_num=round_num)
 
         if not search_content:
-            _set_progress(report_id, 0, search_err, "error")
+            err_msg = f"{search_err}（第{round_num}轮搜索）"
+            _set_progress(report_id, 0, err_msg, "error")
             execute(
                 "UPDATE consulting_reports SET status='error', error_message=?, updated_at=datetime('now','localtime') WHERE id=?",
-                (search_err, report_id),
+                (err_msg, report_id),
             )
             return
 
@@ -854,6 +933,14 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
     rid = int(report_id)
     report_type = report.get("report_type", "risk")
 
+    # 确定重试轮次：error状态重试 → 递增轮次，第1轮 → 清理旧计数
+    if report["status"] == "error":
+        round_num = _gen_retry_count.get(rid, 0) + 1
+        _gen_retry_count[rid] = round_num
+    else:
+        round_num = 1
+        _gen_retry_count.pop(rid, None)  # 非重试 → 清除历史计数
+
     # ── 行前准备规划：检查课程数据（缓存/已有） ──
     if report_type == "preparation":
         program_courses = report.get("program_courses") or ""
@@ -896,12 +983,13 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
             (rid,),
         )
         # 线程启动，内部穷举多策略搜索，失败则直接标 error
-        t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
+        t = threading.Thread(target=_run_generation, args=(rid, int(lead_id), round_num), daemon=True)
         t.start()
+        round_label = f"（第{round_num}轮）" if round_num > 1 else ""
         ok_response(handler, {
             "status": "researching", "progress": 5,
-            "step": "正在联网搜索院校录取要求...",
-            "message": "正在穷举多种搜索策略获取目标院校官网数据",
+            "step": f"正在联网搜索院校录取要求{round_label}...",
+            "message": f"正在穷举搜索目标院校官网数据{round_label}",
         })
         return
 
@@ -911,11 +999,11 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
         (rid,),
     )
 
-    step_label = "启动分析引擎..."
+    step_label = f"启动分析引擎（第{round_num}轮）..."
     _gen_progress[rid] = {"progress": 0, "step": step_label, "status": "generating"}
 
-    t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
-    msg = "AI 分析已启动"
+    t = threading.Thread(target=_run_generation, args=(rid, int(lead_id), round_num), daemon=True)
+    msg = f"AI 分析已启动（第{round_num}轮）"
     t.start()
 
     ok_response(handler, {"status": "processing", "progress": 0, "step": step_label, "message": msg})
