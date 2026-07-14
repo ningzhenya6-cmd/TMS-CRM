@@ -79,7 +79,7 @@ function canUser(role, permission) {
 const ROLE_MENU = [
   { id: 'dashboard', label: '工作台', icon: 'bi-grid-1x2-fill', roles: '*', view: 'dashboard' },
   { id: 'leads', label: '资源管理', icon: 'bi-people-fill', roles: ['admin', 'supervisor', 'cs', 'consultant'], view: 'leads' },
-  { id: 'quick-add', label: '快速录入', icon: 'bi-plus-circle-fill', roles: ['cs', 'consultant', 'admin', 'supervisor'], view: 'quick-add' },
+  { id: 'pending-followup', label: '待跟进', icon: 'bi-card-checklist', roles: ['cs', 'consultant', 'admin', 'supervisor'], view: 'pending-followup' },
   { id: 'followup-plan', label: '跟进计划', icon: 'bi-calendar-check', roles: ['cs', 'consultant', 'academic', 'admin', 'supervisor'], view: 'followup-plan' },
   { id: 'divider1', divider: true },
   { id: 'trials', label: '试听管理', icon: 'bi-ear', roles: ['coordinator', 'admin', 'supervisor', 'cs', 'consultant'], view: 'trials' },
@@ -169,7 +169,7 @@ app.component('include-dashboard', {
   props: ['user', 'switchView', 'roleLabel', 'statusBadge'],
   template: '#tpl-dashboard',
   data() {
-    return { stats: {}, recentLeads: [], overdueCount: 0 };
+    return { stats: {}, recentLeads: [], overdueCount: 0, showAllOverdue: false, showAllNew: false, showAllToday: false };
   },
   computed: {
     statCards() {
@@ -199,6 +199,10 @@ app.component('include-dashboard', {
       }
       return [];
     },
+    actionNewLeads() { return this.stats?.action_new_leads || []; },
+    actionOverdue() { return this.stats?.action_overdue || []; },
+    actionToday() { return this.stats?.action_today || []; },
+    totalActions() { return this.actionNewLeads.length + this.actionOverdue.length + this.actionToday.length; },
   },
   methods: {
     async load() {
@@ -210,6 +214,20 @@ app.component('include-dashboard', {
       this.pendingContact = res.data?.pending_contact || 0;
       const lr = await API.get('/leads?page=1&page_size=5');
       if (!lr.error) this.recentLeads = lr.data?.items || [];
+    },
+    copyPhone(phone) {
+      if (!phone) return;
+      const doCopy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = phone; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(phone).catch(doCopy);
+      } else { doCopy(); }
+      toast('电话已复制', 'success');
     },
     openLead(id) { TMSStore.leadId = id; TMSStore.fromView = this.currentView; this.switchView('lead-detail'); },
   },
@@ -251,13 +269,28 @@ app.component('include-leads', {
   },
   methods: {
     async load() {
-      let p = `?page=${this.page}&page_size=${this.pageSize}&status=${this.filters.status}&source=${this.filters.source}&rank=${this.filters.rank}`;
+      let p;
+
+      // "新线索" filter: use last_followup_at IS NULL approach
+      if (this.filters.status === 'new') {
+        p = `?page=${this.page}&page_size=${this.pageSize}`;
+      } else {
+        p = `?page=${this.page}&page_size=${this.pageSize}&status=${this.filters.status}`;
+      }
+      p += `&source=${this.filters.source}&rank=${this.filters.rank}`;
       if (this.filters.dateFrom) p += `&date_from=${this.filters.dateFrom}`;
       if (this.filters.dateTo) p += `&date_to=${this.filters.dateTo}`;
       if (this.search) p += '&search=' + encodeURIComponent(this.search);
       const res = await API.get('/leads' + p);
       if (res.error) return;
-      this.list = res.data?.items || [];
+      let items = res.data?.items || [];
+
+      // "新线索" filter: client-side filter by has_followup
+      if (this.filters.status === 'new') {
+        items = items.filter(l => l.has_followup === false);
+      }
+
+      this.list = items;
       this.total = res.data?.total || 0;
       // 保存到全局 Store 供详情页跨页导航
       TMSStore.leadsList = this.list.map(l => l.id);
@@ -606,6 +639,11 @@ app.component('include-lead-detail', {
       this.load();
     },
     goBack() { const v = TMSStore.fromView || 'leads'; this.switchView(v); },
+    openGrowth() {
+      if (!this.lead || !this.lead.id) return;
+      TMSStore.growthLeadId = this.lead.id;
+      this.switchView('growth');
+    },
     async goPrevLead() {
       const idx = this.curLeadIndex;
       if (idx > 0) {
@@ -1031,28 +1069,95 @@ app.component('include-lead-detail', {
 /* ════════════════════════════════════════
    Quick Add 组件
    ════════════════════════════════════════ */
-app.component('include-quick-add', {
+app.component('include-pending-followup', {
   props: ['user', 'switchView', 'roleLabel', 'statusBadge'],
-  template: '#tpl-quick-add',
+  template: '#tpl-pending-followup',
   data() {
     return {
-      form: { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' },
-      submitting: false, success: false,
-      sourceOptions: ['抖音', '小红书', '视频号', '转介绍', '线下活动', '线上', '其他'],
+      activeTab: 'first',
+      list: [],
+      loading: false,
+      followupForm: { lead_id: null, content: '', followup_rank: 'B', followup_type: '微信沟通' },
+      showFollowupModal: false,
+      submitting: false,
+      tabs: [
+        { key: 'first', label: '待首次跟进' },
+        { key: 'contact', label: '待联系' },
+        { key: 'today', label: '今日需跟进' },
+      ],
     };
   },
   methods: {
-    async submit() {
-      if (!this.form.name) { toast('请输入姓名', 'error'); return; }
-      this.submitting = true; this.success = false;
-      const res = await API.post('/leads', this.form);
+    async load() {
+      this.loading = true;
+      const params = new URLSearchParams();
+
+      if (this.activeTab === 'first') {
+        params.set('page_size', '50');
+        // Fetch all leads, filter client-side by has_followup (not status, which backend doesn't have)
+        const res = await API.get('/leads?' + params.toString());
+        if (!res.error) {
+          const all = res.data?.items || [];
+          this.list = all.filter(item => !item.has_followup && item.status !== 'closed' && item.status !== 'lost');
+        }
+      } else if (this.activeTab === 'contact') {
+        params.set('page_size', '50');
+        const res = await API.get('/leads?' + params.toString());
+        if (!res.error) {
+          const all = res.data?.items || [];
+          this.list = all.filter(item => item.contact_status === 'not_reached' || item.contact_status === 'follow_up');
+        }
+      } else if (this.activeTab === 'today') {
+        params.set('page_size', '50');
+        const res = await API.get('/leads?' + params.toString());
+        if (!res.error) {
+          const all = res.data?.items || [];
+          const today = new Date().toISOString().slice(0, 10);
+          this.list = all.filter(item => {
+            const next = (item.next_followup_at || '').slice(0, 10);
+            return next === today;
+          });
+        }
+      }
+      this.loading = false;
+    },
+    switchTab(key) { this.activeTab = key; this.load(); },
+    openQuickFollowup(lead) {
+      this.followupForm = { lead_id: lead.id, content: '', followup_rank: 'B', followup_type: '微信沟通' };
+      this.showFollowupModal = true;
+    },
+    async submitFollowup() {
+      if (!this.followupForm.content) { toast('请填写跟进内容', 'error'); return; }
+      this.submitting = true;
+      const res = await API.post('/followups', this.followupForm);
       this.submitting = false;
       if (res.error) { toast(res.error, 'error'); return; }
-      this.success = true;
-      this.form = { name: '', phone: '', wechat: '', source: '其他', country: '', grade: '', remark: '' };
-      toast('线索创建成功', 'success');
+      this.showFollowupModal = false;
+      toast('跟进已创建', 'success');
+      this.load();
     },
+    copyPhone(phone) {
+      if (!phone) return;
+      // Clipboard API 在 HTTPS 下可用，HTTP 下用 execCommand 兜底
+      const doCopy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = phone;
+        ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(phone).catch(doCopy);
+      } else {
+        doCopy();
+      }
+      toast('电话已复制', 'success');
+    },
+    openLead(id) { TMSStore.leadId = id; TMSStore.fromView = 'pending-followup'; this.switchView('lead-detail'); },
   },
+  created() { this.load(); },
 });
 
 /* ════════════════════════════════════════
@@ -1107,6 +1212,24 @@ app.component('include-followup-plan', {
     switchTab(key) { this.activeTab = key; this.page = 1; this.load(); },
     goPage(p) { if (p < 1 || p > this.totalPages || p === '...') return; this.page = p; this.load(); },
     openLead(id) { TMSStore.leadId = id; TMSStore.fromView = 'followup-plan'; this.switchView('lead-detail'); },
+    copyPhone(phone) {
+      if (!phone) return;
+      const doCopy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = phone;
+        ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(phone).catch(doCopy);
+      } else {
+        doCopy();
+      }
+      toast('电话已复制', 'success');
+    },
   },
   created() { this.load(); },
 });
@@ -2948,7 +3071,16 @@ canManage() {
     },
     formatDate(d) { return d ? d.slice(0,10) : ''; },
   },
-  created() { this.loadStudents(); },
+  created() {
+    this.loadStudents().then(() => {
+      // 从客户详情跳转时，自动选中预指定的学生
+      if (TMSStore.growthLeadId) {
+        const id = TMSStore.growthLeadId;
+        TMSStore.growthLeadId = null;
+        this.selectStudent(id);
+      }
+    });
+  },
   unmounted() { if (this.genPollTimer) clearTimeout(this.genPollTimer); },
 });
 

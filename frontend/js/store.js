@@ -6,6 +6,7 @@
   const TMSStore = Vue.reactive({
     leadId: null,       // 当前查看的线索/学生 ID
     fromView: null,     // 导航来源（用于返回）
+    growthLeadId: null, // 成长档案预选学生 ID（从客户详情跳转时传入）
     leadsPage: 1,       // 资源列表当前页码
     leadsList: [],      // 资源列表当前页的线索（用于上下条导航）
     leadsTotal: 0,      // 资源列表总条数
