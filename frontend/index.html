@@ -1502,6 +1502,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
                 <span v-else-if="r.risk_level === 'high'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-red-100 text-red-700">高风险</span>
                 <span v-else-if="r.risk_level" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-amber-100 text-amber-700">中风险</span>
                 <span v-else-if="r.status === 'completed'" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-emerald-100 text-emerald-700">已生成</span>
+                <span v-if="r.status === 'completed' && r.program_url && r.program_url.startsWith('real_time:')" class="inline-block px-1.5 py-0.5 rounded text-[.6rem] font-medium bg-green-100 text-green-700" title="已从学校官网实时抓取数据">🟢 官网实时</span>
               </div>
               <div class="text-xs text-gray-400 mt-0.5">
                 <span v-if="r.status === 'completed'">已生成 · {{ (r.created_at || '').slice(0,10) }}</span>
@@ -1703,6 +1704,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               </p>
             </div>
             <div class="flex items-center gap-2">
+              <span v-if="consultingReport.program_url && consultingReport.program_url.startsWith('real_time:')" class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700" title="数据来源于学校官网实时抓取">🟢 官网实时</span>
               <!-- risk 类型：风险等级 -->
               <template v-if="consultingReport.report_type !== 'preparation'">
                 <span v-if="consultingReport.risk_level === 'low'" class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">低风险</span>
@@ -4271,7 +4273,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=107"></script>
+<script src="js/app.js?v=108"></script>
 
   </body>
 </html>

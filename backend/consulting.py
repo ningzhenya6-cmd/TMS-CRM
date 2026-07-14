@@ -554,6 +554,9 @@ def _run_generation(report_id, lead_id, round_num=1):
 
         parsed = json.loads(content)
 
+        # 往 report_json 写入搜索来源标记（不影响报告内容，仅前端识别用）
+        parsed["_search_info"] = {"round": round_num, "from_website": True}
+
         # 分离公开内容和内部参考
         tips = parsed.pop("consultant_tips", "")
         report_json = json.dumps(parsed, ensure_ascii=False)
@@ -563,6 +566,9 @@ def _run_generation(report_id, lead_id, round_num=1):
         summary = parsed.get("overall_assessment", "")[:200] or parsed.get("student_profile", {}).get("background", "")[:200]
         report_title = parsed.get("report_title", "")
 
+        # program_url 字段：对 risk/unified 报告存搜索标记；preparation 仍存 report_title
+        search_marker = f"real_time:round={round_num}" if report.get("report_type") in ("risk", "unified") else report_title
+
         _set_progress(report_id, 90, "正在保存报告...")
 
         execute(
@@ -571,7 +577,7 @@ def _run_generation(report_id, lead_id, round_num=1):
                    program_url=?, program_courses=?,
                    status='completed', progress=100, updated_at=datetime('now','localtime')
                WHERE id=?""",
-            (report_json, risk_level, summary, report_title, full_json, report_id),
+            (report_json, risk_level, summary, search_marker, full_json, report_id),
         )
 
         _gen_progress[report_id] = {
