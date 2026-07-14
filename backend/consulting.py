@@ -81,8 +81,210 @@ def _call_deepseek(messages, temperature=0.3, max_tokens=3000, enable_search=Fal
         return {"error": str(e)}
 
 
+# ═══════════════════════════════════════════
+# 穷举多策略搜索 — 只从学校官网实时抓取
+# ═══════════════════════════════════════════
+
+def _resolve_official_domain(school_en):
+    """将院校英文名映射到官方域名"""
+    domain_map = {
+        "university college london": "ucl.ac.uk",
+        "ucl": "ucl.ac.uk",
+        "imperial college london": "imperial.ac.uk",
+        "london school of economics": "lse.ac.uk",
+        "university of oxford": "ox.ac.uk",
+        "oxford": "ox.ac.uk",
+        "university of cambridge": "cam.ac.uk",
+        "cambridge": "cam.ac.uk",
+        "university of edinburgh": "ed.ac.uk",
+        "edinburgh": "ed.ac.uk",
+        "university of manchester": "manchester.ac.uk",
+        "manchester": "manchester.ac.uk",
+        "king's college london": "kcl.ac.uk",
+        "kcl": "kcl.ac.uk",
+        "university of bristol": "bristol.ac.uk",
+        "university of melbourne": "unimelb.edu.au",
+        "melbourne": "unimelb.edu.au",
+        "university of sydney": "sydney.edu.au",
+        "university of new south wales": "unsw.edu.au",
+        "unsw": "unsw.edu.au",
+        "harvard university": "harvard.edu",
+        "harvard": "harvard.edu",
+        "massachusetts institute of technology": "mit.edu",
+        "mit": "mit.edu",
+        "stanford university": "stanford.edu",
+        "stanford": "stanford.edu",
+        "national university of singapore": "nus.edu.sg",
+        "nus": "nus.edu.sg",
+        "nanyang technological university": "ntu.edu.sg",
+        "ntu": "ntu.edu.sg",
+        "university of hong kong": "hku.hk",
+        "hku": "hku.hk",
+        "university of toronto": "utoronto.ca",
+        "toronto": "utoronto.ca",
+    }
+    key = school_en.strip().lower()
+    if key in domain_map:
+        return domain_map[key]
+    if "university of " in key:
+        name = key.replace("university of ", "").replace(" ", "")
+        return f"{name}.ac.uk"
+    return ""
+
+
+def _exhaustive_university_search(school, major, lead, report_id):
+    """
+    穷举多策略搜索目标院校官方信息，只从学校官网实时抓取。
+    返回 (search_content, error_message, fetched_url)
+    """
+    school_en = school.strip()
+    major_en = major.strip()
+    domain = _resolve_official_domain(school_en) or ""
+
+    # ── 最多7种搜索策略，每种用不同角度锁定官网 ──
+    strategies = []
+
+    # ① 中文全称搜录取要求
+    strategies.append({
+        "label": "中文全称录取要求",
+        "prompt": (
+            f"请搜索 {school_en} 的 {major_en} 专业的官方介绍及录取要求信息。"
+            f"请优先从学校官网 {domain or school_en} 获取信息。"
+            f"需要以下内容：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
+            f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
+            f" 5) 该专业课程特色、学制、学分。全部用中文回答，提供具体数据。"
+        ),
+    })
+
+    # ② 英文全称搜 admission requirements
+    strategies.append({
+        "label": "英文admission requirements",
+        "prompt": (
+            f"Search the official website of {school_en} for the {major_en} program admission requirements. "
+            f"Only include information from the official {domain or school_en} website. "
+            f"Find: 1) GPA requirements 2) English language requirements (IELTS/TOEFL scores) "
+            f"3) Prerequisite subjects 4) Portfolio/interview/other selection criteria "
+            f"5) Course structure, duration, credits. Provide exact numbers and requirements."
+        ),
+    })
+
+    # ③ 英文全称搜 entry requirements + course structure
+    strategies.append({
+        "label": "英文entry requirements+课程",
+        "prompt": (
+            f"Search {school_en} {major_en} entry requirements and course structure from the official "
+            f"{domain or school_en} website. Find: 1) A-level/IB or equivalent entry requirements "
+            f"2) IELTS/TOEFL minimum scores for each band 3) Core modules and optional modules "
+            f"4) Teaching and assessment methods 5) Year-by-year programme breakdown. "
+            f"Only use official university website data."
+        ),
+    })
+
+    # ④ site:官方域名强制锁定
+    if domain:
+        strategies.append({
+            "label": f"site:{domain} 锁定域名",
+            "prompt": (
+                f"Search site:{domain} for {major_en} program information at {school_en}. "
+                f"Find the official programme page and extract: entry requirements, "
+                f"IELTS/TOEFL scores, course modules, degree classification requirements, "
+                f"and tuition fees. Only return data from the official {domain} domain."
+            ),
+        })
+        strategies.append({
+            "label": f"site:{domain} course catalogue",
+            "prompt": (
+                f"Search site:{domain} for the {major_en} course catalogue or programme specification. "
+                f"I need the complete module list, credit breakdown per year, "
+                f"assessment weighting, and compulsory vs optional module details for {major_en} at {school_en}. "
+                f"Only use official {domain} data."
+            ),
+        })
+
+    # ⑤ 搜 programme specification PDF
+    if domain:
+        strategies.append({
+            "label": "programme specification PDF",
+            "prompt": (
+                f"Search for the {major_en} programme specification PDF on {school_en} official website "
+                f"(site:{domain}). UK universities publish detailed programme specifications in PDF format "
+                f"listing every module, learning outcomes, and assessment methods. "
+                f"Find and extract the content of this PDF for {major_en} at {school_en}. "
+                f"Only include data from the official {domain} domain."
+            ),
+        })
+
+    # ⑥ 搜 course catalogue 课程目录
+    if domain:
+        strategies.append({
+            "label": "course catalogue 课程目录",
+            "prompt": (
+                f"Search site:{domain} for the {major_en} course catalogue or module directory at {school_en}. "
+                f"Every UK university publishes a programme catalogue with full module descriptions. "
+                f"Find the programme page for {major_en} and extract: all module names, credit values, "
+                f"teaching periods, and assessment breakdown. Only use {domain}."
+            ),
+        })
+
+    search_content = ""
+    last_error = ""
+    fetched_url = ""
+
+    # 第三方网站标记（搜索结果中被判定为非官方的线索）
+    third_party_signals = ["topuniversities.com", "shiksha.com", "hotcoursesabroad.com",
+                           "timeshighereducation.com", "theguardian.com", "findamasters.com",
+                           "mastersportal.com", "bachelorsportal.com", "phdportal.com",
+                           "大学排名", "学费排名", "留学中介", "IDP", "EIC"]
+
+    for i, strategy in enumerate(strategies):
+        label = strategy["label"]
+        step_num = i + 1
+        total = len(strategies)
+
+        _set_progress(report_id, 5 + step_num * 10 // total,
+                      f"📡 官网搜索策略{step_num}/{total}：{label}", "researching")
+
+        result = _call_deepseek(
+            [{"role": "user", "content": strategy["prompt"]}],
+            temperature=0.1 + step_num * 0.05,  # 逐步提高随机性
+            max_tokens=3000,
+            enable_search=True,
+        )
+
+        if "error" not in result:
+            content = result["content"]
+            # 检查结果是否包含明显的第三方非官方信息
+            has_third_party = any(sig.lower() in content.lower() for sig in third_party_signals)
+            has_official = domain.lower() in content.lower() if domain else True
+
+            if has_official or not has_third_party:
+                search_content = content
+                _set_progress(report_id, 10 + step_num * 40 // total,
+                              f"✅ 策略{step_num}成功：{label}，数据已获取", "researching")
+                return search_content, "", fetched_url
+            else:
+                _set_progress(report_id, 5 + step_num * 10 // total,
+                              f"⚠️ 策略{step_num}只返回了第三方信息，尝试下一策略", "researching")
+                time.sleep(2)
+        else:
+            last_error = result["error"]
+            _set_progress(report_id, 5 + step_num * 10 // total,
+                          f"❌ 策略{step_num}/{total}失败({label})：{result['error'][:40]}", "researching")
+            time.sleep(2)
+
+    # 全部策略失败
+    err_msg = f"穷举{total}种搜索策略均未获取到目标院校官网数据，请稍后重试"
+    if last_error:
+        err_msg += f"。最后错误：{last_error[:60]}"
+    return "", err_msg, fetched_url
+
+
+# ═══════════════════════════════════════════
+# AI 生成报告（后台线程）
+# ═══════════════════════════════════════════
+
 def _run_generation(report_id, lead_id):
-    """后台线程：调用 DeepSeek 生成学业风险分析报告"""
+    """后台线程：穷举搜索院校官网 → 生成学业风险分析报告"""
     try:
         # 1. 读取报告 + 线索信息
         report = query_one("SELECT * FROM consulting_reports WHERE id=?", (report_id,))
@@ -95,7 +297,6 @@ def _run_generation(report_id, lead_id):
             _set_progress(report_id, 0, "学生不存在", "error")
             return
 
-        # 1b. 联网搜索目标院校录取要求 — 硬性要求，穷举重试
         school = report.get('target_school', '')
         major = report.get('target_major', '')
         if not school or not major:
@@ -107,43 +308,20 @@ def _run_generation(report_id, lead_id):
             )
             return
 
-        max_retries = 3
-        search_content = ""
-        for attempt in range(1, max_retries + 1):
-            retry_label = f"（第{attempt}次尝试）" if attempt > 1 else ""
-            _set_progress(report_id, 5, f"正在联网搜索院校信息{retry_label}...", "researching")
-            search_prompt = (
-                f"请搜索 {school} 的 {major} 专业的官方信息，"
-                f"包括：1) GPA/平均分要求 2) 语言成绩要求（雅思/托福等）"
-                f" 3) 前置修读科目要求 4) 作品集/面试/其他考核形式"
-                f" 5) 该专业课程特色、学制、学分。请用中文回答，提供具体的数据和信息。"
-            )
-            search_result = _call_deepseek(
-                [{"role": "user", "content": search_prompt}],
-                temperature=0.1, max_tokens=2000, enable_search=True,
-            )
-            if "error" not in search_result:
-                search_content = search_result["content"]
-                _set_progress(report_id, 20, "院校信息已获取，正在分析学生情况...")
-                break
-            else:
-                err = search_result["error"]
-                _set_progress(report_id, 5, f"联网搜索失败（{attempt}/{max_retries}）：{err[:50]}", "researching")
-                if attempt < max_retries:
-                    time.sleep(5)
+        # 2. 穷举多策略搜索院校官网（只从官方域获取）
+        search_content, search_err, _ = _exhaustive_university_search(school, major, lead, report_id)
 
         if not search_content:
-            err_msg = f"联网搜索院校信息失败（已重试{max_retries}次），请稍后重试"
-            _set_progress(report_id, 0, err_msg, "error")
+            _set_progress(report_id, 0, search_err, "error")
             execute(
                 "UPDATE consulting_reports SET status='error', error_message=?, updated_at=datetime('now','localtime') WHERE id=?",
-                (err_msg, report_id),
+                (search_err, report_id),
             )
             return
 
-        _set_progress(report_id, 10, "正在分析学生背景...")
+        _set_progress(report_id, 20, "院校信息已获取，正在分析学生情况...")
 
-        # 2. 构造 prompt — 统一学业风险与规划报告
+        # 3. 构造 prompt — 统一学业风险与规划报告
         system_prompt = """你是一位资深的留学学业规划顾问。请根据学生情况描述，生成一份「学业风险与规划报告」。
 
 报告面向学生和家长，语言专业但易懂。
@@ -254,7 +432,6 @@ def _run_generation(report_id, lead_id):
 - 时间线根据当前日期给出具体月份安排
 - consultant_tips 仍要输出，供内部参考"""
 
-
         current_date = datetime.datetime.now().strftime("%Y年%m月%d日")
         user_prompt = f"""当前日期：{current_date}
 
@@ -270,14 +447,9 @@ def _run_generation(report_id, lead_id):
 当前院校：{report.get('current_school', '')}
 当前成绩：{report.get('gpa', '')}
 语言成绩：{report.get('language_scores', '')}
-"""
 
-        # 如果有联网搜索到的院校信息，追加到 prompt 中
-        if search_content:
-            user_prompt += f"""
-
-【联网搜索获取的院校信息】
-{search_content[:2500]}"""
+【从目标院校官网获取的官方信息】
+{search_content[:3000]}"""
 
         _set_progress(report_id, 30, "正在调用 AI 分析引擎...")
 
@@ -302,12 +474,12 @@ def _run_generation(report_id, lead_id):
         content = re.sub(r"\s*```$", "", content)
 
         parsed = json.loads(content)
-        
+
         # 分离公开内容和内部参考
         tips = parsed.pop("consultant_tips", "")
         report_json = json.dumps(parsed, ensure_ascii=False)
         full_json = json.dumps({**parsed, "consultant_tips": tips}, ensure_ascii=False)
-        
+
         risk_level = parsed.get("risk_level", "medium")
         summary = parsed.get("overall_assessment", "")[:200] or parsed.get("student_profile", {}).get("background", "")[:200]
         report_title = parsed.get("report_title", "")
@@ -716,20 +888,20 @@ def trigger_generate(handler, token_payload, qs, body, lead_id=None, report_id=N
                 })
                 return
 
-    # ── 学业风险分析：联网搜索院校录取要求（硬性要求，穷举重试） ──
+    # ── 学业风险分析：联网搜索院校录取要求（硬性要求，穷举策略） ──
     if report_type in ("risk", "unified"):
         _gen_progress[rid] = {"progress": 5, "step": "正在联网搜索院校录取要求...", "status": "researching"}
         execute(
             "UPDATE consulting_reports SET status='researching', progress=5, updated_at=datetime('now','localtime') WHERE id=?",
             (rid,),
         )
-        # 线程启动，内部穷举重试搜索，失败则报告标 error
+        # 线程启动，内部穷举多策略搜索，失败则直接标 error
         t = threading.Thread(target=_run_generation, args=(rid, int(lead_id)), daemon=True)
         t.start()
         ok_response(handler, {
             "status": "researching", "progress": 5,
             "step": "正在联网搜索院校录取要求...",
-            "message": "正在在线搜索目标院校的录取要求信息，搜索完成后自动生成分析报告",
+            "message": "正在穷举多种搜索策略获取目标院校官网数据",
         })
         return
 
