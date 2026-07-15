@@ -567,7 +567,11 @@ def _run_generation(report_id, lead_id, round_num=1):
         report_title = parsed.get("report_title", "")
 
         # program_url 字段：对 risk/unified 报告存搜索标记；preparation 仍存 report_title
-        search_marker = f"real_time:round={round_num}" if report.get("report_type") in ("risk", "unified") else report_title
+        _rt = report.get("report_type", "")
+        if _rt in ("risk", "unified"):
+            search_marker = f"real_time:round={round_num}"
+        else:
+            search_marker = report_title
 
         _set_progress(report_id, 90, "正在保存报告...")
 
