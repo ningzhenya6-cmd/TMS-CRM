@@ -66,7 +66,8 @@ def list_leads(handler, token_payload, qs, body):
     # 分页查询
     offset = (page - 1) * page_size
     rows = query(
-        f"""SELECT l.*, u.display_name as assignee_name
+        f"""SELECT l.*, u.display_name as assignee_name,
+                   (SELECT COUNT(*) FROM followups f WHERE f.lead_id=l.id) > 0 as has_followup
             FROM leads l
             LEFT JOIN users u ON l.assignee_id = u.id
             WHERE {where_sql}
@@ -156,6 +157,7 @@ def export_leads(handler, token_payload, qs, body):
         f"""SELECT l.id, l.name, l.phone, l.wechat, l.source, l.country, l.grade,
                    l.status, l.lost_reason,
                    u.display_name as assignee_name,
+                   (SELECT COUNT(*) FROM followups f WHERE f.lead_id=l.id) > 0 as has_followup,
                    l.created_at, l.last_followup_at, l.next_followup_at
             FROM leads l
             LEFT JOIN users u ON l.assignee_id = u.id
@@ -175,6 +177,7 @@ def export_leads(handler, token_payload, qs, body):
         ("status", "状态"),
         ("lost_reason", "流失原因"),
         ("assignee_name", "跟进人"),
+        ("has_followup", "有无跟进"),
         ("created_at", "创建时间"),
         ("last_followup_at", "最近跟进"),
         ("next_followup_at", "下次跟进"),
@@ -376,6 +379,7 @@ def delete_lead(handler, token_payload, qs, body, lead_id=None):
         conn.execute("DELETE FROM consulting_reports WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM lesson_feedback WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM followups WHERE lead_id=?", (lead_id,))
+        conn.execute("DELETE FROM homework_uploads WHERE lead_id=?", (lead_id,))
         for r in query("SELECT id FROM contracts WHERE lead_id=?", (lead_id,)):
             cid = r["id"]
             conn.execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
