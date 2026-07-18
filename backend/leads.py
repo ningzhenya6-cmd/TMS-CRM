@@ -373,17 +373,23 @@ def delete_lead(handler, token_payload, qs, body, lead_id=None):
     conn = get_conn()
     try:
         conn.execute("BEGIN")
+        # ═══ 按 FK 依赖拓扑顺序删除（子→父），避免逐条 FK 检查失败 ═══
+        # lesson_feedback.schedule_id → schedules, lesson_feedback.lead_id → leads
+        conn.execute("DELETE FROM lesson_feedback WHERE lead_id=?", (lead_id,))
+        # schedules.lead_id → leads
         conn.execute("DELETE FROM schedules WHERE lead_id=?", (lead_id,))
+        # 以下表直接依赖 leads
+        conn.execute("DELETE FROM homework_uploads WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM exam_results WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM admission_results WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM consulting_reports WHERE lead_id=?", (lead_id,))
-        conn.execute("DELETE FROM lesson_feedback WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM followups WHERE lead_id=?", (lead_id,))
-        conn.execute("DELETE FROM homework_uploads WHERE lead_id=?", (lead_id,))
+        # contracts 的子表（packages / payment_records）
         for r in query("SELECT id FROM contracts WHERE lead_id=?", (lead_id,)):
             cid = r["id"]
             conn.execute("DELETE FROM payment_records WHERE contract_id=?", (cid,))
             conn.execute("DELETE FROM packages WHERE contract_id=?", (cid,))
+        # contracts / leads — 有 ON DELETE CASCADE 但显式删除更安全可控
         conn.execute("DELETE FROM contracts WHERE lead_id=?", (lead_id,))
         conn.execute("DELETE FROM leads WHERE id=?", (lead_id,))
         conn.commit()
