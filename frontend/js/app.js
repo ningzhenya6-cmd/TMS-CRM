@@ -1803,8 +1803,11 @@ app.component('include-signing', {
     // ── New Signing ──
     openNewSigning() {
       this.signingForm = { lead_id: '', signed_at: new Date().toISOString().slice(0,10), contract_no: '', package_name: '标准课时包', total_hours: 0, price_per_hour: 0, payment_amount: 0, payment_method: '', payment_date: new Date().toISOString().slice(0,10), remark: '' };
-      this.showSigningModal = true;
-      if (!this.allLeads.length) this.loadAllLeads();
+      if (this.allLeads.length === 0) {
+        this.loadAllLeads().then(() => { this.showSigningModal = true; });
+      } else {
+        this.showSigningModal = true;
+      }
     },
     async submitSigning() {
       if (!this.signingForm.lead_id) { toast('请选择学生', 'error'); return; }
@@ -2103,6 +2106,12 @@ app.component('searchable-select', {
   watch: {
     searchText() { this.highlightIdx = 0; },
     isOpen(val) { if (val) this.highlightIdx = 0; },
+    // 当异步数据加载完成后，如果用户已输入搜索词，重新打开下拉菜单
+    items(val) {
+      if (val && val.length > 0 && this.searchText && !this.isOpen) {
+        this.isOpen = true;
+      }
+    },
   },
   methods: {
     select(item) {
