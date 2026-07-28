@@ -2841,6 +2841,83 @@ canManage() {
       a.click();
       URL.revokeObjectURL(a.href);
     },
+    async saveOverallReport() {
+      if (!this.reportEditData) return;
+      this.reportSaving = true;
+      const res = await API.put('/growth/' + this.selectedLeadId + '/overall-report', { data: this.reportEditData });
+      this.reportSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('报告已保存', 'success');
+    },
+    async downloadOverallReport(format) {
+      if (!this.selectedLeadId) return;
+      const token = localStorage.getItem('tms_token') || '';
+      const a = document.createElement('a');
+      a.href = '/api/growth/' + this.selectedLeadId + '/overall-report/download?format=' + format + '&token=' + token;
+      a.download = '';
+      a.click();
+    },
+    // ── 考试成绩 ──
+    openExam() {
+      const d = new Date();
+      this.examForm = { exam_date: d.toISOString().slice(0,10), exam_type: '雅思', subject: '', score: null, total_score: 9, notes: '' };
+      this.showExamModal = true;
+    },
+    async submitExam() {
+      if (!this.examForm.exam_date || !this.examForm.exam_type) { toast('请填写考试信息', 'error'); return; }
+      this.examSaving = true;
+      const res = await API.post('/growth/' + this.selectedLeadId + '/exams', this.examForm);
+      this.examSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('成绩已录入', 'success');
+      this.showExamModal = false;
+      this.selectStudent(this.selectedLeadId);
+    },
+    confirmDeleteExam(id) {
+      this.deleteExamId = id;
+      this.showDeleteExamConfirm = true;
+    },
+    async deleteExam() {
+      if (!this.deleteExamId) return;
+      const res = await API.del('/growth/' + this.selectedLeadId + '/exams/' + this.deleteExamId);
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('考试成绩已删除', 'success');
+      this.showDeleteExamConfirm = false;
+      this.deleteExamId = null;
+      this.selectStudent(this.selectedLeadId);
+    },
+    // ── 录取结果 ──
+    openAdmission(existing) {
+      this.admissionForm = existing
+        ? Object.assign({}, existing, { application_date: (existing.application_date || '').slice(0,10), decision_date: (existing.decision_date || '').slice(0,10) })
+        : { target_school: '', target_major: '', application_date: '', admission_status: 'pending', admitted_school: '', admitted_major: '', final_score: '', decision_date: '', notes: '' };
+      this.showAdmissionModal = true;
+    },
+    async submitAdmission() {
+      if (!this.admissionForm.target_school) { toast('请填写目标院校', 'error'); return; }
+      this.admissionSaving = true;
+      const existing = this.growth?.admissions?.[0];
+      const res = existing
+        ? await API.put('/growth/' + this.selectedLeadId + '/admissions/' + existing.id, this.admissionForm)
+        : await API.post('/growth/' + this.selectedLeadId + '/admissions', this.admissionForm);
+      this.admissionSaving = false;
+      if (res.error) { toast(res.error, 'error'); return; }
+      toast('录取信息已保存', 'success');
+      this.showAdmissionModal = false;
+      this.selectStudent(this.selectedLeadId);
+    },
+    subjectColor(subject) {
+      const colors = { '写作': 'bg-rose-100 text-rose-700', '口语': 'bg-blue-100 text-blue-700', '阅读': 'bg-emerald-100 text-emerald-700', '听力': 'bg-amber-100 text-amber-700' };
+      return colors[subject] || 'bg-gray-100 text-gray-700';
+    },
+    statusColor(status) {
+      const map = { 'pending': 'bg-yellow-100 text-yellow-700', 'admitted': 'bg-green-100 text-green-700', 'rejected': 'bg-red-100 text-red-700', 'waiting': 'bg-blue-100 text-blue-700' };
+      return map[status] || 'bg-gray-100 text-gray-700';
+    },
+    statusLabel(status) {
+      const map = { 'pending': '申请中', 'admitted': '已录取', 'rejected': '未录取', 'waiting': '候补中' };
+      return map[status] || status;
+    },
     formatDate(d) { return d ? d.slice(0, 10) : ''; },
   },
   created() {
