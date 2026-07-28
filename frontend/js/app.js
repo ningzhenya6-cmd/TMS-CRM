@@ -469,11 +469,7 @@ app.component('include-lead-detail', {
       showOverallReportModal: false,
       reportEditData: {},
       reportSaving: false,
-      homeworkList: [],
-      uploadProgress: 0,
-      uploading: false,
-      uploadStep: '',
-      dragOver: false,
+
     };
   },
   computed: {
@@ -649,7 +645,6 @@ app.component('include-lead-detail', {
         this.lead = null;
         TMSStore.leadId = TMSStore.leadsList[idx - 1];
         this.load();
-        this.loadHomework();
       } else if (TMSStore.leadsPage > 1) {
         // 需要加载上一页
         const prevPage = TMSStore.leadsPage - 1;
@@ -658,8 +653,7 @@ app.component('include-lead-detail', {
           this.lead = null;
           TMSStore.leadId = list[list.length - 1]; // 上一页最后一条
           this.load();
-          this.loadHomework();
-        }
+          }
       }
     },
     async goNextLead() {
@@ -669,7 +663,6 @@ app.component('include-lead-detail', {
         this.lead = null;
         TMSStore.leadId = TMSStore.leadsList[idx + 1];
         this.load();
-        this.loadHomework();
       } else if (TMSStore.leadsPage * pageSize < TMSStore.leadsTotal) {
         // 需要加载下一页
         const nextPage = TMSStore.leadsPage + 1;
@@ -678,8 +671,7 @@ app.component('include-lead-detail', {
           this.lead = null;
           TMSStore.leadId = list[0]; // 下一页第一条
           this.load();
-          this.loadHomework();
-        }
+          }
       }
     },
     updateContactStatus() {
@@ -791,12 +783,27 @@ app.component('include-lead-detail', {
       const d = this.reportEditData || this.overallReport;
       if (!d) return;
       let txt = d.report_title + '\n\n';
+      if (d.subject_analysis) {
+        txt += '【逐学科分析】\n';
+        d.subject_analysis.forEach(sa => {
+          txt += '\n【' + sa.subject + '】老师: ' + (sa.teacher || '-') + ' · ' + (sa.sessions || 0) + '节\n';
+          if (sa.current_progress) txt += '进度: ' + sa.current_progress + '\n';
+          if (sa.performance) txt += '表现: ' + sa.performance + '\n';
+          if (sa.weak_points) txt += '薄弱: ' + sa.weak_points + '\n';
+          if (sa.trend) txt += '趋势: ' + sa.trend + '\n';
+          if (sa.suggestion) txt += '建议: ' + sa.suggestion + '\n';
+        });
+        txt += '\n';
+      }
       if (d.baseline) txt += '【入学前基础概况】\n' + d.baseline + '\n\n';
       if (d.learning_summary) txt += '【学习历程总结】\n' + d.learning_summary + '\n\n';
       if (d.progress) txt += '【进步方面】\n' + d.progress.map(p => '· ' + p.aspect + '：' + p.detail).join('\n') + '\n\n';
       if (d.weaknesses) txt += '【待改进方面】\n' + d.weaknesses.map(w => '· ' + w.aspect + '：' + w.detail).join('\n') + '\n\n';
       if (d.overall_assessment) txt += '【综合评估】\n' + d.overall_assessment + '\n\n';
       if (d.recommendations) txt += '【后续建议】\n' + d.recommendations.map((r,i) => (i+1) + '. ' + r).join('\n');
+      if (d.risk_warnings) txt += '\n\n【风险预警】\n' + d.risk_warnings.map(rw => '[' + rw.severity + '] ' + rw.type + ': ' + rw.detail).join('\n');
+      if (d.consultant_actions) txt += '\n\n【顾问行动建议】\n' + d.consultant_actions.map((ca,i) => (i+1) + '. ' + ca.action + ' (' + ca.priority + ')').join('\n');
+      if (d.parent_communication) txt += '\n\n【家长沟通建议】\n' + d.parent_communication;
       const blob = new Blob([txt], {type: 'text/plain;charset=utf-8'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -804,84 +811,10 @@ app.component('include-lead-detail', {
       a.click();
       URL.revokeObjectURL(a.href);
     },
-    async loadHomework() {
-      if (!this.lead || !this.lead.id) return;
-      const res = await API.get('/leads/' + this.lead.id + '/homework');
-      if (!res.error) this.homeworkList = res.data || [];
-    },
-    handleDrop(event) {
-      this.dragOver = false;
-      const files = event.dataTransfer?.files;
-      if (files?.length) {
-        // Upload first file
-        const dt = new DataTransfer();
-        dt.items.add(files[0]);
-        const inputEvent = { target: { files: dt.files } };
-        this.uploadHomework(inputEvent);
-      }
-    },
-    uploadHomework(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      this.uploadFileWithProgress(file);
-      event.target.value = '';
-    },
-    uploadFileWithProgress(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      const token = localStorage.getItem('tms_token') || '';
-      this.uploadProgress = 0;
-      this.uploading = true;
-      this.uploadStep = '上传中...';
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/leads/' + this.lead.id + '/homework');
-      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 98);
-          this.uploadProgress = Math.min(pct, 98);
-        }
-      };
-      xhr.onload = () => {
-        this.uploadProgress = 100;
-        this.uploadStep = '处理中...';
-        setTimeout(() => {
-          this.uploading = false;
-          this.uploadProgress = 0;
-          this.uploadStep = '';
-          if (xhr.status >= 200 && xhr.status < 300) {
-            toast('作业已上传', 'success');
-            this.loadHomework();
-          } else {
-            let msg = '上传失败';
-            try { const d = JSON.parse(xhr.responseText); msg = d.error || msg; } catch(e) {}
-            toast(msg, 'error');
-          }
-        }, 500);
-      };
-      xhr.onerror = () => { this.uploading = false; this.uploadProgress = 0; this.uploadStep = ''; toast('网络错误', 'error'); };
-      xhr.send(formData);
-    },
-    async deleteHomework(fileId) {
-      if (!confirm('确定删除这份作业？')) return;
-      const res = await API.get('/homework/' + fileId + '/delete');
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('作业已删除', 'success');
-      this.loadHomework();
-    },
-    async downloadHomework(fileId) {
-      const token = localStorage.getItem('tms_token') || '';
-      const a = document.createElement('a');
-      a.href = '/api/homework/' + fileId + '/download?token=' + token;
-      a.target = '_blank';
-      a.click();
-    },
-
     openLeadEdit() {
       this.editForm = {
         id: this.lead.id,
         name: this.lead.name || '',
-        phone: this.lead.phone || '',
         wechat: this.lead.wechat || '',
         source: this.lead.source || '',
         country: this.lead.country || '',
@@ -2576,11 +2509,7 @@ app.component('include-growth', {
       showOverallReportModal: false,
       reportEditData: {},
       reportSaving: false,
-      homeworkList: [],
-      uploadProgress: 0,
-      uploading: false,
-      uploadStep: '',
-      dragOver: false,
+
       genStatus: { progress: 0, step: '' },
       genPollTimer: null,
       // 考试弹窗
@@ -2885,179 +2814,34 @@ canManage() {
       const d = this.reportEditData || this.overallReport;
       if (!d) return;
       let txt = d.report_title + '\n\n';
+      if (d.subject_analysis) {
+        txt += '【逐学科分析】\n';
+        d.subject_analysis.forEach(sa => {
+          txt += '\n【' + sa.subject + '】老师: ' + (sa.teacher || '-') + ' · ' + (sa.sessions || 0) + '节\n';
+          if (sa.current_progress) txt += '进度: ' + sa.current_progress + '\n';
+          if (sa.performance) txt += '表现: ' + sa.performance + '\n';
+          if (sa.weak_points) txt += '薄弱: ' + sa.weak_points + '\n';
+          if (sa.trend) txt += '趋势: ' + sa.trend + '\n';
+          if (sa.suggestion) txt += '建议: ' + sa.suggestion + '\n';
+        });
+        txt += '\n';
+      }
       if (d.baseline) txt += '【入学前基础概况】\n' + d.baseline + '\n\n';
       if (d.learning_summary) txt += '【学习历程总结】\n' + d.learning_summary + '\n\n';
       if (d.progress) txt += '【进步方面】\n' + d.progress.map(p => '· ' + p.aspect + '：' + p.detail).join('\n') + '\n\n';
       if (d.weaknesses) txt += '【待改进方面】\n' + d.weaknesses.map(w => '· ' + w.aspect + '：' + w.detail).join('\n') + '\n\n';
       if (d.overall_assessment) txt += '【综合评估】\n' + d.overall_assessment + '\n\n';
       if (d.recommendations) txt += '【后续建议】\n' + d.recommendations.map((r,i) => (i+1) + '. ' + r).join('\n');
+      if (d.risk_warnings) txt += '\n\n【风险预警】\n' + d.risk_warnings.map(rw => '[' + rw.severity + '] ' + rw.type + ': ' + rw.detail).join('\n');
+      if (d.consultant_actions) txt += '\n\n【顾问行动建议】\n' + d.consultant_actions.map((ca,i) => (i+1) + '. ' + ca.action + ' (' + ca.priority + ')').join('\n');
+      if (d.parent_communication) txt += '\n\n【家长沟通建议】\n' + d.parent_communication;
       const blob = new Blob([txt], {type: 'text/plain;charset=utf-8'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = (d.report_title || '学情报告') + '.txt';
       a.click();
       URL.revokeObjectURL(a.href);
-    },
-    async loadHomework() {
-      if (!this.lead || !this.lead.id) return;
-      const res = await API.get('/leads/' + this.lead.id + '/homework');
-      if (!res.error) this.homeworkList = res.data || [];
-    },
-    handleDrop(event) {
-      this.dragOver = false;
-      const files = event.dataTransfer?.files;
-      if (files?.length) {
-        // Upload first file
-        const dt = new DataTransfer();
-        dt.items.add(files[0]);
-        const inputEvent = { target: { files: dt.files } };
-        this.uploadHomework(inputEvent);
-      }
-    },
-    uploadHomework(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      this.uploadFileWithProgress(file);
-      event.target.value = '';
-    },
-    uploadFileWithProgress(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      const token = localStorage.getItem('tms_token') || '';
-      this.uploadProgress = 0;
-      this.uploading = true;
-      this.uploadStep = '上传中...';
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/leads/' + this.lead.id + '/homework');
-      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 98);
-          this.uploadProgress = Math.min(pct, 98);
-        }
-      };
-      xhr.onload = () => {
-        this.uploadProgress = 100;
-        this.uploadStep = '处理中...';
-        setTimeout(() => {
-          this.uploading = false;
-          this.uploadProgress = 0;
-          this.uploadStep = '';
-          if (xhr.status >= 200 && xhr.status < 300) {
-            toast('作业已上传', 'success');
-            this.loadHomework();
-          } else {
-            let msg = '上传失败';
-            try { const d = JSON.parse(xhr.responseText); msg = d.error || msg; } catch(e) {}
-            toast(msg, 'error');
-          }
-        }, 500);
-      };
-      xhr.onerror = () => { this.uploading = false; this.uploadProgress = 0; this.uploadStep = ''; toast('网络错误', 'error'); };
-      xhr.send(formData);
-    },
-    async deleteHomework(fileId) {
-      if (!confirm('确定删除这份作业？')) return;
-      const res = await API.get('/homework/' + fileId + '/delete');
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('作业已删除', 'success');
-      this.loadHomework();
-    },
-    async downloadHomework(fileId) {
-      const token = localStorage.getItem('tms_token') || '';
-      const a = document.createElement('a');
-      a.href = '/api/homework/' + fileId + '/download?token=' + token;
-      a.target = '_blank';
-      a.click();
-    },
-    clearOverallReport() {
-      this.overallReport = null;
-      this.overallReportStatus = '';
-      this.overallReportProgress = 0;
-      this.overallReportStep = '';
-    },
-    async loadOverallReport() {
-      const res = await API.get('/growth/' + this.selectedLeadId + '/overall-report');
-      if (!res.error && res.data && res.data.report_title) {
-        this.overallReport = res.data;
-        this.overallReportStatus = 'done';
-      }
-    },
-    // ── 考试成绩 ──
-    openExam() {
-      const d = new Date();
-      this.examForm = { exam_date: d.toISOString().slice(0,10), exam_type: '雅思', subject: '', score: null, total_score: 9, notes: '' };
-      this.showExamModal = true;
-    },
-    async submitExam() {
-      if (!this.examForm.exam_date || !this.examForm.exam_type) { toast('请填写考试信息', 'error'); return; }
-      this.examSaving = true;
-      const res = await API.post('/growth/' + this.selectedLeadId + '/exams', this.examForm);
-      this.examSaving = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('成绩已录入', 'success');
-      this.showExamModal = false;
-      this.selectStudent(this.selectedLeadId);
-    },
-    confirmDeleteExam(id) {
-      this.deleteExamId = id;
-      this.showDeleteExamConfirm = true;
-    },
-    async deleteExam() {
-      if (!this.deleteExamId) return;
-      const res = await API.del('/growth/' + this.selectedLeadId + '/exams/' + this.deleteExamId);
-      this.showDeleteExamConfirm = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('成绩已删除', 'success');
-      this.deleteExamId = null;
-      this.selectStudent(this.selectedLeadId);
-    },
-    // ── 录取结果 ──
-    openAdmission(existing) {
-      if (existing) {
-        this.admissionForm = {
-          target_school: existing.target_school || '',
-          target_major: existing.target_major || '',
-          application_date: existing.application_date || '',
-          admission_status: existing.admission_status || 'pending',
-          admitted_school: existing.admitted_school || '',
-          admitted_major: existing.admitted_major || '',
-          final_score: existing.final_score || '',
-          decision_date: existing.decision_date || '',
-          notes: existing.notes || '',
-        };
-      } else {
-        this.admissionForm = { target_school: '', target_major: '', application_date: '', admission_status: 'pending', admitted_school: '', admitted_major: '', final_score: '', decision_date: '', notes: '' };
-      }
-      this.showAdmissionModal = true;
-    },
-    async submitAdmission() {
-      this.admissionSaving = true;
-      const existing = this.growth?.admissions?.[0];
-      const res = existing
-        ? await API.put('/growth/' + this.selectedLeadId + '/admissions/' + existing.id, this.admissionForm)
-        : await API.post('/growth/' + this.selectedLeadId + '/admissions', this.admissionForm);
-      this.admissionSaving = false;
-      if (res.error) { toast(res.error, 'error'); return; }
-      toast('录取信息已保存', 'success');
-      this.showAdmissionModal = false;
-      this.selectStudent(this.selectedLeadId);
-    },
-    // ── 工具函数 ──
-    subjectColor(subject) {
-      const colors = { '写作': 'bg-rose-100 text-rose-700', '口语': 'bg-blue-100 text-blue-700', '阅读': 'bg-emerald-100 text-emerald-700', '听力': 'bg-amber-100 text-amber-700' };
-      return colors[subject] || 'bg-gray-100 text-gray-700';
-    },
-    statusColor(status) {
-      const map = { 'pending': 'bg-yellow-100 text-yellow-700', 'admitted': 'bg-green-100 text-green-700', 'rejected': 'bg-red-100 text-red-700', 'waiting': 'bg-blue-100 text-blue-700' };
-      return map[status] || 'bg-gray-100 text-gray-700';
-    },
-    statusLabel(status) {
-      const map = { 'pending': '申请中', 'admitted': '已录取', 'rejected': '未录取', 'waiting': '候补中' };
-      return map[status] || status;
-    },
-    formatDate(d) { return d ? d.slice(0,10) : ''; },
-  },
+    },  },
   created() {
     this.loadStudents().then(() => {
       // 从客户详情跳转时，自动选中预指定的学生
