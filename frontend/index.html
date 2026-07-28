@@ -531,10 +531,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           {{ growth.admissions.length > 0 ? '编辑' : '+ 添加升学目标' }}
         </button>
       </div>
-      <div v-if="growth.admissions.length === 0" class="text-center py-8 text-gray-400 text-sm">
-        <i class="bi bi-building text-3xl block mb-2"></i>暂无升学目标信息
-      </div>
-      <div v-else v-for="ad in growth.admissions" :key="ad.id" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <template v-if="growth.admissions.length === 0">
+        <div class="text-center py-8 text-gray-400 text-sm">
+          <i class="bi bi-building text-3xl block mb-2"></i>暂无升学目标信息
+        </div>
+      </template>
+      <template v-else>
+        <div v-for="ad in growth.admissions" :key="ad.id" class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div>
           <div class="text-xs text-gray-500 mb-1">目标院校</div>
           <div class="text-sm font-medium text-gray-900">{{ ad.target_school || '-' }}</div>
@@ -552,6 +555,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <div class="text-sm font-medium text-gray-900">{{ ad.admitted_school || '-' }}</div>
         </div>
       </div>
+      </template>
     </div>
 
   </div>
@@ -4296,7 +4300,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=114"></script>
+<script src="js/app.js?v=115"></script>
 
   </body>
 </html>
