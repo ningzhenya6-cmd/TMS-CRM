@@ -13,11 +13,11 @@ class InvalidTransition(Exception):
 # ── 合法转换表 ──
 # key = from_status, value = set of allowed to_status
 _TRANSITIONS = {
-    "pending":   {"assigned", "closed"},
-    "assigned":  {"following", "pending", "closed"},
+    "pending":   {"assigned", "closed", "enrolled"},        # enrolled: 直接签约（外部导入）
+    "assigned":  {"following", "pending", "closed", "enrolled"},  # enrolled: 直接签约
     "following": {"trial", "enrolled", "closed", "lost"},
     "trial":     {"following", "enrolled", "lost"},
-    "enrolled":  {"closed"},
+    "enrolled":  {"closed", "assigned"},                    # assigned: 合同回滚（删合同后）
     "closed":    {"pending"},
     "lost":      {"following"},
 }

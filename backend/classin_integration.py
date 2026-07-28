@@ -1,3 +1,5 @@
+# ⚠️ ZOMBIE FILE — all functions are stubs returning None. Never imported. Do not import without implementing.
+
 """
 ClassIn 开放平台集成（预留）
 

@@ -1,10 +1,28 @@
 """
 数据库模块 — sqlite3 封装
 使用 WAL 模式、外键约束、行工厂返回 dict
+
+## 事务安全原则
+
+**核心规则：execute() 在事务外自动提交，在事务内不提交。**
+这种"自适应"行为确保：
+  - 旧代码（直接调 execute()）继续工作，不受影响
+  - 新代码用 with transaction() 块，get_conn().execute() 和 execute() 都安全
+
+用法：
+    # 多步写入 → 用事务
+    with transaction() as conn:
+        conn.execute("INSERT ...")
+        conn.execute("UPDATE ...")
+    # 自动 commit，异常自动 rollback
+
+    # 单步写入 → 直接用 execute()（auto-commit）
+    execute("INSERT ...")
 """
 import sqlite3
 import os
 import threading
+import functools
 
 DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.path.join(DB_DIR, "tms.db")
@@ -25,6 +43,11 @@ def get_conn() -> sqlite3.Connection:
     return _local.conn
 
 
+def _in_tx() -> bool:
+    """当前线程是否在事务中"""
+    return getattr(_local, "in_transaction", False)
+
+
 def query(sql: str, params: tuple = ()) -> list[dict]:
     """查询返回 dict 列表"""
     conn = get_conn()
@@ -41,19 +64,96 @@ def query_one(sql: str, params: tuple = ()):
 
 
 def execute(sql: str, params: tuple = ()) -> int:
-    """执行写入，返回影响行数"""
+    """
+    执行写入，返回影响行数。
+    事务外 → 自动提交（兼容旧代码）
+    事务内 → 不提交（由事务边界控制）
+    """
     conn = get_conn()
     cur = conn.execute(sql, params)
-    conn.commit()
+    if not _in_tx():
+        conn.commit()
     return cur.rowcount
 
 
 def execute_lastrowid(sql: str, params: tuple = ()) -> int:
-    """执行写入，返回最后插入的 rowid"""
+    """
+    执行写入，返回最后插入的 rowid。
+    事务外 → 自动提交（兼容旧代码）
+    事务内 → 不提交（由事务边界控制）
+    """
     conn = get_conn()
     cur = conn.execute(sql, params)
-    conn.commit()
+    if not _in_tx():
+        conn.commit()
     return cur.lastrowid
+
+
+# ═══════════════════════════════════════════
+#  事务管理
+# ═══════════════════════════════════════════
+
+
+def transaction():
+    """
+    事务上下文管理器。
+
+    用法：
+        with transaction() as conn:
+            conn.execute("INSERT ...")
+            conn.execute("UPDATE ...")
+        # 正常退出 → commit
+        # 异常退出 → rollback
+
+    事务内的 execute() / execute_lastrowid() 不会自动提交，
+    保证多步写入的原子性。
+    """
+    return _TransactionContext()
+
+
+class _TransactionContext:
+    """事务上下文 — 支持嵌套检测（不允许多层事务）"""
+
+    def __enter__(self):
+        if _in_tx():
+            raise RuntimeError("检测到嵌套事务：当前线程已在事务中")
+        _local.in_transaction = True
+        self.conn = get_conn()
+        self.conn.execute("BEGIN")
+        return self.conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _local.in_transaction = False
+        if exc_type is None:
+            self.conn.commit()
+        else:
+            try:
+                self.conn.execute("ROLLBACK")
+            except Exception:
+                pass
+        return False  # 不吞异常
+
+
+def tx(fn):
+    """
+    装饰器：自动为 handler 函数包裹事务。
+
+    用法：
+        @post("/api/leads")
+        @tx
+        def create_lead(handler, token_payload, qs, body):
+            # handler 内的 execute() 不会自动提交
+            # 正常返回 → commit，异常 → rollback
+
+    注意：
+        有 @tx 装饰的 handler，内部执行 execute() 不会自动提交。
+        如果没有用 @tx，execute() 行为不变（自动提交）。
+    """
+    @functools.wraps(fn)
+    def wrapper(handler, token_payload, qs, body, **kwargs):
+        with transaction():
+            return fn(handler, token_payload, qs, body, **kwargs)
+    return wrapper
 
 
 def init_db():

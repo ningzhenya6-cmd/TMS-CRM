@@ -3,8 +3,9 @@ import datetime
 import math
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
-from db import query, query_one, execute, execute_lastrowid, get_conn
+from db import query, query_one, execute, execute_lastrowid, get_conn, tx
 from permissions import can, scope_where
+from services import calc_duration_minutes, deduct_hours
 
 
 # ── 教师排课冲突检测 ──
@@ -33,16 +34,9 @@ def _check_teacher_conflict(teacher_id, start_time, end_time, exclude_id=None):
     return rows
 
 
+# 保持向后兼容（新代码请直接调用 services.calc_duration_minutes）
 def _duration_minutes(start_str, end_str):
-    """计算两个时间字符串之间的分钟差"""
-    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S"):
-        try:
-            s = datetime.datetime.strptime(start_str[:16], fmt)
-            e = datetime.datetime.strptime(end_str[:16], fmt)
-            return int((e - s).total_seconds() / 60)
-        except (ValueError, TypeError):
-            continue
-    return 0
+    return calc_duration_minutes(start_str, end_str)
 
 
 @get("/api/schedules")
@@ -244,6 +238,7 @@ def get_schedule(handler, token_payload, qs, body, schedule_id=None):
 
 
 @post("/api/schedules")
+@tx
 def create_schedule(handler, token_payload, qs, body):
     """创建单条排课（含每周重复）"""
     if not can(token_payload["role"], "schedule:manage"):
@@ -272,56 +267,40 @@ def create_schedule(handler, token_payload, qs, body):
     created_ids = []
 
     conn = get_conn()
-    try:
-        conn.execute("BEGIN")
-        for week in range(repeat_count):
-            if repeat_count > 1:
-                base_dt = datetime.datetime.strptime(start_time[:10], "%Y-%m-%d")
-                cur_start = (base_dt + datetime.timedelta(weeks=week)).strftime("%Y-%m-%d") + start_time[10:]
-                cur_end = (base_dt + datetime.timedelta(weeks=week)).strftime("%Y-%m-%d") + end_time[10:]
-            else:
-                cur_start, cur_end = start_time, end_time
+    for week in range(repeat_count):
+        if repeat_count > 1:
+            base_dt = datetime.datetime.strptime(start_time[:10], "%Y-%m-%d")
+            cur_start = (base_dt + datetime.timedelta(weeks=week)).strftime("%Y-%m-%d") + start_time[10:]
+            cur_end = (base_dt + datetime.timedelta(weeks=week)).strftime("%Y-%m-%d") + end_time[10:]
+        else:
+            cur_start, cur_end = start_time, end_time
 
-            sid = execute_lastrowid(
-                """INSERT INTO schedules (lead_id, tutor_id, teacher_id, teacher_name, subject, start_time, end_time,
-                   duration_minutes, status, remark, created_by, tutoring_form)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    int(lead_id),
-                    int(body["tutor_id"]) if body.get("tutor_id") else None,
-                    int(teacher_id) if teacher_id else None,
-                    body.get("teacher_name", ""),
-                    body.get("subject", ""),
-                    cur_start,
-                    cur_end,
-                    duration,
-                    body.get("status", "pending"),
-                    body.get("remark", ""),
-                    uid,
-                    body.get("tutoring_form", ""),
-                ),
-            )
-            created_ids.append(sid)
+        sid = conn.execute(
+            """INSERT INTO schedules (lead_id, tutor_id, teacher_id, teacher_name, subject, start_time, end_time,
+               duration_minutes, status, remark, created_by, tutoring_form)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                int(lead_id),
+                int(body["tutor_id"]) if body.get("tutor_id") else None,
+                int(teacher_id) if teacher_id else None,
+                body.get("teacher_name", ""),
+                body.get("subject", ""),
+                cur_start,
+                cur_end,
+                duration,
+                body.get("status", "pending"),
+                body.get("remark", ""),
+                uid,
+                body.get("tutoring_form", ""),
+            ),
+        ).lastrowid
+        created_ids.append(sid)
 
-            # 如果创建时就是 completed 状态，直接扣课时
-            if body.get("status") == "completed":
-                hours = round(duration / 60, 1)
-                if hours > 0:
-                    pkg = query_one(
-                        """SELECT p.id FROM packages p
-                           JOIN contracts c ON p.contract_id = c.id
-                           WHERE c.lead_id=? AND c.status='active'
-                           ORDER BY p.created_at ASC LIMIT 1""",
-                        (int(lead_id),),
-                    )
-                    if pkg:
-                        conn.execute("UPDATE packages SET used_hours = ROUND(used_hours + ?, 1) WHERE id=?", (hours, pkg["id"]))
-
-        conn.commit()
-    except Exception as e:
-        conn.execute("ROLLBACK")
-        error_response(handler, f"创建失败: {e}", 500)
-        return
+        # 如果创建时就是 completed 状态，直接扣课时
+        if body.get("status") == "completed":
+            hours = round(duration / 60, 1)
+            if hours > 0:
+                deduct_hours(int(lead_id), hours)
 
     add_oplog(uid, token_payload.get("name", ""), "create", "schedule", created_ids[0],
               f"创建排课 {len(created_ids)} 条 (含重复)")
@@ -500,6 +479,7 @@ def batch_delete_schedules(handler, token_payload, qs, body):
 
 
 @post("/api/schedules/batch")
+@tx
 def batch_create_schedules(handler, token_payload, qs, body):
     """批量排课——一次性创建多条排课（混合：指定日期 + 每周重复）
 
@@ -547,19 +527,13 @@ def batch_create_schedules(handler, token_payload, qs, body):
     created_ids = []
 
     def parse_time(t_str):
-        """从 '14:00' 或 '2026-07-06 14:00' 提取小时和分钟"""
         if ':' in t_str:
             parts = t_str.strip().split(':')
             return int(parts[0]), int(parts[1])
         return 0, 0
 
-    def calc_duration_minutes(start, end):
-        h1, m1 = parse_time(start)
-        h2, m2 = parse_time(end)
-        return (h2 * 60 + m2) - (h1 * 60 + m1)
-
-    try:
-        conn.execute("BEGIN")
+    def _calc_dur(start, end):
+        return calc_duration_minutes(start, end)
 
         for idx, item in enumerate(items):
             typ = item.get("type", "fixed")
@@ -577,9 +551,9 @@ def batch_create_schedules(handler, token_payload, qs, body):
                     continue
                 start_dt = date + " " + (st if ':' in st else st + ":00")
                 end_dt = date + " " + (et if ':' in et else et + ":00")
-                dur = calc_duration_minutes(st, et) or _duration_minutes(start_dt, end_dt)
+                dur = _calc_dur(st, et) or _duration_minutes(start_dt, end_dt)
 
-                sid = execute_lastrowid(
+                sid = conn.execute(
                     """INSERT INTO schedules (lead_id, teacher_id, teacher_name, subject, start_time, end_time,
                        duration_minutes, status, remark, created_by, tutoring_form)
                        VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
@@ -587,7 +561,7 @@ def batch_create_schedules(handler, token_payload, qs, body):
                      int(teacher_id) if teacher_id else None,
                      teacher_name, subject, start_dt, end_dt,
                      dur, status, remark, uid, tutoring_form),
-                )
+                ).lastrowid
                 created_ids.append(sid)
 
             elif typ == "weekly":
@@ -600,7 +574,7 @@ def batch_create_schedules(handler, token_payload, qs, body):
                 if not st or not et or not start_date_str:
                     continue
 
-                dur = calc_duration_minutes(st, et)
+                dur = _calc_dur(st, et)
                 base_date = datetime.datetime.strptime(start_date_str[:10], "%Y-%m-%d")
                 # 找到第一个符合 day_of_week 的日期
                 days_ahead = dow - base_date.weekday()
@@ -614,7 +588,7 @@ def batch_create_schedules(handler, token_payload, qs, body):
                     start_dt = cur_date_str + " " + (st if ':' in st else st + ":00")
                     end_dt = cur_date_str + " " + (et if ':' in et else et + ":00")
 
-                    sid = execute_lastrowid(
+                    sid = conn.execute(
                         """INSERT INTO schedules (lead_id, teacher_id, teacher_name, subject, start_time, end_time,
                            duration_minutes, status, remark, created_by, tutoring_form)
                            VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
@@ -622,10 +596,10 @@ def batch_create_schedules(handler, token_payload, qs, body):
                          int(teacher_id) if teacher_id else None,
                          teacher_name, subject, start_dt, end_dt,
                          dur, status, remark, uid, tutoring_form),
-                    )
+                    ).lastrowid
                     created_ids.append(sid)
 
-        # 如果状态是 completed，统一扣课时（避免每次 INSERT 单独扣）
+        # 如果状态是 completed，统一扣课时
         if status == "completed":
             total_minutes = 0
             for item in items:
@@ -637,21 +611,7 @@ def batch_create_schedules(handler, token_payload, qs, body):
                     total_minutes += dur * rw
             total_hours = round(total_minutes / 60, 1)
             if total_hours > 0:
-                pkg = query_one(
-                    """SELECT p.id FROM packages p
-                       JOIN contracts c ON p.contract_id = c.id
-                       WHERE c.lead_id=? AND c.status='active'
-                       ORDER BY p.created_at ASC LIMIT 1""",
-                    (int(lead_id),),
-                )
-                if pkg:
-                    conn.execute("UPDATE packages SET used_hours = ROUND(used_hours + ?, 1) WHERE id=?", (total_hours, pkg["id"]))
-
-        conn.commit()
-    except Exception as e:
-        conn.execute("ROLLBACK")
-        error_response(handler, f"批量排课失败: {e}", 500)
-        return
+                deduct_hours(int(lead_id), total_hours)
 
     add_oplog(uid, uname, "batch_create", "schedule", 0, f"批量排课 {len(created_ids)} 条 ({status})")
     ok_response(handler, {"count": len(created_ids), "ids": created_ids}, 201)

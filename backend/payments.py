@@ -11,6 +11,7 @@ from router import get, post, delete, put
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid, get_conn
 from permissions import can
+from services import compute_sign_type
 
 
 @get("/api/payments/list")
@@ -106,15 +107,9 @@ def create_payment(handler, token_payload, qs, body, contract_id=None):
     try:
         conn.execute("BEGIN")
 
-        # 计算签名类型：该学生此笔之前累计课时
-        prev = query_one(
-            """SELECT COALESCE(SUM(pr2.hours),0) as h
-               FROM payment_records pr2
-               JOIN contracts c2 ON pr2.contract_id = c2.id
-               WHERE c2.lead_id=(SELECT lead_id FROM contracts WHERE id=?)""",
-            (cid,),
-        )["h"]
-        pay_sign_type = "renewal" if prev > 10 else "new"
+        # 计算签名类型（用统一的服务层）
+        c_lead = query_one("SELECT lead_id FROM contracts WHERE id=?", (cid,))
+        pay_sign_type = compute_sign_type(c_lead["lead_id"]) if c_lead else "new"
 
         # 写入流水（用 conn.execute 不走全局 execute——它 auto-commit 会破坏手动事务）
         cur = conn.execute(

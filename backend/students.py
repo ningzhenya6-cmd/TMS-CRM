@@ -62,12 +62,17 @@ def list_students(handler, token_payload, qs, body):
     for r in rows:
         # 合同
         contracts = query(
-            """SELECT id, contract_no, total_amount, status, signed_at
+            """SELECT id, contract_no, total_amount, paid_amount, status, signed_at
                FROM contracts WHERE lead_id=?
                ORDER BY created_at DESC LIMIT 1""",
             (r["id"],),
         )
         r["contract"] = contracts[0] if contracts else None
+        if r["contract"]:
+            r["contract"]["payment_records"] = query(
+                "SELECT id, amount, type, method, note, created_at FROM payment_records WHERE contract_id=? ORDER BY created_at DESC LIMIT 5",
+                (r["contract"]["id"],),
+            )
 
         # 课时包汇总（仅 active 合同下的）
         pkg = query_one(
@@ -155,6 +160,6 @@ def export_students(handler, token_payload, qs, body):
         ("total_hours", "总课时"),
         ("used_hours", "已用课时"),
         ("remaining_hours", "剩余课时"),
-        ("created_at", "签约时间"),
+        ("created_at", "创建时间"),
     ]
     csv_response(handler, rows, columns, "签约学生导出.csv")

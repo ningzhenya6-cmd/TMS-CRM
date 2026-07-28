@@ -1,7 +1,10 @@
 """认证 API — 登录、获取当前用户、初始化用户"""
+import time
 from router import get, post
 from utils import json_response, error_response, parse_body, ok_response, hash_password, verify_password, create_token, add_oplog
 from db import query_one, execute, query
+
+_login_attempts = {}  # username -> [timestamps]
 
 
 @post("/api/auth/login", auth=False)
@@ -12,6 +15,17 @@ def login(handler, token_payload, qs, body):
         error_response(handler, "用户名和密码不能为空")
         return
 
+    # Rate limiting: 5 次/分钟 同一用户
+    now = time.time()
+    key = username
+    attempts = _login_attempts.get(key, [])
+    attempts = [t for t in attempts if now - t < 60]
+    if len(attempts) >= 5:
+        error_response(handler, "登录尝试过于频繁，请稍后再试", 429)
+        return
+    attempts.append(now)
+    _login_attempts[key] = attempts
+
     user = query_one("SELECT * FROM users WHERE username=? AND active=1", (username,))
     if not user or not verify_password(password, user["password"]):
         error_response(handler, "用户名或密码错误", 401)
@@ -21,6 +35,10 @@ def login(handler, token_payload, qs, body):
     if user["role"] == "tutor":
         error_response(handler, "教师账号暂不支持登录", 401)
         return
+
+    # 登录成功，清除限流计数
+    if key in _login_attempts:
+        del _login_attempts[key]
 
     token = create_token(user["id"], user["role"], user["display_name"])
     ok_response(handler, {

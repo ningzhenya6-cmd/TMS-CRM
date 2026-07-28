@@ -3,8 +3,11 @@
 支持两种报告类型：risk（学业风险分析）, preparation（行前准备规划）
 """
 import json
+import logging
 import os
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 # ── Word ──
 from docx import Document
@@ -391,6 +394,26 @@ def _build_unified_docx(report, report_data, lead):
         doc.add_heading("目标院校专业概览", level=1)
         doc.add_paragraph(po)
 
+    # 逐课程分析
+    courses = report_data.get("course_analysis", [])
+    if courses:
+        doc.add_heading("核心课程逐门分析", level=1)
+        table = doc.add_table(rows=1, cols=7)
+        table.style = 'Light Grid Accent 1'
+        hdr = table.rows[0].cells
+        for i, label in enumerate(["课程", "学分", "考核形式", "前置要求", "学生掌握", "差距分析", "建议补充"]):
+            hdr[i].text = label
+        for c in courses:
+            row = table.add_row().cells
+            row[0].text = c.get("course_name", "")
+            row[1].text = str(c.get("credits", ""))
+            row[2].text = c.get("assessment", "")
+            row[3].text = c.get("prerequisites", "")
+            row[4].text = c.get("student_readiness", "")
+            row[5].text = c.get("gap", "")
+            row[6].text = c.get("supplement_action", "")
+        doc.add_paragraph()
+
     # 差距分析
     gaps = report_data.get("gap_analysis", [])
     if gaps:
@@ -442,6 +465,73 @@ def _build_unified_docx(report, report_data, lead):
     return _docx_bytes(doc)
 
 
+
+def _build_growth_docx(report, report_data, lead):
+    """生成整体学情报告 Word 文档"""
+    from docx import Document
+    doc = Document()
+    li = {"name": lead.get("name","未知")} if lead else {"name":"未知"}
+    
+    doc.add_heading(report_data.get("report_title", "阶段性学情综合报告"), level=0)
+    
+    si = report_data.get("student_info", {})
+    if si:
+        doc.add_heading("学生信息", level=1)
+        for k, v in si.items():
+            p = doc.add_paragraph()
+            run = p.add_run(f"{k}：")
+            run.bold = True
+            p.add_run(str(v))
+    
+    bl = report_data.get("baseline", "")
+    if bl:
+        doc.add_heading("入学前基础概况", level=1)
+        doc.add_paragraph(bl)
+    
+    ls = report_data.get("learning_summary", "")
+    if ls:
+        doc.add_heading("学习历程总结", level=1)
+        doc.add_paragraph(ls)
+    
+    for title, field, color in [("进步方面", "progress", "green"), ("待改进方面", "weaknesses", "red")]:
+        items = report_data.get(field, [])
+        if items:
+            doc.add_heading(title, level=1)
+            for item in items:
+                doc.add_paragraph(f"{item.get('aspect','')}：{item.get('detail','')}")
+    
+    et = report_data.get("exam_trend", "")
+    if et:
+        doc.add_heading("考试成绩趋势", level=1)
+        doc.add_paragraph(et)
+    
+    dims = report_data.get("dimensions", {})
+    if dims:
+        doc.add_heading("多维度评估", level=1)
+        labels = {"academic":"学术","language":"语言","psychology":"心理","adaptation":"适应","planning":"规划"}
+        for key, dim in dims.items():
+            p = doc.add_paragraph()
+            run = p.add_run(f"{labels.get(key,key)}（{dim.get('score','')}）：")
+            run.bold = True
+            p.add_run(dim.get("note",""))
+    
+    oa = report_data.get("overall_assessment", "")
+    if oa:
+        doc.add_heading("综合评估", level=1)
+        doc.add_paragraph(oa)
+    
+    recs = report_data.get("recommendations", [])
+    if recs:
+        doc.add_heading("后续建议", level=1)
+        for i, rec in enumerate(recs, 1):
+            doc.add_paragraph(f"{i}. {rec}")
+    
+    from io import BytesIO
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf.read()
+
 def generate_docx(report, lead, report_type="risk") -> bytes:
     """
     生成 Word 文档
@@ -458,6 +548,8 @@ def generate_docx(report, lead, report_type="risk") -> bytes:
 
     if report_type == "preparation":
         return _build_preparation_docx(report, report_data, lead)
+    if report_type == "growth_overall":
+        return _build_growth_docx(report, report_data, lead)
     if report_type == "unified":
         return _build_unified_docx(report, report_data, lead)
     return _build_risk_docx(report, report_data, lead)
@@ -504,8 +596,8 @@ class _ReportPDF(FPDF):
                 self.add_font("CJK", "B", font_path)
                 self._chinese_ok = True
                 self._cn_font = "CJK"
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error('Failed to add Chinese font to PDF, falling back to Helvetica', extra={'error': str(e), 'font_path': font_path})
 
     def footer(self):
         self.set_y(-15)
@@ -802,95 +894,254 @@ def _pdf_bytes(pdf) -> bytes:
 
 
 def _build_unified_pdf(report, report_data, lead):
-    """生成统一学业风险与规划报告 PDF"""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import mm, cm
-    from reportlab.lib import colors
+    """生成统一学业风险与规划报告 PDF（使用 fpdf）"""
+    pdf = FPDF()
+    pdf.add_page()
+    cn_font_path = _find_chinese_font()
+    if cn_font_path:
+        pdf.add_font("cn", "", cn_font_path, uni=True)
+        pdf._cn_font = "cn"
+    else:
+        pdf._cn_font = "Helvetica"
+    pdf.set_auto_page_break(auto=True, margin=20)
 
-    pdf = BaseDocTemplate(_pdf_buffer(), pagesize=A4,
-                          leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story = []
+    def w(s):
+        """写一行（自动折行）"""
+        pdf.multi_cell(0, 8, s, new_x="LMARGIN", new_y="NEXT")
 
-    def add_heading(text, level=1):
-        story.append(Paragraph(text, styles[f"Heading{level}"]))
+    def heading(s):
+        pdf.set_font("cn", "", 14)
+        pdf.set_text_color(30, 30, 80)
+        pdf.cell(0, 12, s, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
 
-    def add_body(text):
-        story.append(Paragraph(text, styles["Normal"]))
-
-    def add_bullet(text):
-        story.append(Paragraph(f"&bull; {text}", styles["Normal"]))
+    def body(s):
+        pdf.set_font("cn", "", 10)
+        pdf.set_text_color(60, 60, 60)
+        w(s)
 
     if not report_data:
-        story.append(Paragraph("报告数据为空", styles["Normal"]))
-        pdf.build(story)
-        return _pdf_value(pdf)
+        body("报告数据为空")
+        return _pdf_bytes(pdf)
 
-    # Title
-    add_heading("学业风险与规划报告", 0)
-    add_body(f"报告日期：{str(report.get('created_at', ''))[:10]}")
+    pdf.set_font("cn", "", 18)
+    pdf.set_text_color(30, 30, 80)
+    pdf.cell(0, 15, "学业风险与规划报告", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.set_font("cn", "", 9)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 8, f"报告日期：{str(report.get('created_at', ''))[:10]}", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.ln(5)
 
     # 学生基础画像
     sp = report_data.get("student_profile", {})
     if sp:
-        add_heading("学生基础画像", 1)
-        add_body(sp.get("background", ""))
-        add_body(f"<b>目标：</b>{sp.get('target', '')}")
+        heading("学生基础画像")
+        body(sp.get("background", ""))
+        body(f"目标：{sp.get('target', '')}")
         ki = sp.get("key_info", {})
         for k, v in ki.items():
-            add_body(f"<b>{k}：</b>{v}")
+            body(f"{k}：{v}")
+        pdf.ln(3)
 
     # 目标院校概览
     po = report_data.get("program_overview", "")
     if po:
-        add_heading("目标院校专业概览", 1)
-        add_body(po)
+        heading("目标院校专业概览")
+        body(po)
+        pdf.ln(3)
+
+    # 逐课程分析
+    courses = report_data.get("course_analysis", [])
+    if courses:
+        heading("核心课程逐门分析")
+        for c in courses:
+            # 检查是否需要新页
+            if pdf.get_y() > pdf.h - 40:
+                pdf.add_page()
+            pdf.set_font("cn", "", 10)
+            pdf.set_text_color(30, 30, 80)
+            name = c.get("course_name", "")
+            credits = c.get("credits", "")
+            pdf.cell(0, 7, f"{name}" + (f" ({credits})" if credits else ""), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("cn", "", 10)
+            pdf.set_text_color(60, 60, 60)
+            assessment = c.get("assessment", "")
+            if assessment:
+                body(f"考核形式：{assessment}")
+            prereq = c.get("prerequisites", "")
+            if prereq:
+                body(f"前置要求：{prereq}")
+            readiness = c.get("student_readiness", "")
+            if readiness:
+                body(f"学生掌握：{readiness}")
+            gap = c.get("gap", "")
+            if gap:
+                body(f"差距分析：{gap}")
+            action = c.get("supplement_action", "")
+            if action:
+                pdf.set_text_color(80, 60, 160)
+                body(f"建议补充：{action}")
+                pdf.set_text_color(60, 60, 60)
+            pdf.ln(2)
 
     # 差距分析
     gaps = report_data.get("gap_analysis", [])
     if gaps:
-        add_heading("多维差距分析", 1)
+        heading("多维差距分析")
         for g in gaps:
-            add_body(f"<b>{g.get('dimension', '')}（{g.get('risk', 'medium')}）</b>")
-            add_body(f"当前：{g.get('current', '')}")
-            add_body(f"要求：{g.get('required', '')}")
-            add_body(f"差距：{g.get('gap', '')}")
+            pdf.set_font("cn", "", 10)
+            pdf.set_text_color(30, 30, 80)
+            pdf.cell(0, 8, f"{g.get('dimension', '')}（{g.get('risk', 'medium')}）", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(60, 60, 60)
+            body(f"当前：{g.get('current', '')}")
+            body(f"要求：{g.get('required', '')}")
+            body(f"差距：{g.get('gap', '')}")
             if g.get("improvement_strategy"):
-                add_body(f"改进策略：{g['improvement_strategy']}")
+                body(f"改进策略：{g['improvement_strategy']}")
+            pdf.ln(2)
 
     # 准备计划
     plans = report_data.get("preparation_plan", [])
     if plans:
-        add_heading("准备计划", 1)
+        heading("准备计划")
         for plan in plans:
-            title = plan.get("phase", "")
             tl = plan.get("timeline", "")
-            add_body(f"<b>{title}</b>" + (f" · {tl}" if tl else ""))
+            pdf.set_font("cn", "", 10)
+            pdf.set_text_color(30, 30, 80)
+            label = plan.get("phase", "") + (f" · {tl}" if tl else "")
+            pdf.cell(0, 8, label, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(60, 60, 60)
             if plan.get("goal"):
-                add_body(f"目标：{plan['goal']}")
+                body(f"目标：{plan['goal']}")
             for task in plan.get("tasks", []):
-                add_bullet(task)
+                body(f"  - {task}")
+            pdf.ln(2)
 
     # 综合评估
     oa = report_data.get("overall_assessment", "")
     if oa:
-        add_heading("综合评估", 1)
-        add_body(oa)
-        add_body(f"<b>整体风险：{report_data.get('risk_level', 'medium')}</b>")
+        heading("综合评估")
+        body(oa)
+        pdf.set_font("cn", "", 10)
+        pdf.set_text_color(30, 30, 80)
+        pdf.cell(0, 8, f"整体风险：{report_data.get('risk_level', 'medium')}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
 
     # 建议
     recs = report_data.get("recommendations", [])
     if recs:
-        add_heading("具体建议", 1)
+        heading("具体建议")
         for i, rec in enumerate(recs, 1):
             text = rec if isinstance(rec, str) else rec.get("action", str(rec))
-            add_body(f"{i}. {text}")
+            body(f"{i}. {text}")
 
-    pdf.build(story)
-    return _pdf_value(pdf)
+    return _pdf_bytes(pdf)
 
+
+
+def _build_growth_pdf(report, report_data, lead):
+    """生成整体学情报告 PDF"""
+    pdf = FPDF()
+    pdf.add_page()
+    cn_font_path = _find_chinese_font()
+    if cn_font_path:
+        pdf.add_font("cn", "", cn_font_path, uni=True)
+        pdf._cn_font = "cn"
+    else:
+        pdf._cn_font = "Helvetica"
+    pdf.set_auto_page_break(auto=True, margin=20)
+    
+    def heading(s):
+        pdf.set_font("cn", "", 16)
+        pdf.set_text_color(30, 30, 80)
+        pdf.cell(0, 12, s, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+    
+    def subheading(s):
+        pdf.set_font("cn", "", 12)
+        pdf.set_text_color(30, 64, 175)
+        pdf.cell(0, 10, s, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(1)
+    
+    def body(s):
+        pdf.set_font("cn", "", 10)
+        pdf.set_text_color(60, 60, 60)
+        pdf.multi_cell(0, 7, s)
+        pdf.ln(2)
+    
+    def bold_line(label, value):
+        pdf.set_font("cn", "", 10)
+        pdf.set_text_color(30, 30, 80)
+        pdf.cell(0, 7, f"{label}：{value}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(1)
+    
+    pdf.set_font("cn", "", 20)
+    pdf.set_text_color(30, 30, 80)
+    pdf.cell(0, 15, report_data.get("report_title", "阶段性学情综合报告"), new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.ln(5)
+    
+    si = report_data.get("student_info", {})
+    if si:
+        heading("学生信息")
+        for k, v in si.items():
+            bold_line(k, str(v))
+    
+    bl = report_data.get("baseline", "")
+    if bl:
+        heading("入学前基础概况")
+        body(bl)
+    
+    ls = report_data.get("learning_summary", "")
+    if ls:
+        heading("学习历程总结")
+        body(ls)
+    
+    for title, field in [("进步方面", "progress"), ("待改进方面", "weaknesses")]:
+        items = report_data.get(field, [])
+        if items:
+            heading(title)
+            for item in items:
+                pdf.set_font("cn", "", 10)
+                pdf.set_text_color(30, 30, 80)
+                pdf.cell(0, 7, f"{item.get('aspect','')}：{item.get('detail','')}", new_x="LMARGIN", new_y="NEXT")
+                pdf.ln(1)
+    
+    et = report_data.get("exam_trend", "")
+    if et:
+        heading("考试成绩趋势")
+        body(et)
+    
+    dims = report_data.get("dimensions", {})
+    if dims:
+        heading("多维度评估")
+        labels = {"academic":"学术","language":"语言","psychology":"心理","adaptation":"适应","planning":"规划"}
+        for key, dim in dims.items():
+            score = dim.get("score", "")
+            note = dim.get("note", "")
+            pdf.set_font("cn", "", 10)
+            pdf.set_text_color(30, 30, 80)
+            pdf.cell(0, 7, f"{labels.get(key,key)}（{score}）", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("cn", "", 9)
+            pdf.set_text_color(60, 60, 60)
+            if note:
+                pdf.multi_cell(0, 6, note)
+            pdf.ln(1)
+    
+    oa = report_data.get("overall_assessment", "")
+    if oa:
+        heading("综合评估")
+        body(oa)
+    
+    recs = report_data.get("recommendations", [])
+    if recs:
+        heading("后续建议")
+        for i, rec in enumerate(recs, 1):
+            pdf.set_font("cn", "", 10)
+            pdf.set_text_color(60, 60, 60)
+            pdf.cell(0, 7, f"{i}. {rec}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
+    
+    return _pdf_bytes(pdf)
 
 def generate_pdf(report, lead, report_type="risk") -> bytes:
     """
@@ -908,6 +1159,8 @@ def generate_pdf(report, lead, report_type="risk") -> bytes:
 
     if report_type == "preparation":
         return _build_preparation_pdf(report, report_data, lead)
+    if report_type == "growth_overall":
+        return _build_growth_pdf(report, report_data, lead)
     if report_type == "unified":
         return _build_unified_pdf(report, report_data, lead)
     return _build_risk_pdf(report, report_data, lead)

@@ -7,6 +7,8 @@ from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
 from statemachine import transition_lead
 from permissions import can
+import logging
+logger = logging.getLogger(__name__)
 
 # ── 安全迁移：给 schedules 表追加试听相关字段 ──
 _added_columns = False
@@ -26,7 +28,7 @@ def _ensure_columns():
         try:
             execute(ddl)
         except Exception:
-            pass  # 字段已存在
+            logger.debug('ALTER TABLE 失败（可能字段已存在）', extra={'ddl': ddl})
     _added_columns = True
 
 
@@ -89,10 +91,11 @@ def list_trials(handler, token_payload, qs, body):
     rows = query(
         f"""SELECT s.*, l.name as lead_name, l.phone as lead_phone, l.status as lead_status,
                    l.assignee_id, u_a.display_name as assignee_name,
-                   u.display_name as tutor_name
+                   COALESCE(u.display_name, t.name) as tutor_name
             FROM schedules s
             LEFT JOIN leads l ON s.lead_id = l.id
             LEFT JOIN users u ON s.tutor_id = u.id
+            LEFT JOIN teachers t ON s.teacher_id = t.id
             LEFT JOIN users u_a ON l.assignee_id = u_a.id
             WHERE {where_sql}
             ORDER BY s.start_time DESC
@@ -113,12 +116,13 @@ def create_trial(handler, token_payload, qs, body):
         return
     lead_id = body.get("lead_id")
     tutor_id = body.get("tutor_id")
+    teacher_id = body.get("teacher_id")
     start_time = body.get("start_time")
     end_time = body.get("end_time")
     subject = body.get("subject", "试听课")
 
-    if not lead_id or not tutor_id or not start_time or not end_time:
-        error_response(handler, "缺少必填参数 (lead_id, tutor_id, start_time, end_time)")
+    if not lead_id or (not tutor_id and not teacher_id) or not start_time or not end_time:
+        error_response(handler, "缺少必填参数 (lead_id, tutor/teacher_id, start_time, end_time)")
         return
 
     # 检查线索是否存在且状态允许安排试听
@@ -142,11 +146,14 @@ def create_trial(handler, token_payload, qs, body):
 
     sid = execute_lastrowid(
         """INSERT INTO schedules
-           (lead_id, tutor_id, subject, start_time, end_time, duration_minutes,
+           (lead_id, tutor_id, teacher_id, subject, start_time, end_time, duration_minutes,
             status, remark, created_by, schedule_type, classin_link)
-           VALUES (?,?,?,?,?,?,?,?,?,'trial',?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,'trial',?)""",
         (
-            int(lead_id), int(tutor_id), subject,
+            int(lead_id),
+            int(tutor_id) if tutor_id else None,
+            int(teacher_id) if teacher_id else None,
+            subject,
             start_time, end_time, duration,
             body.get("status", "pending"),
             body.get("remark", ""),
@@ -160,7 +167,7 @@ def create_trial(handler, token_payload, qs, body):
         try:
             transition_lead(int(lead_id), "trial")
         except Exception:
-            pass
+            logger.warning('状态机推进失败', extra={'lead_id': lead_id})
 
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
               "create", "trial", sid, f"安排试听: {lead['name']}")
@@ -262,9 +269,10 @@ def submit_feedback(handler, token_payload, qs, body, trial_id=None):
     # 通过状态机更新线索状态
     try:
         transition_lead(s["lead_id"], lead_status)
-    except Exception:
-        # 如果状态机拒绝，fallback 到直接更新（兼容旧数据）
-        execute("UPDATE leads SET status=? WHERE id=?", (lead_status, s["lead_id"]))
+    except Exception as e:
+        logger.error('状态机转换失败', extra={'lead_id': s["lead_id"], 'to_status': lead_status, 'error': str(e)})
+        error_response(handler, f'状态转换失败：{e}', 400)
+        return
 
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
               "feedback", "trial", tid,

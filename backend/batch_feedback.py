@@ -6,7 +6,7 @@ import datetime
 import threading
 from router import get, post
 from utils import ok_response, error_response, add_oplog
-from db import query, query_one, execute, execute_lastrowid
+from db import query, query_one, execute, execute_lastrowid, get_conn
 from permissions import can
 from classin_api import fetch_transcript, parse_classin_url
 from growth import _generate_structured_feedback, _add_package_info
@@ -59,47 +59,56 @@ def _auto_create_schedule(lead_id, link, transcript_result, uid):
 
 def _save_batch_feedback(schedule_id, lead_id, classin_link, parsed_feedback, uid):
     """保存反馈到 lesson_feedback 表"""
-    existing = query_one("SELECT id FROM lesson_feedback WHERE schedule_id=?", (schedule_id,))
-    if existing:
-        execute(
-            """UPDATE lesson_feedback SET
-               classin_link=?, content_covered=?, student_performance=?,
-               difficulties=?, homework_completion=?, teacher_notes=?,
-               next_focus=?, ai_generated=1, updated_at=datetime('now','localtime')
-               WHERE schedule_id=?""",
-            (
-                classin_link,
-                parsed_feedback.get("content_covered", ""),
-                parsed_feedback.get("student_performance", ""),
-                parsed_feedback.get("difficulties", ""),
-                parsed_feedback.get("homework_completion", ""),
-                parsed_feedback.get("teacher_notes", ""),
-                parsed_feedback.get("next_focus", ""),
-                schedule_id,
-            ),
-        )
-        return existing["id"]
-    else:
-        fid = execute_lastrowid(
-            """INSERT INTO lesson_feedback
-               (schedule_id, lead_id, classin_link, content_covered, student_performance,
-                difficulties, homework_completion, teacher_notes, next_focus,
-                ai_generated, created_by)
-               VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
-            (
-                schedule_id,
-                int(lead_id),
-                classin_link,
-                parsed_feedback.get("content_covered", ""),
-                parsed_feedback.get("student_performance", ""),
-                parsed_feedback.get("difficulties", ""),
-                parsed_feedback.get("homework_completion", ""),
-                parsed_feedback.get("teacher_notes", ""),
-                parsed_feedback.get("next_focus", ""),
-                uid,
-            ),
-        )
-        return fid
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
+        cur = conn.execute("SELECT id FROM lesson_feedback WHERE schedule_id=?", (schedule_id,))
+        existing = cur.fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE lesson_feedback SET
+                   classin_link=?, content_covered=?, student_performance=?,
+                   difficulties=?, homework_completion=?, teacher_notes=?,
+                   next_focus=?, ai_generated=1, updated_at=datetime('now','localtime')
+                   WHERE schedule_id=?""",
+                (
+                    classin_link,
+                    parsed_feedback.get("content_covered", ""),
+                    parsed_feedback.get("student_performance", ""),
+                    parsed_feedback.get("difficulties", ""),
+                    parsed_feedback.get("homework_completion", ""),
+                    parsed_feedback.get("teacher_notes", ""),
+                    parsed_feedback.get("next_focus", ""),
+                    schedule_id,
+                ),
+            )
+            conn.commit()
+            return existing["id"]
+        else:
+            cur = conn.execute(
+                """INSERT INTO lesson_feedback
+                   (schedule_id, lead_id, classin_link, content_covered, student_performance,
+                    difficulties, homework_completion, teacher_notes, next_focus,
+                    ai_generated, created_by)
+                   VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
+                (
+                    schedule_id,
+                    int(lead_id),
+                    classin_link,
+                    parsed_feedback.get("content_covered", ""),
+                    parsed_feedback.get("student_performance", ""),
+                    parsed_feedback.get("difficulties", ""),
+                    parsed_feedback.get("homework_completion", ""),
+                    parsed_feedback.get("teacher_notes", ""),
+                    parsed_feedback.get("next_focus", ""),
+                    uid,
+                ),
+            )
+            conn.commit()
+            return cur.lastrowid
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def _run_batch(batch_id, lead_id, links, uid, uname):

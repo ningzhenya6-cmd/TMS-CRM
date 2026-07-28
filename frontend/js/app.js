@@ -525,7 +525,6 @@ app.component('include-lead-detail', {
       const res = await API.get('/leads/' + id);
       if (res.error) { toast(res.error, 'error'); return; }
       this.lead = res.data;
-      this.loadHomework();
       this.loadOverallReport();
     },
     async loadOverallReport() {
@@ -2841,7 +2840,9 @@ canManage() {
       a.download = (d.report_title || '学情报告') + '.txt';
       a.click();
       URL.revokeObjectURL(a.href);
-    },  },
+    },
+    formatDate(d) { return d ? d.slice(0, 10) : ''; },
+  },
   created() {
     this.loadStudents().then(() => {
       // 从客户详情跳转时，自动选中预指定的学生

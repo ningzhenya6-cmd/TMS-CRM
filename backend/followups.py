@@ -2,11 +2,14 @@
 跟进记录 API — 增强版：强制评级 + 自动排期 + 超期标记
 """
 import datetime
+import logging
 from router import get, post, delete
 from utils import ok_response, error_response, add_oplog
-from db import query, query_one, execute, execute_lastrowid
+from db import query, query_one, execute, execute_lastrowid, get_conn
 from statemachine import transition_lead
 from permissions import can, scope_where
+
+logger = logging.getLogger(__name__)
 
 
 def _calc_next_deadline(rank, signed_at=None):
@@ -108,7 +111,7 @@ def get_followup_plan(handler, token_payload, qs, body):
 
     offset = (page - 1) * page_size
     rows = query(
-        f"""SELECT l.id, l.name, l.phone, l.lead_rank, l.status,
+        f"""SELECT l.id, l.name, l.phone, l.lead_rank, l.status, l.source,
                    l.next_followup_at, l.last_followup_at,
                    l.assignee_id, l.overdue_count,
                    u.display_name as assignee_name,
@@ -179,46 +182,56 @@ def create_followup(handler, token_payload, qs, body):
     enrollment_timeline = body.get("enrollment_timeline", "") if followup_rank == "B" else ""
     application_stage = body.get("application_stage", "") if followup_rank == "C" else ""
 
-    fid = execute_lastrowid(
-        """INSERT INTO followups (lead_id, content, next_action, next_date, created_by, followup_type, followup_rank,
-                                  urgency_label, enrollment_timeline, application_stage)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-        (
-            lead_id, content,
-            body.get("next_action", ""),
-            body.get("next_date", ""),
-            token_payload["sub"],
-            followup_type,
-            followup_rank,
-            urgency_label,
-            enrollment_timeline,
-            application_stage,
-        ),
-    )
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN")
 
-    # ── 通过状态机推进线索状态 ──
-    if lead["status"] in ("pending", "assigned"):
-        try:
-            transition_lead(lead_id, "following")
-        except Exception:
-            pass
+        cur = conn.execute(
+            """INSERT INTO followups (lead_id, content, next_action, next_date, created_by, followup_type, followup_rank,
+                                      urgency_label, enrollment_timeline, application_stage)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (
+                lead_id, content,
+                body.get("next_action", ""),
+                body.get("next_date", ""),
+                token_payload["sub"],
+                followup_type,
+                followup_rank,
+                urgency_label,
+                enrollment_timeline,
+                application_stage,
+            ),
+        )
+        fid = cur.lastrowid
 
-    # ── 自动计算下次跟进截止时间（P0 核心规则） ──
-    # 用户手动填了 next_date 就用它，否则按评级自动算
-    next_date = body.get("next_date", "")
-    if not next_date:
-        next_date = _calc_next_deadline(followup_rank)
+        # ── 通过状态机推进线索状态 ──
+        if lead["status"] in ("pending", "assigned"):
+            try:
+                transition_lead(lead_id, "following")
+            except Exception:
+                logger.warning('transition_lead failed for lead_id=%s', lead_id, exc_info=True)
 
-    # 更新 leads 的跟进信息
-    execute(
-        """UPDATE leads SET
-           last_followup_at=datetime('now','localtime'),
-           next_followup_at=?,
-           contact_status=?,
-           lead_rank=?
-           WHERE id=?""",
-        (next_date, body.get("contact_status", ""), followup_rank, lead_id),
-    )
+        # ── 自动计算下次跟进截止时间（P0 核心规则） ──
+        # 用户手动填了 next_date 就用它，否则按评级自动算
+        next_date = body.get("next_date", "")
+        if not next_date:
+            next_date = _calc_next_deadline(followup_rank)
+
+        # 更新 leads 的跟进信息
+        conn.execute(
+            """UPDATE leads SET
+               last_followup_at=datetime('now','localtime'),
+               next_followup_at=?,
+               contact_status=?,
+               lead_rank=?
+               WHERE id=?""",
+            (next_date, body.get("contact_status", ""), followup_rank, lead_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        error_response(handler, "操作失败", 500)
+        return
 
     add_oplog(token_payload["sub"], token_payload.get("name", ""),
               "create", "followup", fid, f"跟进线索: {lead['name']} (评级:{followup_rank})")
@@ -273,4 +286,3 @@ def get_overdue_stats(handler, token_payload, qs, body):
     )
 
     ok_response(handler, {"total_overdue": overdue_count, "by_consultant": by_consultant})
-

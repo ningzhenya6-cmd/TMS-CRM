@@ -2,8 +2,9 @@
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid, get_conn
-from statemachine import transition_lead
+from statemachine import transition_lead, validate_transition
 from permissions import can
+from services import compute_sign_type, compute_sign_type_from_packages
 
 
 @get("/api/contracts")
@@ -81,16 +82,8 @@ def create_contract(handler, token_payload, qs, body):
         error_response(handler, "缺少学生信息")
         return
 
-    # 计算新签/续费
-    # 查该学生所有已有合同下课时包的总课时
-    prev_hours = query_one(
-        """SELECT COALESCE(SUM(p.total_hours),0) as h
-           FROM packages p
-           JOIN contracts c ON p.contract_id = c.id
-           WHERE c.lead_id=?""",
-        (int(lead_id),),
-    )["h"]
-    sign_type = "renewal" if prev_hours > 10 else "new"
+    # 计算新签/续费（用统一的服务层）
+    sign_type = compute_sign_type_from_packages(int(lead_id))
 
     cid = execute_lastrowid(
         """INSERT INTO contracts (lead_id, contract_no, total_amount, status, signed_at, remark, created_by, sign_type)
@@ -109,8 +102,12 @@ def create_contract(handler, token_payload, qs, body):
     add_oplog(token_payload["sub"], token_payload.get("name", ""), "create", "contract", cid, "创建合同")
 
     # 通过状态机将线索推进为"已签约"
-    # 强制更新为已签约状态（不经过状态机，因为外部导入的线索可能从pending直接签约）
-    execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
+    # 注：statemachine.py 已配 pending/assigned → enrolled 允许直接签约
+    try:
+        transition_lead(int(lead_id), "enrolled")
+    except Exception as e:
+        error_response(handler, f"状态转换失败: {e}", 400)
+        return
 
     c = query_one("SELECT * FROM contracts WHERE id=?", (cid,))
     ok_response(handler, c, 201)
@@ -176,7 +173,11 @@ def delete_contract(handler, token_payload, qs, body, contract_id=None):
     if lid:
         remaining = query_one("SELECT COUNT(*) as cnt FROM contracts WHERE lead_id=?", (lid,))
         if not remaining or remaining["cnt"] == 0:
-            execute("UPDATE leads SET status='assigned' WHERE id=? AND status='enrolled'", (lid,))
+            try:
+                transition_lead(lid, "assigned")
+            except Exception:
+                # 回退失败说明状态机不允许 enrolled→assigned（安全兜底，不阻塞删合同）
+                pass
 
     ok_response(handler, {"message": "已删除"})
 
@@ -203,15 +204,8 @@ def create_signing(handler, token_payload, qs, body):
         error_response(handler, "收款金额必须大于 0")
         return
 
-    # 计算新签/续费：该学生此笔收款之前累计的课时（基于 payment_records.hours）
-    prev_hours = query_one(
-        """SELECT COALESCE(SUM(pr.hours),0) as h
-           FROM payment_records pr
-           JOIN contracts c2 ON pr.contract_id = c2.id
-           WHERE c2.lead_id=?""",
-        (int(lead_id),),
-    )["h"]
-    sign_type = "renewal" if prev_hours > 10 else "new"
+    # 计算新签/续费（用统一的服务层）
+    sign_type = compute_sign_type(int(lead_id))
 
     signed_at = body.get("signed_at", "") or __import__("datetime").datetime.now().strftime("%Y-%m-%d")
     payment_date = body.get("payment_date", "") or signed_at
@@ -275,8 +269,12 @@ def create_signing(handler, token_payload, qs, body):
         )
         pay_id = cur.lastrowid
 
-        # 4. 更新学生状态为已签约
-        conn.execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
+        # 4. 更新学生状态为已签约（手动事务内，用 conn.execute 不走 transition_lead）
+        cur = conn.execute("SELECT status FROM leads WHERE id=?", (int(lead_id),))
+        lead_row = cur.fetchone()
+        if lead_row:
+            validate_transition(lead_row["status"], "enrolled")
+            conn.execute("UPDATE leads SET status='enrolled' WHERE id=?", (int(lead_id),))
 
         conn.commit()
     except Exception as e:
@@ -328,8 +326,9 @@ def refresh_sign_types(handler, token_payload, qs, body):
     for p in payments:
         pid = p["id"]
         lid = p["lead_id"]
-        prior = lead_hours.get(lid, 0)
-        should = "renewal" if prior > 10 else "new"
+        # 用统一的服务层计算
+        should = compute_sign_type(lid)
+        # refresh 是重新计算所有记录，用 compute_sign_type 一次性判断
 
         if p["sign_type"] != should:
             execute("UPDATE payment_records SET sign_type=? WHERE id=?", (should, pid))
