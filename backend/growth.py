@@ -2,6 +2,7 @@
 成长档案 API — 课后反馈、考试成绩、录取结果、成长时间线
 """
 import json
+import logging
 import os
 import re
 import threading
@@ -11,6 +12,8 @@ import urllib.error
 from router import get, post, put, delete
 from utils import ok_response, error_response, add_oplog
 from db import query, query_one, execute, execute_lastrowid
+
+logger = logging.getLogger(__name__)
 
 # 统一用 query() 返回列表
 from permissions import can, scope_where
@@ -745,3 +748,281 @@ def update_admission(handler, token_payload, qs, body, lead_id=None, admission_i
               "update", "admission_result", int(admission_id), "更新录取结果")
     row = query_one("SELECT * FROM admission_results WHERE id=?", (int(admission_id),))
     ok_response(handler, row)
+
+# ═══════════════════════════════════════════
+# 整体学情报告（一键生成）v2 — 系统化深度分析
+# ═══════════════════════════════════════════
+
+_growth_report_progress = {}
+
+@post("/api/growth/{lead_id}/overall-report")
+def generate_overall_report(handler, token_payload, qs, body, lead_id=None):
+    """一键生成学生整体学情报告 v2"""
+    role = token_payload["role"]
+    if not can(role, "growth:view"):
+        error_response(handler, "无权访问", 403)
+        return
+
+    lid = int(lead_id)
+    lead = query_one("SELECT * FROM leads WHERE id=?", (lid,))
+    if not lead:
+        error_response(handler, "学生不存在", 404)
+        return
+
+    # ═══ v2 数据收集 ═══
+    feedbacks = query(
+        "SELECT * FROM lesson_feedback WHERE lead_id=? ORDER BY created_at", (lid,))
+    consulting_reports = query(
+        "SELECT * FROM consulting_reports WHERE lead_id=? ORDER BY created_at DESC LIMIT 1", (lid,))
+    followups = query(
+        """SELECT f.*, u.display_name as creator_name
+           FROM followups f LEFT JOIN users u ON f.created_by = u.id
+           WHERE f.lead_id=? ORDER BY f.created_at""", (lid,))
+    exams = query(
+        "SELECT * FROM exam_results WHERE lead_id=? ORDER BY exam_date", (lid,))
+    # v2新增：排课（含老师名）、课时包
+    schedules = query("""SELECT s.*, t.name as teacher_name
+       FROM schedules s LEFT JOIN teachers t ON s.teacher_id = t.id
+       WHERE s.lead_id=? ORDER BY s.start_time DESC""", (lid,))
+    contracts = query("""SELECT c.*,
+       (SELECT COALESCE(SUM(p.total_hours),0) FROM packages p WHERE p.contract_id=c.id AND p.status='active') as total_hours,
+       (SELECT COALESCE(SUM(p.used_hours),0) FROM packages p WHERE p.contract_id=c.id AND p.status='active') as used_hours
+       FROM contracts c WHERE c.lead_id=? AND c.status='active' ORDER BY c.created_at DESC LIMIT 1""", (lid,))
+
+    _growth_report_progress[lid] = {"progress": 10, "step": "正在分析学生数据...", "status": "generating"}
+
+    import json as _json, threading as _threading
+    def _run(lid, lead, feedbacks, consulting_reports, followups, exams, schedules, contracts, creator_id):
+        try:
+            _growth_report_progress[lid] = {"progress": 20, "step": "正在逐学科分析...", "status": "generating"}
+
+            # ── 按学科分组反馈 ──
+            fb_by_subject = {}
+            for fb in feedbacks:
+                sched = next((s for s in schedules if s["id"] == fb.get("schedule_id")), None)
+                subj = (sched.get("subject") or "未分类").strip()
+                teacher = sched.get("teacher_name") or "未知老师"
+                if subj not in fb_by_subject:
+                    fb_by_subject[subj] = {"teacher": teacher, "feedbacks": []}
+                fb_by_subject[subj]["feedbacks"].append(fb)
+
+            # ── 排课统计 ──
+            total_scheduled = len(schedules)
+            completed_schedules = sum(1 for s in schedules if s["status"] == "completed")
+            pending_schedules = sum(1 for s in schedules if s["status"] == "pending")
+            sched_by_month = {}
+            for s in schedules:
+                mk = (s.get("start_time") or "")[:7]
+                if mk:
+                    sched_by_month[mk] = sched_by_month.get(mk, 0) + 1
+            sched_by_subject = {}
+            for s in schedules:
+                subj = (s.get("subject") or "未分类").strip()
+                if subj not in sched_by_subject:
+                    sched_by_subject[subj] = {"total": 0, "completed": 0}
+                sched_by_subject[subj]["total"] += 1
+                if s["status"] == "completed":
+                    sched_by_subject[subj]["completed"] += 1
+
+            # ── 课时包 ──
+            total_hours = sum((c.get("total_hours",0) or 0) for c in contracts)
+            used_hours = sum((c.get("used_hours",0) or 0) for c in contracts)
+            rem_hours = round(total_hours - used_hours, 1) if total_hours else 0
+            cons_rate = round(used_hours / (total_hours or 1) * 100, 1)
+
+            # ── 按学科的结构化反馈 ──
+            subject_detailed = []
+            for subj, data in fb_by_subject.items():
+                lines = []
+                for fb in data["feedbacks"][-15:]:
+                    date = (fb.get("created_at") or "")[:10]
+                    parts = []
+                    if fb.get("content_covered"):
+                        parts.append("内容:" + fb["content_covered"][:120])
+                    if fb.get("student_performance"):
+                        parts.append("表现:" + fb["student_performance"][:80])
+                    if fb.get("difficulties"):
+                        parts.append("困难:" + fb["difficulties"][:80])
+                    if parts:
+                        lines.append("[" + date + "] " + " | ".join(parts))
+                fb_text = "\n".join(lines) if lines else ""
+                subject_detailed.append({"subject": subj, "teacher": data["teacher"], "feedbacks_text": fb_text})
+
+            # ── 跟进摘要 ──
+            fu_summary = "\n".join(["[%s] rank=%s %s" % ((f.get("created_at") or "")[:10], f.get("followup_rank","-"), (f.get("content") or "")[:100]) for f in followups[-15:]]) if followups else ""
+
+            # ── 学业风险报告 ──
+            cr_summary = ""
+            for cr in consulting_reports:
+                rj = cr.get("report_json", "")
+                if rj:
+                    try:
+                        rd = _json.loads(rj)
+                        cr_summary += "· %s: %s\n" % (rd.get("report_title","学业风险规划报告"), (rd.get("overall_assessment","") or "")[:200])
+                    except Exception:
+                        pass
+
+            # ── 排课频次趋势 ──
+            month_keys = sorted(sched_by_month.keys())
+            freq_trend = "无排课记录"
+            if month_keys:
+                parts = ["%s:%s节" % (mk, sched_by_month[mk]) for mk in month_keys[-6:]]
+                freq_trend = " → ".join(parts)
+
+            system_prompt = """你是一位资深的留学学业规划顾问。根据学生全部数据，生成一份「阶段性学情综合报告」。
+
+报告要求系统化、有深度、数据驱动。面向机构内部顾问和家长双方，既要有专业分析，也要有可执行建议。
+
+## 输出结构
+
+{
+  "report_title": "阶段性学情综合报告",
+  "student_info": {"name":"","grade":"","country":"","total_classes":0,"completed_classes":0,"total_hours":0,"used_hours":0,"remaining_hours":0,"consumption_rate":0},
+  "subject_analysis": [
+    {"subject":"学科名","teacher":"老师名","sessions":0,"current_progress":"","performance":"","weak_points":"","trend":"稳定上升/波动/下滑","suggestion":""}
+  ],
+  "learning_trends": {"class_frequency":"上课频次分析","monthly_schedule_count":"各月排课数","hour_consumption_note":"课时消耗分析"},
+  "risk_warnings": [{"type":"课时不足|上课频次下降|长期未跟进|成绩下滑|其他","detail":"","severity":"high/medium/low","action_required":""}],
+  "overall_assessment": "综合评估（200-300字）",
+  "consultant_actions": [{"action":"具体行动","priority":"high/medium","target":"行动对象","note":"执行要点"}],
+  "parent_communication": "家长沟通建议",
+  "recommendations": ["后续学习建议3-5条"]
+}
+
+## 原则
+1. subject_analysis是核心——每个学科单独分析，基于该学科的实际课后反馈
+2. risk_warnings必须基于真实数据，没有则不输出
+3. consultant_actions要可执行，具体到人和事
+4. 没有数据的维度不输出
+5. 措辞客观，用数据说话"""
+
+            user_parts = ["学生: " + (lead.get("name","?") or "?")]
+            if lead.get("grade"): user_parts[0] += " 年级: " + lead["grade"]
+            if lead.get("country"): user_parts[0] += " 国家: " + lead["country"]
+            if lead.get("remark"):
+                user_parts.append("[学生备注]\n" + ((lead["remark"] or "")[:500]))
+
+            # 排课
+            sched_text = "总排课%d节 | 已完成%d节 | 待上课%d节" % (total_scheduled, completed_schedules, pending_schedules)
+            sched_text += "\n各月趋势: " + freq_trend
+            if sched_by_subject:
+                sched_text += "\n按学科:"
+                for subj, data in sorted(sched_by_subject.items()):
+                    sched_text += " %s:%d节(%d完成)" % (subj, data["total"], data["completed"])
+            user_parts.append("[排课数据]\n" + sched_text)
+
+            if contracts:
+                pkg = "总课时%sh | 已用%sh | 剩余%sh | 消耗率%s%%" % (total_hours, used_hours, rem_hours, cons_rate)
+                user_parts.append("[课时使用]\n" + pkg)
+
+            if subject_detailed:
+                st = ["学科: " + sd["subject"] + " 老师: " + sd["teacher"] + "\n" + sd["feedbacks_text"] for sd in subject_detailed]
+                user_parts.append("[课后反馈（按学科）]\n" + "\n---\n".join(st))
+
+            if cr_summary:
+                user_parts.append("[学业风险报告]\n" + cr_summary[:1500])
+            if fu_summary:
+                user_parts.append("[跟进记录]\n" + fu_summary[:1500])
+            if exams:
+                el = [{"科目":e.get("subject"),"分数":e.get("score"),"日期":e.get("exam_date")} for e in exams]
+                user_parts.append("[考试成绩]\n" + _json.dumps(el, ensure_ascii=False)[:1000])
+
+            user_prompt = "\n\n".join(user_parts)
+            _growth_report_progress[lid] = {"progress": 50, "step": "AI 正在逐学科分析...", "status": "generating"}
+            result = _call_deepseek(system_prompt, user_prompt, temperature=0.3, max_tokens=4000)
+            if isinstance(result, dict) and "error" in result:
+                _growth_report_progress[lid] = {"progress": 0, "step": "❌ 生成失败: " + result["error"], "status": "error"}
+                return
+            content_raw = result.strip() if isinstance(result, str) else str(result)
+            content_raw = re.sub(r"^```(?:json)?\s*", "", content_raw)
+            content_raw = re.sub(r"\s*```$", "", content_raw)
+            parsed = _json.loads(content_raw)
+            report_json = _json.dumps(parsed, ensure_ascii=False)
+            existing = query_one("SELECT id FROM consulting_reports WHERE lead_id=? AND report_type='growth_overall'", (lid,))
+            if existing:
+                execute("UPDATE consulting_reports SET report_json=?, updated_at=datetime('now','localtime') WHERE id=?", (report_json, existing["id"]))
+            else:
+                execute("INSERT INTO consulting_reports (lead_id, target_country, target_school, target_major, report_type, report_json, status, created_by, created_at, updated_at) VALUES (?,'','','','growth_overall',?,'completed',?,datetime('now','localtime'),datetime('now','localtime'))", (lid, report_json, creator_id))
+            _growth_report_progress[lid] = {"progress": 100, "step": "✅ 报告生成完成！", "status": "done", "result": parsed}
+        except Exception as e:
+            _growth_report_progress[lid] = {"progress": 0, "step": "❌ 生成失败: " + str(e), "status": "error"}
+
+    _growth_report_progress[lid] = {"progress": 5, "step": "正在收集数据...", "status": "generating"}
+    creator_id = token_payload["sub"]
+    t = _threading.Thread(target=_run, args=(lid, lead, feedbacks, consulting_reports, followups, exams, schedules, contracts, creator_id), daemon=True)
+    t.start()
+
+    ok_response(handler, {"status": "generating", "progress": 5, "step": "正在收集数据..."})
+
+@get("/api/growth/{lead_id}/overall-report/progress")
+def get_overall_report_progress(handler, token_payload, qs, body, lead_id=None):
+    lid = int(lead_id)
+    task = _growth_report_progress.get(lid, {})
+    if not task:
+        ok_response(handler, {"status": "idle", "progress": 0})
+        return
+    ok_response(handler, task)
+
+@get("/api/growth/{lead_id}/overall-report")
+def get_overall_report(handler, token_payload, qs, body, lead_id=None):
+    lid = int(lead_id)
+    # 从 DB 到读取
+    row = query_one("SELECT * FROM consulting_reports WHERE lead_id=? AND report_type='growth_overall' ORDER BY created_at DESC LIMIT 1", (lid,))
+    if row and row.get("report_json"):
+        try:
+            data = json.loads(row["report_json"])
+            data["_report_id"] = row["id"]
+            ok_response(handler, data)
+            return
+        except Exception as e:
+            logger.error('Failed to parse overall report JSON from DB', extra={'error': str(e), 'lead_id': lid})
+    ok_response(handler, {"status": "not_found"})
+
+@put("/api/growth/{lead_id}/overall-report")
+def save_overall_report(handler, token_payload, qs, body, lead_id=None):
+    """保存编辑后的报告"""
+    lid = int(lead_id)
+    row = query_one("SELECT id FROM consulting_reports WHERE lead_id=? AND report_type='growth_overall'", (lid,))
+    if not row:
+        error_response(handler, "报告不存在", 404)
+        return
+    report_json = json.dumps(body.get("data", body), ensure_ascii=False)
+    execute("UPDATE consulting_reports SET report_json=?, updated_at=datetime('now','localtime') WHERE id=?", (report_json, row["id"]))
+    ok_response(handler, {"message": "已保存"})
+
+
+@get("/api/growth/{lead_id}/overall-report/download")
+def download_overall_report(handler, token_payload, qs, body, lead_id=None):
+    """下载 PDF/Word"""
+    from export import generate_pdf, generate_docx
+    lid = int(lead_id)
+    fmt = qs.get("format", ["pdf"])[0]
+    row = query_one("SELECT * FROM consulting_reports WHERE lead_id=? AND report_type='growth_overall' ORDER BY created_at DESC LIMIT 1", (lid,))
+    if not row or not row.get("report_json"):
+        error_response(handler, "报告不存在", 404)
+        return
+    lead = query_one("SELECT * FROM leads WHERE id=?", (lid,))
+    report_data = json.loads(row["report_json"])
+    lead_name = lead["name"] if lead else "student"
+    if fmt == "docx":
+        content = generate_docx(row, lead, "growth_overall")
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        handler.send_header("Content-Disposition", f'attachment; filename="report.docx"')
+        handler.send_header("Content-Length", str(len(content)))
+        handler.end_headers()
+        handler.wfile.write(content)
+    else:
+        content = generate_pdf(row, lead, "growth_overall")
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/pdf")
+        handler.send_header("Content-Disposition", f'attachment; filename="report.pdf"')
+        handler.send_header("Content-Length", str(len(content)))
+        handler.end_headers()
+        handler.wfile.write(content)
+
+
+@delete("/api/growth/{lead_id}/overall-report")
+def delete_overall_report(handler, token_payload, qs, body, lead_id=None):
+    _growth_report_progress.pop(int(lead_id), None)
+    ok_response(handler, {"message": "已清除"})

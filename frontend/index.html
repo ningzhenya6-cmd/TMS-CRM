@@ -802,44 +802,80 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             </div>
           </div>
         </div>
-        <div v-if="overallReport.baseline" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-clock-history mr-1"></i>入学前基础概况</h6>
-          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'baseline')">{{ reportEditData.baseline }}</p>
-        </div>
-        <div v-if="overallReport.learning_summary" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-journal-text mr-1"></i>学习历程总结</h6>
-          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'learning_summary')">{{ reportEditData.learning_summary }}</p>
-        </div>
-        <div v-if="overallReport.progress && overallReport.progress.length" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-green-800 mb-2"><i class="bi bi-arrow-up-circle mr-1"></i>进步方面</h6>
-          <div v-for="(item, i) in overallReport.progress" :key="i" class="flex gap-2 mb-1 text-sm">
-            <span class="text-green-600 font-medium">{{ item.aspect }}：</span><span class="text-gray-600">{{ item.detail }}</span>
-          </div>
-        </div>
-        <div v-if="overallReport.weaknesses && overallReport.weaknesses.length" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-exclamation-triangle mr-1"></i>待改进方面</h6>
-          <div v-for="(item, i) in overallReport.weaknesses" :key="i" class="flex gap-2 mb-1 text-sm">
-            <span class="text-amber-600 font-medium">{{ item.aspect }}：</span><span class="text-gray-600">{{ item.detail }}</span>
-          </div>
-        </div>
-        <div v-if="overallReport.exam_trend" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-graph-up mr-1"></i>考试成绩趋势</h6>
-          <p class="text-sm text-gray-700 leading-relaxed">{{ overallReport.exam_trend }}</p>
-        </div>
-        <div v-if="overallReport.dimensions" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-grid-3x3 mr-1"></i>多维度评估</h6>
-          <div class="space-y-2">
-            <div v-for="(dim, key) in overallReport.dimensions" :key="key" class="flex items-center gap-3 p-2 rounded-lg text-sm" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-50' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-50' : 'bg-red-50'">
-              <span class="w-16 text-xs font-medium text-gray-500">{{ {academic:'学术',language:'语言',psychology:'心理',adaptation:'适应',planning:'规划'}[key] || key }}</span>
-              <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" contenteditable="true" @blur="onEditDim($event,key,'score')" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-200 text-green-800' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-200 text-amber-800' : 'bg-red-200 text-red-800'">{{ reportEditData.dimensions[key].score }}</span>
-              <span class="text-gray-600 flex-1" contenteditable="true" @blur="onEditDim($event,key,'note')">{{ reportEditData.dimensions[key].note }}</span>
+        <!-- 逐学科分析 -->
+        <div v-if="overallReport.subject_analysis && overallReport.subject_analysis.length" class="space-y-3">
+          <h6 class="text-sm font-semibold text-gray-800 px-1"><i class="bi bi-journal-text mr-1"></i>逐学科分析</h6>
+          <div v-for="sa in overallReport.subject_analysis" :key="sa.subject" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <span class="font-semibold text-gray-900 text-sm">{{ sa.subject }}</span>
+                <span v-if="sa.teacher" class="text-xs text-gray-400 ml-2"><i class="bi bi-person"></i> {{ sa.teacher }}</span>
+              </div>
+              <span v-if="sa.sessions" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">{{ sa.sessions }}节</span>
+            </div>
+            <div class="p-4 space-y-2 text-sm">
+              <div v-if="sa.current_progress" class="flex gap-2"><span class="text-gray-400 w-14 shrink-0 text-xs">进度</span><span class="text-gray-700">{{ sa.current_progress }}</span></div>
+              <div v-if="sa.performance" class="flex gap-2"><span class="text-gray-400 w-14 shrink-0 text-xs">表现</span><span class="text-gray-700">{{ sa.performance }}</span></div>
+              <div v-if="sa.weak_points" class="flex gap-2"><span class="text-amber-600 w-14 shrink-0 text-xs font-medium">薄弱</span><span class="text-gray-700">{{ sa.weak_points }}</span></div>
+              <div class="flex gap-2 pt-1 border-t border-gray-50"><span class="text-gray-400 w-14 shrink-0 text-xs">趋势</span>
+                <span v-if="sa.trend" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                  :class="sa.trend.indexOf('上升') >= 0 ? 'bg-green-50 text-green-700' : sa.trend.indexOf('下滑') >= 0 ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-600'">{{ sa.trend }}</span>
+              </div>
+              <div v-if="sa.suggestion" class="flex gap-2 pt-1 border-t border-gray-50"><span class="text-indigo-500 w-14 shrink-0 text-xs font-medium">建议</span><span class="text-gray-700">{{ sa.suggestion }}</span></div>
             </div>
           </div>
         </div>
+
+        <!-- 学习趋势 -->
+        <div v-if="overallReport.learning_trends" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-graph-up mr-1"></i>学习趋势</h6>
+          <p class="text-sm text-gray-700 leading-relaxed">上课频次：{{ overallReport.learning_trends.class_frequency || '无数据' }}<br>月排课数：{{ overallReport.learning_trends.monthly_schedule_count || '无数据' }}<br>课时消耗：{{ overallReport.learning_trends.hour_consumption_note || '无数据' }}</p>
+        </div>
+
+        <!-- 风险预警 -->
+        <div v-if="overallReport.risk_warnings && overallReport.risk_warnings.length" class="space-y-2">
+          <h6 class="text-sm font-semibold text-gray-800 px-1"><i class="bi bi-exclamation-triangle mr-1"></i>风险预警</h6>
+          <div v-for="(rw, i) in overallReport.risk_warnings" :key="i" class="rounded-xl p-4 text-sm"
+            :class="rw.severity === 'high' ? 'bg-red-50 border border-red-200' : rw.severity === 'medium' ? 'bg-amber-50 border border-amber-200' : 'bg-yellow-50 border border-yellow-200'">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-block px-2 py-0.5 rounded text-[.6rem] font-semibold"
+                :class="rw.severity === 'high' ? 'bg-red-200 text-red-800' : rw.severity === 'medium' ? 'bg-amber-200 text-amber-800' : 'bg-yellow-200 text-yellow-800'">{{ rw.severity === 'high' ? '高危' : rw.severity === 'medium' ? '中危' : '提醒' }}</span>
+              <span class="font-medium text-gray-900">{{ rw.type }}</span>
+            </div>
+            <p class="text-gray-600 mt-1">{{ rw.detail }}</p>
+            <p v-if="rw.action_required" class="text-indigo-600 mt-1 text-xs"><i class="bi bi-arrow-right mr-0.5"></i>{{ rw.action_required }}</p>
+          </div>
+        </div>
+
+        <!-- 综合评估 -->
         <div v-if="overallReport.overall_assessment" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200">
           <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-shield-check mr-1"></i>综合评估</h6>
-          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'overall_assessment')">{{ reportEditData.overall_assessment }}</p>
+          <p class="text-sm text-gray-700 leading-relaxed">{{ overallReport.overall_assessment }}</p>
         </div>
+
+        <!-- 顾问行动建议 -->
+        <div v-if="overallReport.consultant_actions && overallReport.consultant_actions.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-list-check mr-1"></i>顾问行动建议</h6>
+          <div class="space-y-2">
+            <div v-for="(ca, i) in overallReport.consultant_actions" :key="i" class="flex items-start gap-3 p-2 rounded-lg text-sm bg-gray-50">
+              <span class="inline-block w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
+                :class="ca.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'">{{ i+1 }}</span>
+              <div class="flex-1 min-w-0">
+                <p class="text-gray-800 font-medium">{{ ca.action }}</p>
+                <p v-if="ca.target" class="text-xs text-gray-500 mt-0.5">{{ ca.target }}</p>
+                <p v-if="ca.note" class="text-xs text-gray-400 mt-0.5">{{ ca.note }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 家长沟通建议 -->
+        <div v-if="overallReport.parent_communication" class="bg-white rounded-xl border border-blue-200 p-4">
+          <h6 class="text-sm font-semibold text-blue-800 mb-2"><i class="bi bi-chat-dots mr-1"></i>家长沟通建议</h6>
+          <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ overallReport.parent_communication }}</p>
+        </div>
+
+        <!-- 后续建议 -->
         <div v-if="overallReport.recommendations && overallReport.recommendations.length" class="bg-white rounded-xl border border-gray-200 p-4">
           <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-lightbulb mr-1"></i>后续建议</h6>
           <ul class="space-y-1">
@@ -848,9 +884,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
               <span>{{ rec }}</span>
             </li>
           </ul>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
+        </div><div class="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
         <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showOverallReportModal=false">关闭</button>
       </div>
     </div>
@@ -1570,54 +1604,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
 
-    <!-- ── 课后作业 ── -->
-<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-    <div class="flex items-center justify-between mb-4">
-      <h5 class="font-semibold text-gray-900">
-        <i class="bi bi-file-earmark-text text-indigo-500 mr-2"></i>课后作业
-      </h5>
-    </div>
-    <!-- 拖拽上传区域 -->
-    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 mb-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
-         @dragover.prevent="dragOver=true"
-         @dragleave.prevent="dragOver=false"
-         @drop.prevent="handleDrop($event)"
-         @click="$refs.hwInput.click()"
-         :class="dragOver ? 'border-indigo-500 bg-indigo-50' : ''">
-      <i class="bi bi-cloud-upload text-3xl text-gray-300 block mb-2"></i>
-      <p class="text-sm text-gray-500">拖拽文件到此处上传，或点击选择文件</p>
-      <p class="text-xs text-gray-400 mt-1">支持 PDF、Word、图片、ZIP 格式</p>
-      <input type="file" ref="hwInput" class="hidden" @change="uploadHomework($event)" accept=".pdf,.doc,.docx,.jpg,.png,.zip" multiple>
-    </div>
-    <div v-if="uploading" class="mb-4">
-      <div class="flex items-center gap-2 text-sm text-indigo-600 mb-1">
-        <div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <span>{{ uploadStep || '上传中...' }} {{ uploadProgress < 100 ? uploadProgress + '%' : ''}}</span>
-      </div>
-      <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-indigo-500 h-2 rounded-full transition-all" :style="{width: uploadProgress + '%'}"></div>
-      </div>
-    </div>
-      <div v-if="!homeworkList || homeworkList.length === 0" class="text-center py-6 text-sm text-gray-400">
-        <i class="bi bi-inbox text-2xl block mb-1"></i>暂无作业记录
-      </div>
-      <div v-else class="space-y-2">
-        <div v-for="(h, i) in homeworkList" :key="h.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-          <div class="flex items-center gap-3 min-w-0">
-            <i class="bi bi-file-earmark text-lg text-indigo-500 flex-shrink-0"></i>
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-gray-800 truncate">{{ h.file_name }}</p>
-              <p class="text-xs text-gray-400">{{ (h.created_at || '').slice(0,10) }} · {{ h.uploader_name || '未知' }} · {{ h.file_size > 1024 ? (h.file_size/1024).toFixed(1) + 'KB' : h.file_size + 'B' }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <button class="text-xs text-indigo-600 hover:underline" @click="downloadHomework(h.id)"><i class="bi bi-download"></i> 下载</button>
-            <button class="text-xs text-red-500 hover:text-red-700" @click="deleteHomework(h.id)"><i class="bi bi-trash"></i></button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 学业分析：创建报告弹窗 -->
     <div v-if="showConsultingCreate" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeConsultingCreate">
       <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -1907,53 +1893,89 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
             </div>
           </div>
         </div>
-        <div v-if="overallReport.baseline" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-clock-history mr-1"></i>入学前基础概况</h6>
-          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'baseline')">{{ reportEditData.baseline }}</p>
-        </div>
-        <div v-if="overallReport.learning_summary" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-journal-text mr-1"></i>学习历程总结</h6>
-          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'learning_summary')">{{ reportEditData.learning_summary }}</p>
-        </div>
-        <div v-if="overallReport.progress && overallReport.progress.length" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-green-800 mb-2"><i class="bi bi-arrow-up-circle mr-1"></i>进步方面</h6>
-          <div v-for="(item, i) in overallReport.progress" :key="i" class="flex gap-2 mb-1 text-sm">
-            <span class="text-green-600 font-medium" contenteditable="true" @blur="onEditArray($event,'progress',i,'aspect')">{{ reportEditData.progress[i].aspect }}：</span>
-            <span class="text-gray-600" contenteditable="true" @blur="onEditArray($event,'progress',i,'detail')">{{ reportEditData.progress[i].detail }}</span>
-          </div>
-        </div>
-        <div v-if="overallReport.weaknesses && overallReport.weaknesses.length" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-exclamation-triangle mr-1"></i>待改进方面</h6>
-          <div v-for="(item, i) in overallReport.weaknesses" :key="i" class="flex gap-2 mb-1 text-sm">
-            <span class="text-amber-600 font-medium" contenteditable="true" @blur="onEditArray($event,'weaknesses',i,'aspect')">{{ reportEditData.weaknesses[i].aspect }}：</span>
-            <span class="text-gray-600" contenteditable="true" @blur="onEditArray($event,'weaknesses',i,'detail')">{{ reportEditData.weaknesses[i].detail }}</span>
-          </div>
-        </div>
-        <div v-if="overallReport.dimensions" class="bg-white rounded-xl border border-gray-200 p-4">
-          <h6 class="text-sm font-semibold text-gray-800 mb-3"><i class="bi bi-grid-3x3 mr-1"></i>多维度评估</h6>
-          <div class="space-y-2">
-            <div v-for="(dim, key) in overallReport.dimensions" :key="key" class="flex items-center gap-3 p-2 rounded-lg text-sm" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-50' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-50' : 'bg-red-50'">
-              <span class="w-16 text-xs font-medium text-gray-500">{{ {academic:'学术',language:'语言',psychology:'心理',adaptation:'适应',planning:'规划'}[key] || key }}</span>
-              <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" contenteditable="true" @blur="onEditDim($event,key,'score')" :class="reportEditData.dimensions[key].score === 'A' || reportEditData.dimensions[key].score === 'B' ? 'bg-green-200 text-green-800' : reportEditData.dimensions[key].score === 'C' ? 'bg-amber-200 text-amber-800' : 'bg-red-200 text-red-800'">{{ reportEditData.dimensions[key].score }}</span>
-              <span class="text-gray-600 flex-1" contenteditable="true" @blur="onEditDim($event,key,'note')">{{ reportEditData.dimensions[key].note }}</span>
+        <!-- 逐学科分析 -->
+        <div v-if="overallReport.subject_analysis && overallReport.subject_analysis.length" class="space-y-3">
+          <h6 class="text-sm font-semibold text-gray-800 px-1"><i class="bi bi-journal-text mr-1"></i>逐学科分析</h6>
+          <div v-for="sa in overallReport.subject_analysis" :key="sa.subject" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <span class="font-semibold text-gray-900 text-sm">{{ sa.subject }}</span>
+                <span v-if="sa.teacher" class="text-xs text-gray-400 ml-2"><i class="bi bi-person"></i> {{ sa.teacher }}</span>
+              </div>
+              <span v-if="sa.sessions" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">{{ sa.sessions }}节</span>
+            </div>
+            <div class="p-4 space-y-2 text-sm">
+              <div v-if="sa.current_progress" class="flex gap-2"><span class="text-gray-400 w-14 shrink-0 text-xs">进度</span><span class="text-gray-700">{{ sa.current_progress }}</span></div>
+              <div v-if="sa.performance" class="flex gap-2"><span class="text-gray-400 w-14 shrink-0 text-xs">表现</span><span class="text-gray-700">{{ sa.performance }}</span></div>
+              <div v-if="sa.weak_points" class="flex gap-2"><span class="text-amber-600 w-14 shrink-0 text-xs font-medium">薄弱</span><span class="text-gray-700">{{ sa.weak_points }}</span></div>
+              <div class="flex gap-2 pt-1 border-t border-gray-50"><span class="text-gray-400 w-14 shrink-0 text-xs">趋势</span>
+                <span v-if="sa.trend" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                  :class="sa.trend.indexOf('上升') >= 0 ? 'bg-green-50 text-green-700' : sa.trend.indexOf('下滑') >= 0 ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-600'">{{ sa.trend }}</span>
+              </div>
+              <div v-if="sa.suggestion" class="flex gap-2 pt-1 border-t border-gray-50"><span class="text-indigo-500 w-14 shrink-0 text-xs font-medium">建议</span><span class="text-gray-700">{{ sa.suggestion }}</span></div>
             </div>
           </div>
         </div>
+
+        <!-- 学习趋势 -->
+        <div v-if="overallReport.learning_trends" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-graph-up mr-1"></i>学习趋势</h6>
+          <p class="text-sm text-gray-700 leading-relaxed">上课频次：{{ overallReport.learning_trends.class_frequency || '无数据' }}<br>月排课数：{{ overallReport.learning_trends.monthly_schedule_count || '无数据' }}<br>课时消耗：{{ overallReport.learning_trends.hour_consumption_note || '无数据' }}</p>
+        </div>
+
+        <!-- 风险预警 -->
+        <div v-if="overallReport.risk_warnings && overallReport.risk_warnings.length" class="space-y-2">
+          <h6 class="text-sm font-semibold text-gray-800 px-1"><i class="bi bi-exclamation-triangle mr-1"></i>风险预警</h6>
+          <div v-for="(rw, i) in overallReport.risk_warnings" :key="i" class="rounded-xl p-4 text-sm"
+            :class="rw.severity === 'high' ? 'bg-red-50 border border-red-200' : rw.severity === 'medium' ? 'bg-amber-50 border border-amber-200' : 'bg-yellow-50 border border-yellow-200'">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-block px-2 py-0.5 rounded text-[.6rem] font-semibold"
+                :class="rw.severity === 'high' ? 'bg-red-200 text-red-800' : rw.severity === 'medium' ? 'bg-amber-200 text-amber-800' : 'bg-yellow-200 text-yellow-800'">{{ rw.severity === 'high' ? '高危' : rw.severity === 'medium' ? '中危' : '提醒' }}</span>
+              <span class="font-medium text-gray-900">{{ rw.type }}</span>
+            </div>
+            <p class="text-gray-600 mt-1">{{ rw.detail }}</p>
+            <p v-if="rw.action_required" class="text-indigo-600 mt-1 text-xs"><i class="bi bi-arrow-right mr-0.5"></i>{{ rw.action_required }}</p>
+          </div>
+        </div>
+
+        <!-- 综合评估 -->
         <div v-if="overallReport.overall_assessment" class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200">
           <h6 class="text-sm font-semibold text-amber-800 mb-2"><i class="bi bi-shield-check mr-1"></i>综合评估</h6>
-          <p class="text-sm text-gray-700 leading-relaxed" contenteditable="true" @blur="onEdit($event,'overall_assessment')">{{ reportEditData.overall_assessment }}</p>
+          <p class="text-sm text-gray-700 leading-relaxed">{{ overallReport.overall_assessment }}</p>
         </div>
+
+        <!-- 顾问行动建议 -->
+        <div v-if="overallReport.consultant_actions && overallReport.consultant_actions.length" class="bg-white rounded-xl border border-gray-200 p-4">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-list-check mr-1"></i>顾问行动建议</h6>
+          <div class="space-y-2">
+            <div v-for="(ca, i) in overallReport.consultant_actions" :key="i" class="flex items-start gap-3 p-2 rounded-lg text-sm bg-gray-50">
+              <span class="inline-block w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
+                :class="ca.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'">{{ i+1 }}</span>
+              <div class="flex-1 min-w-0">
+                <p class="text-gray-800 font-medium">{{ ca.action }}</p>
+                <p v-if="ca.target" class="text-xs text-gray-500 mt-0.5">{{ ca.target }}</p>
+                <p v-if="ca.note" class="text-xs text-gray-400 mt-0.5">{{ ca.note }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 家长沟通建议 -->
+        <div v-if="overallReport.parent_communication" class="bg-white rounded-xl border border-blue-200 p-4">
+          <h6 class="text-sm font-semibold text-blue-800 mb-2"><i class="bi bi-chat-dots mr-1"></i>家长沟通建议</h6>
+          <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ overallReport.parent_communication }}</p>
+        </div>
+
+        <!-- 后续建议 -->
         <div v-if="overallReport.recommendations && overallReport.recommendations.length" class="bg-white rounded-xl border border-gray-200 p-4">
           <h6 class="text-sm font-semibold text-gray-800 mb-2"><i class="bi bi-lightbulb mr-1"></i>后续建议</h6>
           <ul class="space-y-1">
-            <li v-for="(rec, i) in reportEditData.recommendations" :key="i" class="flex items-start gap-2 text-sm text-gray-700">
+            <li v-for="(rec, i) in overallReport.recommendations" :key="i" class="flex items-start gap-2 text-sm text-gray-700">
               <span class="inline-block w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{{ i+1 }}</span>
-              <span contenteditable="true" @blur="onEdit($event,'recommendations',i)">{{ rec }}</span>
+              <span>{{ rec }}</span>
             </li>
           </ul>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
+        </div><div class="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
         <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50" @click="showOverallReportModal=false">关闭</button>
       </div>
     </div>
@@ -4273,7 +4295,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
-<script src="js/app.js?v=109"></script>
+<script src="js/app.js?v=110"></script>
 
   </body>
 </html>
