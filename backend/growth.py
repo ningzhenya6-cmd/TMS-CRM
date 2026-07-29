@@ -948,9 +948,20 @@ def generate_overall_report(handler, token_payload, qs, body, lead_id=None):
                 err_msg = "AI 返回内容为空，请稍后重试"
                 _growth_report_progress[lid] = {"progress": 0, "step": "❌ " + err_msg, "status": "error"}
                 return
-            content_raw = re.sub(r"^```(?:json)?\s*", "", content_raw)
-            content_raw = re.sub(r"\s*```$", "", content_raw)
-            parsed = _json.loads(content_raw)
+            # 尝试提取 JSON：去掉 markdown 代码块标记后优先，再尝试从文本中提取完整 JSON 对象
+            content_clean = re.sub(r"^```(?:json)?\s*", "", content_raw)
+            content_clean = re.sub(r"\s*```$", "", content_clean)
+            try:
+                parsed = _json.loads(content_clean)
+            except _json.JSONDecodeError:
+                # AI 在 JSON 前后写了文字，提取第一个 { 到最后一个 } 之间的内容
+                first_brace = content_raw.find('{')
+                last_brace = content_raw.rfind('}')
+                if first_brace >= 0 and last_brace > first_brace:
+                    extracted = content_raw[first_brace:last_brace + 1]
+                    parsed = _json.loads(extracted)
+                else:
+                    raise
             report_json = _json.dumps(parsed, ensure_ascii=False)
             existing = query_one("SELECT id FROM consulting_reports WHERE lead_id=? AND report_type='growth_overall'", (lid,))
             if existing:

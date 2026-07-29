@@ -562,8 +562,10 @@ def _run_generation(report_id, lead_id, round_num=1):
         _set_progress(report_id, 70, "正在解析分析结果...")
 
         content = result["content"].strip()
-        content = re.sub(r"^```(?:json)?\s*", "", content)
-        content = re.sub(r"\s*```$", "", content)
+        json_start = content.find('{')
+        json_end = content.rfind('}')
+        if json_start >= 0 and json_end > json_start:
+            content = content[json_start:json_end + 1]
 
         parsed = json.loads(content)
 
@@ -753,8 +755,10 @@ GPA：{report.get('gpa', '未提供')}
         _set_progress(report_id, 70, "正在解析规划结果...")
 
         content = result["content"].strip()
-        content = re.sub(r"^```(?:json)?\s*", "", content)
-        content = re.sub(r"\s*```$", "", content)
+        json_start = content.find('{')
+        json_end = content.rfind('}')
+        if json_start >= 0 and json_end > json_start:
+            content = content[json_start:json_end + 1]
 
         parsed = json.loads(content)
 
