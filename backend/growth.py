@@ -930,10 +930,11 @@ def generate_overall_report(handler, token_payload, qs, body, lead_id=None):
             user_prompt = "\n\n".join(user_parts)
             _growth_report_progress[lid] = {"progress": 50, "step": "AI 正在逐学科分析...", "status": "generating"}
             result = _call_deepseek(system_prompt, user_prompt, temperature=0.3, max_tokens=4000)
-            if isinstance(result, dict) and "error" in result:
-                _growth_report_progress[lid] = {"progress": 0, "step": "❌ 生成失败: " + result["error"], "status": "error"}
-                return
             content_raw = result.strip() if isinstance(result, str) else str(result)
+            if not content_raw:
+                err_msg = "AI 返回内容为空，请稍后重试"
+                _growth_report_progress[lid] = {"progress": 0, "step": "❌ " + err_msg, "status": "error"}
+                return
             content_raw = re.sub(r"^```(?:json)?\s*", "", content_raw)
             content_raw = re.sub(r"\s*```$", "", content_raw)
             parsed = _json.loads(content_raw)

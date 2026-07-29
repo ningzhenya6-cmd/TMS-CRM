@@ -816,6 +816,7 @@ app.component('include-lead-detail', {
         name: this.lead.name || '',
         wechat: this.lead.wechat || '',
         source: this.lead.source || '',
+        phone: this.lead.phone || '',
         country: this.lead.country || '',
         grade: this.lead.grade || '',
         remark: this.lead.remark || '',
@@ -2856,6 +2857,13 @@ canManage() {
       a.href = '/api/growth/' + this.selectedLeadId + '/overall-report/download?format=' + format + '&token=' + token;
       a.download = '';
       a.click();
+    },
+    async loadOverallReport() {
+      const res = await API.get('/growth/' + this.selectedLeadId + '/overall-report');
+      if (!res.error && res.data && res.data.report_title) {
+        this.overallReport = res.data;
+        this.overallReportStatus = 'done';
+      }
     },
     // ── 考试成绩 ──
     openExam() {
