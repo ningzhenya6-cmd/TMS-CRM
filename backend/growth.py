@@ -161,7 +161,7 @@ def _load_deepseek_key():
 
 
 def _call_deepseek(system_prompt, user_prompt, temperature=0.3, max_tokens=2000):
-    """调用 DeepSeek API"""
+    """调用 DeepSeek API（自动重试3次）"""
     api_key = _load_deepseek_key()
     if not api_key:
         raise RuntimeError("DEEPSEEK_API_KEY 未配置")
@@ -176,26 +176,39 @@ def _call_deepseek(system_prompt, user_prompt, temperature=0.3, max_tokens=2000)
         "max_tokens": max_tokens,
     }).encode()
 
-    req = urllib.request.Request(
-        "https://api.deepseek.com/v1/chat/completions",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            result = json.loads(resp.read())
-            return result["choices"][0]["message"]["content"]
-    except urllib.error.HTTPError as e:
-        body = e.read().decode(errors="replace")[:200]
-        raise RuntimeError(f"DeepSeek API HTTP {e.code}: {body}")
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"DeepSeek API 请求失败: {e.reason}")
-    except (json.JSONDecodeError, KeyError) as e:
-        raise RuntimeError(f"DeepSeek API 返回格式异常: {e}")
+    last_error = ""
+    for attempt in range(1, 4):
+        try:
+            req = urllib.request.Request(
+                "https://api.deepseek.com/v1/chat/completions",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                body = resp.read()
+                if not body:
+                    last_error = "DeepSeek 返回空响应"
+                    if attempt < 3: time.sleep(1)
+                    continue
+                result = json.loads(body)
+                content = result["choices"][0]["message"]["content"]
+                if content:
+                    return content
+                last_error = "DeepSeek 返回内容为空"
+                if attempt < 3: time.sleep(1)
+        except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")[:200]
+            raise RuntimeError(f"DeepSeek API HTTP {e.code}: {body}")
+        except urllib.error.URLError as e:
+            last_error = f"连接失败: {e.reason}"
+            if attempt < 3: time.sleep(2)
+        except (json.JSONDecodeError, KeyError) as e:
+            last_error = str(e)
+            if attempt < 3: time.sleep(1)
+    raise RuntimeError(f"DeepSeek API 调用失败（已重试3次）: {last_error}")
 
 
 def _generate_structured_feedback(transcript, info):

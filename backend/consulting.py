@@ -43,7 +43,7 @@ def _load_api_key():
 
 
 def _call_deepseek(messages, temperature=0.3, max_tokens=3000, enable_search=False):
-    """调用 DeepSeek API"""
+    """调用 DeepSeek API（自动重试3次）"""
     api_key = _load_api_key()
     if not api_key:
         return {"error": "DEEPSEEK_API_KEY 未配置"}
@@ -60,26 +60,39 @@ def _call_deepseek(messages, temperature=0.3, max_tokens=3000, enable_search=Fal
 
     data = json.dumps(payload).encode()
 
-    req = urllib.request.Request(
-        "https://api.deepseek.com/chat/completions",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-    try:
-        resp = urllib.request.urlopen(req, timeout=120)
-        result = json.loads(resp.read())
-        return {
-            "content": result["choices"][0]["message"]["content"],
-            "usage": result.get("usage", {}),
-        }
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        return {"error": f"HTTP {e.code}: {body[:200]}"}
-    except Exception as e:
-        return {"error": str(e)}
+    last_error = ""
+    for attempt in range(1, 4):
+        try:
+            req = urllib.request.Request(
+                "https://api.deepseek.com/chat/completions",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                },
+            )
+            resp = urllib.request.urlopen(req, timeout=120)
+            body = resp.read()
+            if not body:
+                last_error = "DeepSeek 返回空响应"
+                if attempt < 3: time.sleep(1)
+                continue
+            result = json.loads(body)
+            content = result["choices"][0]["message"]["content"]
+            if content:
+                return {
+                    "content": content,
+                    "usage": result.get("usage", {}),
+                }
+            last_error = "DeepSeek 返回内容为空"
+            if attempt < 3: time.sleep(1)
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()
+            return {"error": f"HTTP {e.code}: {body[:200]}"}
+        except Exception as e:
+            last_error = str(e)
+            if attempt < 3: time.sleep(2)
+    return {"error": f"DeepSeek API 调用失败（已重试3次）: {last_error}"}
 
 
 # ═══════════════════════════════════════════
